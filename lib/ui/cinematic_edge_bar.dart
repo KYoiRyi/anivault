@@ -26,7 +26,8 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
 
   @override
   Widget build(BuildContext context) {
-    final height = _isHovering || _isDragging ? 24.0 : 6.0;
+    // Increased base height for mobile touch targets
+    final height = _isHovering || _isDragging ? 32.0 : 12.0;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),

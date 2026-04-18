@@ -48,7 +48,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     Future.microtask(() async {
       try {
         final nativePlayer = player.platform as NativePlayer;
-        await nativePlayer.setProperty('hwdec', _isAnime4KEnabled ? 'auto-safe' : 'auto');
+        // MUST use 'auto-copy' so the hardware decoder transfers the CVPixelBuffer/d3d11 back to system RAM to allow Fragment Shaders to hook it!
+        await nativePlayer.setProperty('hwdec', _isAnime4KEnabled ? 'auto-copy' : 'auto');
         await nativePlayer.setProperty('glsl-shaders', _isAnime4KEnabled ? _anime4kModels[_currentModelKey]! : '');
 
         // Open provided video file
@@ -63,7 +64,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _applyAnime4KConfig() async {
     try {
       final nativePlayer = player.platform as NativePlayer;
-      await nativePlayer.setProperty('hwdec', _isAnime4KEnabled ? 'auto-safe' : 'auto');
+      await nativePlayer.setProperty('hwdec', _isAnime4KEnabled ? 'auto-copy' : 'auto');
       await nativePlayer.setProperty('glsl-shaders', _isAnime4KEnabled ? _anime4kModels[_currentModelKey]! : '');
       
       // Force dirty frame redraw if video is paused
@@ -333,7 +334,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    child: CinematicEdgeBar(player: player),
+                    child: SafeArea(top: false, child: CinematicEdgeBar(player: player)),
                   ),
                 ],
               ),
