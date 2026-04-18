@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:anivault/ui/player_screen.dart';
+import 'package:anivault/services/logger_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -127,6 +128,72 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: IconButton.filledTonal(
+                  icon: const Icon(Icons.terminal_rounded, size: 24),
+                  style: IconButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return Dialog(
+                          backgroundColor: Colors.black87,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.white24)),
+                          child: Container(
+                            width: 600,
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Hardware Console', style: TextStyle(color: Colors.greenAccent, fontFamily: 'Consolas', fontWeight: FontWeight.bold)),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, color: Colors.white54),
+                                      onPressed: () => Navigator.pop(context),
+                                    )
+                                  ],
+                                ),
+                                const Divider(color: Colors.white24),
+                                SizedBox(
+                                  height: 400,
+                                  child: ListenableBuilder(
+                                    listenable: LoggerService(),
+                                    builder: (context, _) {
+                                      final logs = LoggerService().logs;
+                                      if (logs.isEmpty) {
+                                        return const Center(child: Text('Console is waiting for trace signals...', style: TextStyle(color: Colors.white54, fontStyle: FontStyle.italic)));
+                                      }
+                                      return ListView.builder(
+                                        itemCount: logs.length,
+                                        itemBuilder: (context, index) {
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                            child: Text(
+                                              logs[index],
+                                              style: const TextStyle(fontFamily: 'Consolas', fontSize: 13, color: Colors.white70),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    );
+                  },
+                  tooltip: 'System Console',
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: IconButton.filledTonal(

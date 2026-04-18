@@ -5,6 +5,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:anivault/ui/cinematic_edge_bar.dart';
 import 'package:anivault/ui/performance_hud.dart';
+import 'package:anivault/services/shader_service.dart';
+import 'package:anivault/services/logger_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String videoPath;
@@ -31,18 +33,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
   String _currentModelKey = 'Balanced';
   bool _showHUD = false;
   
-  final Map<String, String> _anime4kModels = {
-    'Speed': 'D:/ollama/lib/vp/vp/Anime4K_Restore_CNN_S.glsl',
-    'Balanced': 'D:/ollama/lib/vp/vp/Anime4K_Restore_CNN_M.glsl',
-    'Quality': 'D:/ollama/lib/vp/vp/Anime4K_Restore_CNN_L.glsl',
-    'Extreme': 'D:/ollama/lib/vp/vp/Anime4K_Restore_CNN_VL.glsl',
-  };
+  String _getDynamicShaderPath() {
+    return ShaderService().getShaderPath(_currentModelKey) ?? '';
+  }
 
   @override
   void initState() {
     super.initState();
     player.stream.log.listen((event) {
-      debugPrint('[MPV LOG] [${event.level}]: ${event.text}');
+      LoggerService().log('[MPV] [${event.level}]: ${event.text}');
     });
     
     Future.microtask(() async {
@@ -50,7 +49,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         final nativePlayer = player.platform as NativePlayer;
         // MUST use 'auto-copy' so the hardware decoder transfers the CVPixelBuffer/d3d11 back to system RAM to allow Fragment Shaders to hook it!
         await nativePlayer.setProperty('hwdec', _isAnime4KEnabled ? 'auto-copy' : 'auto');
-        await nativePlayer.setProperty('glsl-shaders', _isAnime4KEnabled ? _anime4kModels[_currentModelKey]! : '');
+        await nativePlayer.setProperty('glsl-shaders', _isAnime4KEnabled ? _getDynamicShaderPath() : '');
 
         // Open provided video file
         await player.open(Media(widget.videoPath));
@@ -65,7 +64,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     try {
       final nativePlayer = player.platform as NativePlayer;
       await nativePlayer.setProperty('hwdec', _isAnime4KEnabled ? 'auto-copy' : 'auto');
-      await nativePlayer.setProperty('glsl-shaders', _isAnime4KEnabled ? _anime4kModels[_currentModelKey]! : '');
+      await nativePlayer.setProperty('glsl-shaders', _isAnime4KEnabled ? _getDynamicShaderPath() : '');
       
       // Force dirty frame redraw if video is paused
       if (!player.state.playing) {

@@ -1,0 +1,62 @@
+import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:anivault/services/logger_service.dart';
+
+class ShaderService {
+  static final ShaderService _instance = ShaderService._internal();
+  factory ShaderService() => _instance;
+  ShaderService._internal();
+
+  final Map<String, String> _shaderPaths = {};
+
+  Future<void> initializeShaders() async {
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final shaderDir = Directory(p.join(appDir.path, 'shaders'));
+      
+      if (!await shaderDir.exists()) {
+        await shaderDir.create(recursive: true);
+      }
+
+      final models = [
+        'Anime4K_Restore_CNN_S.glsl',
+        'Anime4K_Restore_CNN_M.glsl',
+        'Anime4K_Restore_CNN_L.glsl',
+        'Anime4K_Restore_CNN_VL.glsl',
+      ];
+
+      for (var model in models) {
+        final destFile = File(p.join(shaderDir.path, model));
+        if (!await destFile.exists()) {
+          LoggerService().log('Sys: Unpacking shader $model from asset bundle...');
+          final byteData = await rootBundle.load('assets/shaders/$model');
+          await destFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+        } else {
+          LoggerService().log('Sys: Shader $model mapped natively at ${destFile.path}');
+        }
+        
+        switch (model) {
+          case 'Anime4K_Restore_CNN_S.glsl':
+            _shaderPaths['Speed'] = destFile.path;
+            break;
+          case 'Anime4K_Restore_CNN_M.glsl':
+            _shaderPaths['Balanced'] = destFile.path;
+            break;
+          case 'Anime4K_Restore_CNN_L.glsl':
+            _shaderPaths['Quality'] = destFile.path;
+            break;
+          case 'Anime4K_Restore_CNN_VL.glsl':
+            _shaderPaths['Extreme'] = destFile.path;
+            break;
+        }
+      }
+      LoggerService().log('Sys: Shader Neural Matrix initialized successfully.');
+    } catch (e) {
+      LoggerService().log('ERROR: Failed to unpack shaders: $e');
+    }
+  }
+
+  String? getShaderPath(String key) => _shaderPaths[key];
+}

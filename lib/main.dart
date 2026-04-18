@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:anivault/ui/home_screen.dart';
+import 'package:anivault/services/shader_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  
+  // Extract shaders from assets to local filesystem for native hook support
+  await ShaderService().initializeShaders();
   
   runApp(const AniVaultApp());
 }
