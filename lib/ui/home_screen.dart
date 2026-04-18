@@ -33,6 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _syncMedia();
+    _smbHostCtrl.text = SMBService().savedHost;
+    _smbUserCtrl.text = SMBService().savedUser;
+    _smbPassCtrl.text = SMBService().savedPass;
   }
 
   Future<void> _syncMedia() async {
@@ -173,47 +176,14 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: Colors.black.withValues(alpha: 0.8),
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
-              title: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   const Text(
-                    'Library',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -1.0,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: 300,
-                    child: CupertinoSlidingSegmentedControl<NetworkMode>(
-                      backgroundColor: Colors.white10,
-                      thumbColor: Colors.white24,
-                      groupValue: _currentMode,
-                      children: const {
-                        NetworkMode.local: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('Local Vault', style: TextStyle(color: Colors.white)),
-                        ),
-                        NetworkMode.smb: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('SMB Network', style: TextStyle(color: Colors.white)),
-                        ),
-                      },
-                      onValueChanged: (mode) {
-                        if (mode != null) {
-                          setState(() => _currentMode = mode);
-                          if (mode == NetworkMode.smb && !SMBService().isConnected) {
-                            _showSMBDial();
-                          }
-                        }
-                      },
-                    ),
-                  )
-                ],
+              title: const Text(
+                'Library',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -1.0,
+                  color: Colors.white,
+                ),
               ),
             ),
             actions: [
@@ -358,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
@@ -427,6 +397,62 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
         ],
+      ),
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.only(bottom: 24, left: 32, right: 32),
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: Colors.white12),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20, offset: const Offset(0, 10))
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildDockItem('Vault', Icons.drive_folder_upload, NetworkMode.local),
+                _buildDockItem('Network', Icons.rocket_launch, NetworkMode.smb),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDockItem(String label, IconData icon, NetworkMode mode) {
+    final isSelected = _currentMode == mode;
+    return GestureDetector(
+      onTap: () => setState(() => _currentMode = mode),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutExpo,
+        width: isSelected ? 120 : 64,
+        height: 48,
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: isSelected ? Colors.greenAccent : Colors.white54, size: 20),
+            if (isSelected) ...[
+              const SizedBox(height: 4),
+              Container(
+                width: 4, height: 4,
+                decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle),
+              )
+            ]
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:smb_connect/smb_connect.dart';
 import 'package:anivault/services/smb_service.dart';
 import 'package:anivault/services/cache_manager_service.dart';
@@ -60,24 +61,64 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer> {
       // Check if it's cached
       final cachedPath = await CacheManagerService().getCachedPath(file.path);
       if (cachedPath != null) {
-        // Play local
         if (!mounted) return;
         Navigator.push(context, MaterialPageRoute(
-          builder: (_) => PlayerScreen(
-            videoPath: cachedPath,
-            title: file.name,
-          )
+          builder: (_) => PlayerScreen(videoPath: cachedPath, title: file.name)
         ));
       } else {
-        // Alert to download
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${file.name} is not on disk. Tap the cloud icon to cache.'),
-            behavior: SnackBarBehavior.floating,
-          )
-        );
+        _showFileInspectorPanel(file);
       }
     }
+  }
+
+  void _showFileInspectorPanel(SmbFile file) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      builder: (context) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.2))),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_sync_rounded, size: 48, color: Colors.blueAccent),
+                  const SizedBox(height: 16),
+                  Text(file.name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  Text('${(file.size / 1024 / 1024).toStringAsFixed(2)} MB required', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 16)),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: FilledButton.tonal(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.blueAccent.withValues(alpha: 0.2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        CacheManagerService().cacheFile(file);
+                      },
+                      child: const Text('Inject Cache to Vault', style: TextStyle(fontSize: 18, color: Colors.blueAccent, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    );
   }
 
   @override
@@ -130,30 +171,40 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer> {
                         } else if (isCached) {
                           trailing = const Icon(Icons.offline_pin, color: Colors.greenAccent);
                         } else {
-                          trailing = IconButton(
-                            icon: const Icon(Icons.cloud_download, color: Colors.white54),
-                            onPressed: () {
-                              CacheManagerService().cacheFile(file);
-                            },
-                          );
+                          trailing = const Icon(Icons.cloud_outlined, color: Colors.white24);
                         }
 
-                        return ListTile(
-                          leading: Icon(
-                            isDir ? Icons.folder : Icons.movie,
-                            color: isDir ? Colors.amber : Colors.white70,
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                           ),
-                          title: Text(
-                            file.name,
-                            style: TextStyle(
-                              color: isCached ? Colors.greenAccent : Colors.white,
-                              fontWeight: isCached ? FontWeight.bold : FontWeight.normal
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                                leading: Icon(
+                                  isDir ? Icons.folder : Icons.movie,
+                                  color: isDir ? Colors.amber : Colors.white70,
+                                ),
+                                title: Text(
+                                  file.name,
+                                  style: TextStyle(
+                                    color: isCached ? Colors.greenAccent : Colors.white,
+                                    fontWeight: isCached ? FontWeight.bold : FontWeight.normal
+                                  ),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: isDir ? null : Text('${(file.size / 1024 / 1024).toStringAsFixed(1)} MB', style: const TextStyle(color: Colors.white30)),
+                                trailing: trailing,
+                                onTap: () => _handleFileTap(file),
+                              ),
                             ),
-                            maxLines: 1, overflow: TextOverflow.ellipsis,
                           ),
-                          subtitle: isDir ? null : Text('${(file.size / 1024 / 1024).toStringAsFixed(1)} MB', style: const TextStyle(color: Colors.white30)),
-                          trailing: trailing,
-                          onTap: () => _handleFileTap(file),
                         );
                       }
                     );
