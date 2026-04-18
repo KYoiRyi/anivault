@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:ui';
 import 'package:anivault/ui/player_screen.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/smb_service.dart';
