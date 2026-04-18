@@ -7,8 +7,10 @@
 
 import 'dart:io'; // flutter_ignore: dart_io_import.
 import 'package:file_selector_android/file_selector_android.dart' as file_selector_android;
+import 'package:path_provider_android/path_provider_android.dart' as path_provider_android;
 import 'package:shared_preferences_android/shared_preferences_android.dart' as shared_preferences_android;
 import 'package:file_selector_ios/file_selector_ios.dart' as file_selector_ios;
+import 'package:path_provider_foundation/path_provider_foundation.dart' as path_provider_foundation;
 import 'package:shared_preferences_foundation/shared_preferences_foundation.dart' as shared_preferences_foundation;
 import 'package:file_selector_linux/file_selector_linux.dart' as file_selector_linux;
 import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
@@ -16,6 +18,7 @@ import 'package:path_provider_linux/path_provider_linux.dart' as path_provider_l
 import 'package:shared_preferences_linux/shared_preferences_linux.dart' as shared_preferences_linux;
 import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 import 'package:file_selector_macos/file_selector_macos.dart' as file_selector_macos;
+import 'package:path_provider_foundation/path_provider_foundation.dart' as path_provider_foundation;
 import 'package:shared_preferences_foundation/shared_preferences_foundation.dart' as shared_preferences_foundation;
 import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 import 'package:file_selector_windows/file_selector_windows.dart' as file_selector_windows;
@@ -40,6 +43,15 @@ class _PluginRegistrant {
       }
 
       try {
+        path_provider_android.PathProviderAndroid.registerWith();
+      } catch (err) {
+        print(
+          '`path_provider_android` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
         shared_preferences_android.SharedPreferencesAndroid.registerWith();
       } catch (err) {
         print(
@@ -54,6 +66,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`file_selector_ios` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        path_provider_foundation.PathProviderFoundation.registerWith();
+      } catch (err) {
+        print(
+          '`path_provider_foundation` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }
@@ -119,6 +140,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`file_selector_macos` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        path_provider_foundation.PathProviderFoundation.registerWith();
+      } catch (err) {
+        print(
+          '`path_provider_foundation` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }

@@ -41,6 +41,7 @@ dependencies:
   file_selector: ^1.1.0
   path_provider: ^2.1.5
   path: ^1.9.1
+  smb_connect: ^0.0.9
 
 dev_dependencies:
   flutter_test:

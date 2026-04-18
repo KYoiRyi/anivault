@@ -6,6 +6,9 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:anivault/ui/player_screen.dart';
 import 'package:anivault/services/logger_service.dart';
+import 'package:anivault/services/smb_service.dart';
+import 'package:anivault/services/cache_manager_service.dart';
+import 'package:anivault/ui/smb_viewer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,10 +17,17 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+enum NetworkMode { local, smb }
+
 class _HomeScreenState extends State<HomeScreen> {
   List<String> _mediaPaths = [];
-
   bool _isSyncing = false;
+  NetworkMode _currentMode = NetworkMode.local;
+  
+  final _smbHostCtrl = TextEditingController();
+  final _smbDomainCtrl = TextEditingController();
+  final _smbUserCtrl = TextEditingController();
+  final _smbPassCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -63,6 +73,53 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       setState(() => _isSyncing = false);
     }
+  }
+
+  void _showSMBDial() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool connecting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.white24)),
+              title: const Text('Connect to Network Share', style: TextStyle(color: Colors.white)),
+              content: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(controller: _smbHostCtrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Host IP (e.g. 192.168.1.10)')),
+                    TextField(controller: _smbDomainCtrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Domain (Optional)')),
+                    TextField(controller: _smbUserCtrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Username')),
+                    TextField(controller: _smbPassCtrl, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'Password')),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                FilledButton.tonal(
+                  onPressed: connecting ? null : () async {
+                    setDialogState(() => connecting = true);
+                    final success = await SMBService().connect(
+                      _smbHostCtrl.text,
+                      _smbDomainCtrl.text,
+                      _smbUserCtrl.text,
+                      _smbPassCtrl.text
+                    );
+                    setDialogState(() => connecting = false);
+                    if (success && mounted) Navigator.pop(context);
+                  },
+                  child: connecting ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Connect'),
+                )
+              ],
+            );
+          }
+        );
+      }
+    );
   }
 
   Future<void> _importVideo() async {
@@ -116,18 +173,62 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: Colors.black.withValues(alpha: 0.8),
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-              title: const Text(
-                'Library',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1.0,
-                  color: Colors.white,
-                ),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   const Text(
+                    'Library',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -1.0,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: 300,
+                    child: CupertinoSlidingSegmentedControl<NetworkMode>(
+                      backgroundColor: Colors.white10,
+                      thumbColor: Colors.white24,
+                      groupValue: _currentMode,
+                      children: const {
+                        NetworkMode.local: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('Local Vault', style: TextStyle(color: Colors.white)),
+                        ),
+                        NetworkMode.smb: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('SMB Network', style: TextStyle(color: Colors.white)),
+                        ),
+                      },
+                      onValueChanged: (mode) {
+                        if (mode != null) {
+                          setState(() => _currentMode = mode);
+                          if (mode == NetworkMode.smb && !SMBService().isConnected) {
+                            _showSMBDial();
+                          }
+                        }
+                      },
+                    ),
+                  )
+                ],
               ),
             ),
             actions: [
+              if (_currentMode == NetworkMode.smb)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: IconButton.filledTonal(
+                    icon: const Icon(Icons.router, size: 24),
+                    style: IconButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: _showSMBDial,
+                    tooltip: 'SMB Config',
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: IconButton.filledTonal(
@@ -184,6 +285,32 @@ class _HomeScreenState extends State<HomeScreen> {
                                     },
                                   ),
                                 ),
+                                const Divider(color: Colors.white24),
+                                ListenableBuilder(
+                                  listenable: CacheManagerService(),
+                                  builder: (context, _) {
+                                    final limit = CacheManagerService().cacheLimitGB;
+                                    return Row(
+                                      children: [
+                                        const Icon(Icons.storage, color: Colors.white54, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text('Offline Cache Limit: ${limit.toInt()} GB', style: const TextStyle(color: Colors.white70)),
+                                        Expanded(
+                                          child: Slider(
+                                            value: limit,
+                                            min: 5,
+                                            max: 100,
+                                            divisions: 19,
+                                            activeColor: Colors.greenAccent,
+                                            onChanged: (val) {
+                                              CacheManagerService().setCacheLimit(val);
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                )
                               ],
                             ),
                           ),
@@ -194,24 +321,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   tooltip: 'System Console',
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: IconButton.filledTonal(
-                  icon: _isSyncing 
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)) 
-                      : const Icon(Icons.sync_rounded, size: 24),
-                  style: IconButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              if (_currentMode == NetworkMode.local)
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: IconButton.filledTonal(
+                    icon: _isSyncing 
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)) 
+                        : const Icon(Icons.sync_rounded, size: 24),
+                    style: IconButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: _isSyncing ? null : _importVideo,
+                    tooltip: 'Sync / Import Media',
                   ),
-                  onPressed: _isSyncing ? null : _importVideo,
-                  tooltip: 'Sync / Import Media',
-                ),
-              )
+                )
             ],
           ),
           
-          // Media List
-          if (_mediaPaths.isEmpty)
+          // Media List OR Network List
+          if (_currentMode == NetworkMode.smb)
+            const SliverFillRemaining(
+               child: SMBFileSystemViewer()
+            )
+          else if (_mediaPaths.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Text(
