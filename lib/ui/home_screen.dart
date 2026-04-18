@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'package:anivault/ui/player_screen.dart';
 
@@ -15,25 +16,56 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<String> _mediaPaths = [];
 
+  bool _isSyncing = false;
+
   @override
   void initState() {
     super.initState();
-    _loadMedia();
+    _syncMedia();
   }
 
-  Future<void> _loadMedia() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _mediaPaths = prefs.getStringList('media_library') ?? [];
-    });
-  }
-
-  Future<void> _saveMedia() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('media_library', _mediaPaths);
+  Future<void> _syncMedia() async {
+    if (_isSyncing) return;
+    setState(() => _isSyncing = true);
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      List<String> knownPaths = prefs.getStringList('media_library') ?? [];
+      
+      // Auto-scan iOS Sandbox / Local Document directory
+      final Directory docDir = await getApplicationDocumentsDirectory();
+      final List<FileSystemEntity> entities = await docDir.list(recursive: true).toList();
+      
+      final validExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm'];
+      List<String> discoveredPaths = [];
+      
+      for (var entity in entities) {
+        if (entity is File) {
+          final ext = entity.path.substring(entity.path.lastIndexOf('.')).toLowerCase();
+          if (validExtensions.contains(ext) && !knownPaths.contains(entity.path)) {
+            discoveredPaths.add(entity.path);
+          }
+        }
+      }
+      
+      // Validate existing known paths to clean up deleted synced files
+      knownPaths.removeWhere((path) => !File(path).existsSync());
+      
+      final mergedPaths = [...discoveredPaths, ...knownPaths];
+      
+      setState(() {
+        _mediaPaths = mergedPaths;
+      });
+      await prefs.setStringList('media_library', mergedPaths);
+    } catch (e) {
+      debugPrint('Error syncing media: $e');
+    } finally {
+      setState(() => _isSyncing = false);
+    }
   }
 
   Future<void> _importVideo() async {
+    // Legacy file picker fallback (Useful for Desktop) + trigger Sync
     try {
       const XTypeGroup typeGroup = XTypeGroup(
         label: 'Videos',
@@ -42,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final List<XFile> files = await openFiles(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
 
       if (files.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
         setState(() {
           for (var xfile in files) {
             final path = xfile.path;
@@ -50,18 +83,21 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           }
         });
-        await _saveMedia();
+        await prefs.setStringList('media_library', _mediaPaths);
       }
     } catch (e) {
       debugPrint('Error picking file: $e');
     }
+    // Deep sync after manual additions just in case
+    await _syncMedia();
   }
 
   Future<void> _removeVideo(String path) async {
     setState(() {
       _mediaPaths.remove(path);
     });
-    await _saveMedia();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('media_library', _mediaPaths);
   }
 
   @override
@@ -94,12 +130,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: IconButton.filledTonal(
-                  icon: const Icon(Icons.add, size: 24),
+                  icon: _isSyncing 
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)) 
+                      : const Icon(Icons.sync_rounded, size: 24),
                   style: IconButton.styleFrom(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: _importVideo,
-                  tooltip: 'Import Video',
+                  onPressed: _isSyncing ? null : _importVideo,
+                  tooltip: 'Sync / Import Media',
                 ),
               )
             ],
