@@ -29,7 +29,22 @@ jobs:
           pod install
           
       - name: Build iOS Application (No Sign)
-        run: flutter build ios --release --no-codesign
+        run: |
+          # Flutter must build first to hydrate dart code, fetch CocoaPods, and generate Runner.xcworkspace.
+          # It might crash at the end due to Provisioning Profile requirements, so we swallow the error if any.
+          flutter build ios --release --no-codesign || true
+          
+          # Now that the workspace exists and Pods are installed, we force xcodebuild to produce the Runner.app
+          # by explicitly stripping all code signing attributes from the build environment.
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            DEVELOPMENT_TEAM="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            -quiet
         
       - name: Generate IPA archive
         run: |
