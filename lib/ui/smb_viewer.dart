@@ -166,6 +166,8 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer> with Automati
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    
     if (!SMBService().isConnected) {
       return Center(
         child: Text(
