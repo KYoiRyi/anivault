@@ -1,1 +1,9 @@
-build/  
+build/
+.dart_tool/
+native/**/target/
+native/**/*.dll
+native/**/*.lib
+native/**/*.a
+native/**/*.7z
+native/**/*.mkv
+native/**/*.mp4

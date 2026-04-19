@@ -581,6 +581,10 @@ class _NavigationItem extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
+          height: double.infinity,
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
             gradient: selected
@@ -595,6 +599,15 @@ class _NavigationItem extends StatelessWidget {
                 : null,
             border: selected
                 ? Border.all(color: Colors.white.withValues(alpha: 0.24))
+                : null,
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                    ),
+                  ]
                 : null,
           ),
           child: Row(
