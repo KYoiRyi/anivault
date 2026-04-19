@@ -17,13 +17,19 @@ import 'package:smb_connect/src/smb_constants.dart';
 
 int openReadNextNum = 0;
 
+// Keep reads within a single SMB2 credit and SMB1's 16-bit count field.
+// Larger requests can be negotiated but this package does not calculate
+// SMB2 credit charge for multi-credit reads, which can make some servers
+// return an empty read.
+const int _safeReadChunkSize = 0xF000;
+
 int _readBufferSize(SmbTree tree, int remaining) {
   final negotiated = tree.transport
       .getNegotiatedResponse()
       ?.getReceiveBufferSize();
   final configured = tree.config.receiveBufferSize;
   final size = negotiated != null && negotiated > 0 ? negotiated : configured;
-  return max(1, min(remaining, size));
+  return max(1, min(min(remaining, size), _safeReadChunkSize));
 }
 
 Stream<Uint8List> smbOpenRead(
@@ -177,6 +183,7 @@ Future<int> smbReadFromFile(
   if (blockSize <= 0) {
     blockSize = 64936;
   }
+  blockSize = min(blockSize, _safeReadChunkSize);
   // (type == SmbConstants.TYPE_FILESYSTEM) ? readSizeFile : readSize;
   do {
     r = len > blockSize ? blockSize : len;
