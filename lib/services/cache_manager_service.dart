@@ -129,15 +129,28 @@ class CacheManagerService extends ChangeNotifier {
     await _enforceLRU();
   }
 
-  bool isCached(String smbPath) {
+  bool isCached(String smbPath, {int? expectedBytes}) {
     final record = _downloadForPath(smbPath);
-    return record != null && File(record.localPath).existsSync();
+    if (record == null) return false;
+    final file = File(record.localPath);
+    if (!file.existsSync()) return false;
+    if (expectedBytes != null && expectedBytes > 0) {
+      try {
+        return file.lengthSync() == expectedBytes;
+      } catch (_) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<void> cacheFile(SmbFile smbFile) async {
     if (_activeTasks.containsKey(smbFile.path)) return;
 
-    final existingPath = await getCachedPath(smbFile.path);
+    final existingPath = await getCachedPath(
+      smbFile.path,
+      expectedBytes: smbFile.size,
+    );
     if (existingPath != null) {
       LoggerService().log('[Download] Already downloaded: ${smbFile.name}');
       return;
@@ -179,15 +192,27 @@ class CacheManagerService extends ChangeNotifier {
 
       LoggerService().log('[Download] Starting: ${smbFile.name}');
 
-      final reader = await smbConn.openRead(smbFile);
+      final reader = await smbConn.openRead(smbFile, 0, smbFile.size);
       writer = partFile.openWrite(mode: FileMode.writeOnly);
 
       var lastNotifyAt = DateTime.now();
       var lastNotifyBytes = 0;
 
       await for (final chunk in reader) {
-        writer.add(chunk);
-        task.downloadedBytes += chunk.length;
+        final remainingBytes = task.totalBytes - task.downloadedBytes;
+        if (remainingBytes <= 0) break;
+
+        final bytesToWrite = chunk.length > remainingBytes
+            ? remainingBytes
+            : chunk.length;
+        if (bytesToWrite <= 0) break;
+
+        writer.add(
+          bytesToWrite == chunk.length
+              ? chunk
+              : Uint8List.sublistView(chunk, 0, bytesToWrite),
+        );
+        task.downloadedBytes += bytesToWrite;
 
         final now = DateTime.now();
         final shouldNotify =
@@ -204,6 +229,13 @@ class CacheManagerService extends ChangeNotifier {
 
       await writer.close();
       writer = null;
+
+      if (task.totalBytes > 0 && task.downloadedBytes != task.totalBytes) {
+        throw FileSystemException(
+          'Download ended at ${task.downloadedBytes} bytes, expected ${task.totalBytes} bytes',
+          partFile.path,
+        );
+      }
 
       if (await localFile.exists()) {
         await localFile.delete();
@@ -264,11 +296,17 @@ class CacheManagerService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> getCachedPath(String smbPath) async {
+  Future<String?> getCachedPath(String smbPath, {int? expectedBytes}) async {
     final record = _downloadForPath(smbPath);
     if (record != null) {
       final file = File(record.localPath);
       if (await file.exists()) {
+        if (expectedBytes != null &&
+            expectedBytes > 0 &&
+            await file.length() != expectedBytes) {
+          await _removeBadDownload(record, file);
+          return null;
+        }
         await _touch(file);
         return file.path;
       }
@@ -284,6 +322,14 @@ class CacheManagerService extends ChangeNotifier {
     final localFile = File(p.join(vaultDir.path, _safeCacheName(smbPath)));
 
     if (await localFile.exists()) {
+      if (expectedBytes != null &&
+          expectedBytes > 0 &&
+          await localFile.length() != expectedBytes) {
+        try {
+          await localFile.delete();
+        } catch (_) {}
+        return null;
+      }
       await _touch(localFile);
       _upsertDownload(
         CachedDownload(
@@ -381,6 +427,18 @@ class CacheManagerService extends ChangeNotifier {
       if (item.smbPath == smbPath) return item;
     }
     return null;
+  }
+
+  Future<void> _removeBadDownload(CachedDownload record, File file) async {
+    try {
+      await file.delete();
+    } catch (_) {}
+    _cachedDownloads.removeWhere((item) => item.smbPath == record.smbPath);
+    await _saveDownloads();
+    LoggerService().log(
+      '[Download] Removed incomplete file: ${record.fileName}',
+    );
+    notifyListeners();
   }
 
   String _safeCacheName(String smbPath) {

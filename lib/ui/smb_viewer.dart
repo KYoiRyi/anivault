@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smb_connect/smb_connect.dart';
 
 import 'package:anivault/services/cache_manager_service.dart';
@@ -14,6 +15,8 @@ class SMBFileSystemViewer extends StatefulWidget {
 
 class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
     with AutomaticKeepAliveClientMixin {
+  static const _navigationStackKey = 'smb_navigation_stack';
+
   final List<String> _navigationStack = [];
   List<SmbFile> _currentFiles = [];
   bool _isLoading = false;
@@ -25,7 +28,7 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
   void initState() {
     super.initState();
     SMBService().addListener(_onSmbStateChanged);
-    _loadCurrentDirectory();
+    _restoreStateAndConnect();
   }
 
   @override
@@ -36,10 +39,36 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
 
   void _onSmbStateChanged() {
     if (!mounted) return;
-    if (SMBService().isConnected && _navigationStack.isNotEmpty) {
+    if (SMBService().isConnected &&
+        _navigationStack.isNotEmpty &&
+        !_isLoading) {
       _loadCurrentDirectory();
     } else {
       setState(() {});
+    }
+  }
+
+  Future<void> _restoreStateAndConnect() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedStack = prefs.getStringList(_navigationStackKey) ?? [];
+
+    if (!mounted) return;
+    setState(() {
+      _navigationStack
+        ..clear()
+        ..addAll(savedStack);
+      _isLoading = SMBService().hasSavedConnection && !SMBService().isConnected;
+    });
+
+    if (!SMBService().isConnected && SMBService().hasSavedConnection) {
+      await SMBService().connectSaved();
+    }
+
+    if (!mounted) return;
+    if (SMBService().isConnected && _navigationStack.isNotEmpty) {
+      await _loadCurrentDirectory();
+    } else {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -73,13 +102,20 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
 
   void _navigateIn(String path) {
     _navigationStack.add(path);
+    _saveNavigationStack();
     _loadCurrentDirectory();
   }
 
   void _navigateOut() {
     if (_navigationStack.isEmpty) return;
     _navigationStack.removeLast();
+    _saveNavigationStack();
     _loadCurrentDirectory();
+  }
+
+  Future<void> _saveNavigationStack() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_navigationStackKey, _navigationStack);
   }
 
   Future<void> _handleFileTap(SmbFile file) async {
@@ -88,7 +124,10 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
       return;
     }
 
-    final cachedPath = await CacheManagerService().getCachedPath(file.path);
+    final cachedPath = await CacheManagerService().getCachedPath(
+      file.path,
+      expectedBytes: file.size,
+    );
     if (!mounted) return;
 
     if (cachedPath != null) {
@@ -160,11 +199,33 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
   Widget build(BuildContext context) {
     super.build(context);
 
+    if (SMBService().isConnecting || _isLoading && !SMBService().isConnected) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (!SMBService().isConnected) {
       return Center(
-        child: Text(
-          'Connect to a network share to browse files.',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                SMBService().hasSavedConnection
+                    ? 'Saved network share is not connected.'
+                    : 'Connect to a network share to browse files.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+              ),
+              if (SMBService().hasSavedConnection) ...[
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: SMBService().connectSaved,
+                  child: const Text('Reconnect'),
+                ),
+              ],
+            ],
+          ),
         ),
       );
     }
@@ -319,7 +380,10 @@ class _FileList extends StatelessWidget {
           listenable: CacheManagerService(),
           builder: (context, _) {
             final task = CacheManagerService().activeTasks[file.path];
-            final isCached = CacheManagerService().isCached(file.path);
+            final isCached = CacheManagerService().isCached(
+              file.path,
+              expectedBytes: file.size,
+            );
 
             Widget trailing;
             if (isDir) {

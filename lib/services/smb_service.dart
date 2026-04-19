@@ -15,6 +15,7 @@ class SMBService extends ChangeNotifier {
   SMBService._internal();
 
   SmbConnect? _connection;
+  bool _isConnecting = false;
   String _host = '';
 
   String _savedUser = '';
@@ -22,6 +23,8 @@ class SMBService extends ChangeNotifier {
   String _savedDomain = '';
 
   bool get isConnected => _connection != null;
+  bool get isConnecting => _isConnecting;
+  bool get hasSavedConnection => _host.trim().isNotEmpty;
   String get currentHost => _host;
   String get savedHost => _host;
   String get savedUser => _savedUser;
@@ -42,6 +45,16 @@ class SMBService extends ChangeNotifier {
     String username,
     String password,
   ) async {
+    await saveSettings(
+      host: host,
+      domain: domain,
+      username: username,
+      password: password,
+    );
+    if (_isConnecting) return false;
+    _isConnecting = true;
+    notifyListeners();
+
     try {
       LoggerService().log('[SMB] Connecting to $host...');
 
@@ -64,6 +77,10 @@ class SMBService extends ChangeNotifier {
         sendBufferSize: 1048576,
       );
 
+      final previousConnection = _connection;
+      _connection = null;
+      await previousConnection?.close();
+
       _connection = await SmbConnect.connect(
         config,
         host,
@@ -74,18 +91,6 @@ class SMBService extends ChangeNotifier {
         },
       );
 
-      _host = host;
-      _savedUser = username;
-      _savedPass = password;
-      _savedDomain = domain;
-
-      // Persistence
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('smb_host', host);
-      await prefs.setString('smb_user', username);
-      await prefs.setString('smb_pass', password);
-      await prefs.setString('smb_domain', domain);
-
       LoggerService().log('[SMB] Connected successfully.');
       notifyListeners();
       return true;
@@ -94,7 +99,37 @@ class SMBService extends ChangeNotifier {
       _connection = null;
       notifyListeners();
       return false;
+    } finally {
+      _isConnecting = false;
+      notifyListeners();
     }
+  }
+
+  Future<bool> connectSaved() async {
+    if (!hasSavedConnection || isConnected || _isConnecting) {
+      return isConnected;
+    }
+
+    return connect(_host, _savedDomain, _savedUser, _savedPass);
+  }
+
+  Future<void> saveSettings({
+    required String host,
+    required String domain,
+    required String username,
+    required String password,
+  }) async {
+    _host = host;
+    _savedDomain = domain;
+    _savedUser = username;
+    _savedPass = password;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('smb_host', host);
+    await prefs.setString('smb_domain', domain);
+    await prefs.setString('smb_user', username);
+    await prefs.setString('smb_pass', password);
+    notifyListeners();
   }
 
   Future<List<SmbFile>> listShares() async {

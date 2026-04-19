@@ -22,6 +22,8 @@ class HomeScreen extends StatefulWidget {
 enum HomeSection { library, network, downloads }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const _homeSectionKey = 'home_section';
+
   List<String> _mediaPaths = [];
   bool _isSyncing = false;
   HomeSection _currentSection = HomeSection.library;
@@ -35,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadSmbFields();
+    _loadHomeSection();
     _syncMedia();
   }
 
@@ -52,6 +55,20 @@ class _HomeScreenState extends State<HomeScreen> {
     _smbDomainCtrl.text = SMBService().savedDomain;
     _smbUserCtrl.text = SMBService().savedUser;
     _smbPassCtrl.text = SMBService().savedPass;
+  }
+
+  Future<void> _loadHomeSection() async {
+    final prefs = await SharedPreferences.getInstance();
+    final index = prefs.getInt(_homeSectionKey) ?? _currentSection.index;
+    if (index < 0 || index >= HomeSection.values.length || !mounted) return;
+    setState(() => _currentSection = HomeSection.values[index]);
+  }
+
+  Future<void> _setSection(HomeSection section) async {
+    if (_currentSection == section) return;
+    setState(() => _currentSection = section);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_homeSectionKey, section.index);
   }
 
   Future<void> _syncMedia() async {
@@ -368,11 +385,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildContent() {
-    return switch (_currentSection) {
-      HomeSection.library => _buildLibrary(),
-      HomeSection.network => const SMBFileSystemViewer(),
-      HomeSection.downloads => const DownloadsView(),
-    };
+    return IndexedStack(
+      index: _currentSection.index,
+      children: [
+        _buildLibrary(),
+        const SMBFileSystemViewer(),
+        const DownloadsView(),
+      ],
+    );
   }
 
   Widget _buildLibrary() {
@@ -454,20 +474,19 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Library',
             icon: Icons.video_library_outlined,
             selected: _currentSection == HomeSection.library,
-            onTap: () => setState(() => _currentSection = HomeSection.library),
+            onTap: () => _setSection(HomeSection.library),
           ),
           _NavigationItem(
             label: 'Network',
             icon: Icons.folder_shared_outlined,
             selected: _currentSection == HomeSection.network,
-            onTap: () => setState(() => _currentSection = HomeSection.network),
+            onTap: () => _setSection(HomeSection.network),
           ),
           _NavigationItem(
             label: 'Downloads',
             icon: Icons.download_done_outlined,
             selected: _currentSection == HomeSection.downloads,
-            onTap: () =>
-                setState(() => _currentSection = HomeSection.downloads),
+            onTap: () => _setSection(HomeSection.downloads),
           ),
         ],
       ),
