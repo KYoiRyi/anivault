@@ -153,6 +153,16 @@ class SMBService extends ChangeNotifier {
     }
   }
 
+  Future<SmbFile?> fileInfo(String smbPath) async {
+    if (_connection == null) return null;
+    try {
+      return await _connection!.file(smbPath);
+    } catch (e) {
+      LoggerService().log('[SMB ERROR] Failed to read file info $smbPath: $e');
+      return null;
+    }
+  }
+
   SmbConnect? get connection => _connection;
 
   Future<void> disconnect() async {

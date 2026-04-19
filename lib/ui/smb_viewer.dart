@@ -264,7 +264,7 @@ class _DownloadStatusBar extends StatelessWidget {
       listenable: CacheManagerService(),
       builder: (context, _) {
         final tasks = CacheManagerService().activeTasks.values
-            .where((task) => !task.isCompleted)
+            .where((task) => !task.isCompleted && !task.hasFailed)
             .toList();
         if (tasks.isEmpty) return const SizedBox.shrink();
 
@@ -388,6 +388,11 @@ class _FileList extends StatelessWidget {
             Widget trailing;
             if (isDir) {
               trailing = const Icon(Icons.chevron_right_rounded);
+            } else if (task != null && task.hasFailed) {
+              trailing = const Icon(
+                Icons.error_outline_rounded,
+                color: Colors.redAccent,
+              );
             } else if (task != null && !task.isCompleted) {
               trailing = SizedBox(
                 width: 24,
@@ -437,6 +442,7 @@ class _FileList extends StatelessWidget {
 
   String _fileSubtitle(SmbFile file, CacheTask? task, bool isCached) {
     if (task != null && !task.isCompleted) {
+      if (task.hasFailed) return 'Download failed';
       return 'Downloading ${_formatBytes(task.downloadedBytes)} / ${_formatBytes(task.totalBytes)}';
     }
     if (isCached) return 'Downloaded - ${_formatBytes(file.size)}';

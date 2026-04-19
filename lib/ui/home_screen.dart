@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -460,35 +461,61 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBottomNavigation() {
     return Container(
-      height: 56,
-      margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-      padding: const EdgeInsets.all(4),
+      height: 66,
+      margin: const EdgeInsets.fromLTRB(18, 8, 18, 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        children: [
-          _NavigationItem(
-            label: 'Library',
-            icon: Icons.video_library_outlined,
-            selected: _currentSection == HomeSection.library,
-            onTap: () => _setSection(HomeSection.library),
-          ),
-          _NavigationItem(
-            label: 'Network',
-            icon: Icons.folder_shared_outlined,
-            selected: _currentSection == HomeSection.network,
-            onTap: () => _setSection(HomeSection.network),
-          ),
-          _NavigationItem(
-            label: 'Downloads',
-            icon: Icons.download_done_outlined,
-            selected: _currentSection == HomeSection.downloads,
-            onTap: () => _setSection(HomeSection.downloads),
+        borderRadius: BorderRadius.circular(33),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.34),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(33),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+          child: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(33),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.24),
+                  Colors.white.withValues(alpha: 0.08),
+                  Colors.black.withValues(alpha: 0.18),
+                ],
+              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+            ),
+            child: Row(
+              children: [
+                _NavigationItem(
+                  label: 'Library',
+                  icon: Icons.video_library_outlined,
+                  selected: _currentSection == HomeSection.library,
+                  onTap: () => _setSection(HomeSection.library),
+                ),
+                _NavigationItem(
+                  label: 'Network',
+                  icon: Icons.folder_shared_outlined,
+                  selected: _currentSection == HomeSection.network,
+                  onTap: () => _setSection(HomeSection.network),
+                ),
+                _NavigationItem(
+                  label: 'Downloads',
+                  icon: Icons.download_done_outlined,
+                  selected: _currentSection == HomeSection.downloads,
+                  onTap: () => _setSection(HomeSection.downloads),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -549,14 +576,26 @@ class _NavigationItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: InkWell(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(28),
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF242424) : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(28),
+            gradient: selected
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.34),
+                      Colors.white.withValues(alpha: 0.16),
+                    ],
+                  )
+                : null,
+            border: selected
+                ? Border.all(color: Colors.white.withValues(alpha: 0.24))
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -564,7 +603,7 @@ class _NavigationItem extends StatelessWidget {
               Icon(
                 icon,
                 size: 20,
-                color: selected ? Colors.white : Colors.white54,
+                color: selected ? Colors.white : Colors.white60,
               ),
               const SizedBox(width: 6),
               Flexible(

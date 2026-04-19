@@ -74,12 +74,13 @@ class _ActiveDownloadTile extends StatelessWidget {
     final progressLabel = task.totalBytes > 0
         ? '${(task.progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
         : 'Working';
+    final hasFailed = task.hasFailed;
 
     return _DownloadSurface(
       child: ListTile(
-        leading: const Icon(
-          Icons.downloading_rounded,
-          color: Colors.lightBlueAccent,
+        leading: Icon(
+          hasFailed ? Icons.error_outline_rounded : Icons.downloading_rounded,
+          color: hasFailed ? Colors.redAccent : Colors.lightBlueAccent,
         ),
         title: Text(
           task.fileName,
@@ -92,23 +93,33 @@ class _ActiveDownloadTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              LinearProgressIndicator(
-                value: task.totalBytes > 0 ? task.progress : null,
-                minHeight: 4,
-              ),
+              if (!hasFailed)
+                LinearProgressIndicator(
+                  value: task.totalBytes > 0 ? task.progress : null,
+                  minHeight: 4,
+                ),
               const SizedBox(height: 6),
               Text(
-                '${_formatBytes(task.downloadedBytes)} / ${_formatBytes(task.totalBytes)}  -  ${_formatBytes(task.speedBytesPerSecond.round())}/s',
+                hasFailed
+                    ? task.errorMessage ?? 'Download failed'
+                    : '${_formatBytes(task.downloadedBytes)} / ${_formatBytes(task.totalBytes)}  -  ${_formatBytes(task.speedBytesPerSecond.round())}/s',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+                style: TextStyle(
+                  color: hasFailed
+                      ? Colors.redAccent.withValues(alpha: 0.85)
+                      : Colors.white.withValues(alpha: 0.45),
+                ),
               ),
             ],
           ),
         ),
         trailing: Text(
-          progressLabel,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          hasFailed ? 'Failed' : progressLabel,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: hasFailed ? Colors.redAccent : null,
+          ),
         ),
       ),
     );

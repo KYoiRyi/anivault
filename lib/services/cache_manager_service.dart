@@ -14,11 +14,12 @@ class CacheTask {
   final String smbPath;
   final String localPath;
   final String fileName;
-  final int totalBytes;
   final DateTime startedAt;
 
+  int totalBytes;
   int downloadedBytes = 0;
   bool isCompleted = false;
+  String? errorMessage;
 
   CacheTask({
     required this.smbPath,
@@ -38,6 +39,8 @@ class CacheTask {
     if (elapsed <= 0) return 0;
     return downloadedBytes / elapsed;
   }
+
+  bool get hasFailed => errorMessage != null;
 }
 
 class CachedDownload {
@@ -147,21 +150,13 @@ class CacheManagerService extends ChangeNotifier {
   Future<void> cacheFile(SmbFile smbFile) async {
     if (_activeTasks.containsKey(smbFile.path)) return;
 
-    final existingPath = await getCachedPath(
-      smbFile.path,
-      expectedBytes: smbFile.size,
-    );
-    if (existingPath != null) {
-      LoggerService().log('[Download] Already downloaded: ${smbFile.name}');
-      return;
-    }
-
     final smbConn = SMBService().connection;
     if (smbConn == null) {
       LoggerService().log('[Download] SMB is not connected.');
       return;
     }
 
+    CacheTask? task;
     IOSink? writer;
     File? partFile;
 
@@ -170,29 +165,58 @@ class CacheManagerService extends ChangeNotifier {
       final vaultDir = Directory(p.join(docDir.path, 'SMBVault'));
       if (!await vaultDir.exists()) await vaultDir.create(recursive: true);
 
-      await _enforceLRU(incomingBytes: smbFile.size);
-
       final localFile = File(
         p.join(vaultDir.path, _safeCacheName(smbFile.path)),
       );
       partFile = File('${localFile.path}.part');
-      if (await partFile.exists()) {
-        await partFile.delete();
-      }
-
-      final task = CacheTask(
+      task = CacheTask(
         smbPath: smbFile.path,
         localPath: localFile.path,
         fileName: smbFile.name,
-        totalBytes: smbFile.size,
+        totalBytes: smbFile.size > 0 ? smbFile.size : 0,
         startedAt: DateTime.now(),
       );
       _activeTasks[smbFile.path] = task;
       notifyListeners();
 
+      final sourceFile = await SMBService().fileInfo(smbFile.path) ?? smbFile;
+      final totalBytes = sourceFile.size > 0 ? sourceFile.size : smbFile.size;
+      if (totalBytes <= 0) {
+        throw FileSystemException(
+          'Could not determine file size before download',
+          smbFile.path,
+        );
+      }
+      task.totalBytes = totalBytes;
+      notifyListeners();
+
+      final existingPath = await getCachedPath(
+        smbFile.path,
+        expectedBytes: totalBytes,
+      );
+      if (existingPath != null) {
+        task.downloadedBytes = totalBytes;
+        task.isCompleted = true;
+        LoggerService().log('[Download] Already downloaded: ${smbFile.name}');
+        notifyListeners();
+        Future.delayed(const Duration(seconds: 2), () {
+          if (_activeTasks[smbFile.path] == task) {
+            _activeTasks.remove(smbFile.path);
+            notifyListeners();
+          }
+        });
+        return;
+      }
+
+      await _enforceLRU(incomingBytes: totalBytes);
+
+      if (await partFile.exists()) {
+        await partFile.delete();
+      }
+
       LoggerService().log('[Download] Starting: ${smbFile.name}');
 
-      final reader = await smbConn.openRead(smbFile, 0, smbFile.size);
+      final reader = await smbConn.openRead(sourceFile, 0, totalBytes);
       writer = partFile.openWrite(mode: FileMode.writeOnly);
 
       var lastNotifyAt = DateTime.now();
@@ -230,7 +254,7 @@ class CacheManagerService extends ChangeNotifier {
       await writer.close();
       writer = null;
 
-      if (task.totalBytes > 0 && task.downloadedBytes != task.totalBytes) {
+      if (task.downloadedBytes != task.totalBytes) {
         throw FileSystemException(
           'Download ended at ${task.downloadedBytes} bytes, expected ${task.totalBytes} bytes',
           partFile.path,
@@ -249,7 +273,7 @@ class CacheManagerService extends ChangeNotifier {
           smbPath: smbFile.path,
           localPath: localFile.path,
           fileName: smbFile.name,
-          size: smbFile.size,
+          size: totalBytes,
           cachedAt: DateTime.now(),
         ),
       );
@@ -266,7 +290,17 @@ class CacheManagerService extends ChangeNotifier {
       });
     } catch (e) {
       LoggerService().log('[Download] Failed: ${smbFile.name} ($e)');
-      _activeTasks.remove(smbFile.path);
+      if (task != null) {
+        task.errorMessage = _shortError(e);
+      } else {
+        _activeTasks[smbFile.path] = CacheTask(
+          smbPath: smbFile.path,
+          localPath: '',
+          fileName: smbFile.name,
+          totalBytes: smbFile.size,
+          startedAt: DateTime.now(),
+        )..errorMessage = _shortError(e);
+      }
       try {
         await writer?.close();
       } catch (_) {}
@@ -276,6 +310,13 @@ class CacheManagerService extends ChangeNotifier {
         }
       } catch (_) {}
       notifyListeners();
+      Future.delayed(const Duration(seconds: 6), () {
+        final currentTask = _activeTasks[smbFile.path];
+        if (currentTask != null && currentTask.hasFailed) {
+          _activeTasks.remove(smbFile.path);
+          notifyListeners();
+        }
+      });
     }
   }
 
@@ -449,5 +490,10 @@ class CacheManagerService extends ChangeNotifier {
     try {
       await file.setLastAccessed(DateTime.now());
     } catch (_) {}
+  }
+
+  String _shortError(Object error) {
+    final text = error.toString();
+    return text.length <= 160 ? text : '${text.substring(0, 157)}...';
   }
 }
