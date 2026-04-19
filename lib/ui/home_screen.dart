@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,6 +26,7 @@ enum HomeSection { library, network, downloads }
 
 class _HomeScreenState extends State<HomeScreen> {
   static const _homeSectionKey = 'home_section';
+  static const _mediaPickerChannel = MethodChannel('anivault/media_picker');
 
   List<String> _mediaPaths = [];
   bool _isSyncing = false;
@@ -201,17 +203,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _importVideo() async {
     try {
-      const typeGroup = XTypeGroup(
-        label: 'Videos',
-        extensions: ['mkv', 'mp4', 'avi', 'mov', 'webm'],
-      );
-      final files = await openFiles(acceptedTypeGroups: [typeGroup]);
+      final importedPaths = Platform.isAndroid
+          ? await _importAndroidVideos()
+          : await _pickDesktopVideos();
 
-      if (files.isNotEmpty) {
+      if (importedPaths.isNotEmpty) {
         final prefs = await SharedPreferences.getInstance();
         setState(() {
-          for (final xfile in files) {
-            final path = xfile.path;
+          for (final path in importedPaths) {
             if (!_mediaPaths.contains(path)) {
               _mediaPaths.insert(0, path);
             }
@@ -224,6 +223,25 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     await _syncMedia();
+  }
+
+  Future<List<String>> _pickDesktopVideos() async {
+    const typeGroup = XTypeGroup(
+      label: 'Videos',
+      extensions: ['mkv', 'mp4', 'avi', 'mov', 'webm'],
+    );
+    final files = await openFiles(acceptedTypeGroups: [typeGroup]);
+    return files
+        .map((file) => file.path)
+        .where((path) => path.isNotEmpty)
+        .toList();
+  }
+
+  Future<List<String>> _importAndroidVideos() async {
+    final result = await _mediaPickerChannel.invokeListMethod<String>(
+      'pickVideos',
+    );
+    return result ?? const [];
   }
 
   Future<void> _refreshAnimeLibrary([List<String>? paths]) async {
@@ -523,6 +541,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBottomNavigation() {
+    final size = MediaQuery.sizeOf(context);
+    final aspectRatio = size.width / size.height;
+    final showLabels = size.width >= 430 || aspectRatio >= 0.58;
+
     return Container(
       height: 66,
       margin: const EdgeInsets.fromLTRB(18, 8, 18, 14),
@@ -555,25 +577,69 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
             ),
-            child: Row(
+            child: Stack(
               children: [
-                _NavigationItem(
-                  label: 'Library',
-                  icon: Icons.video_library_outlined,
-                  selected: _currentSection == HomeSection.library,
-                  onTap: () => _setSection(HomeSection.library),
+                AnimatedAlign(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  alignment: switch (_currentSection) {
+                    HomeSection.library => Alignment.centerLeft,
+                    HomeSection.network => Alignment.center,
+                    HomeSection.downloads => Alignment.centerRight,
+                  },
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / HomeSection.values.length,
+                    heightFactor: 1,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.34),
+                            Colors.white.withValues(alpha: 0.16),
+                          ],
+                        ),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.24),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            blurRadius: 18,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                _NavigationItem(
-                  label: 'Network',
-                  icon: Icons.folder_shared_outlined,
-                  selected: _currentSection == HomeSection.network,
-                  onTap: () => _setSection(HomeSection.network),
-                ),
-                _NavigationItem(
-                  label: 'Downloads',
-                  icon: Icons.download_done_outlined,
-                  selected: _currentSection == HomeSection.downloads,
-                  onTap: () => _setSection(HomeSection.downloads),
+                Row(
+                  children: [
+                    _NavigationItem(
+                      label: 'Library',
+                      icon: Icons.video_library_outlined,
+                      selected: _currentSection == HomeSection.library,
+                      showLabel: showLabels,
+                      onTap: () => _setSection(HomeSection.library),
+                    ),
+                    _NavigationItem(
+                      label: 'Network',
+                      icon: Icons.folder_shared_outlined,
+                      selected: _currentSection == HomeSection.network,
+                      showLabel: showLabels,
+                      onTap: () => _setSection(HomeSection.network),
+                    ),
+                    _NavigationItem(
+                      label: 'Downloads',
+                      icon: Icons.download_done_outlined,
+                      selected: _currentSection == HomeSection.downloads,
+                      showLabel: showLabels,
+                      onTap: () => _setSection(HomeSection.downloads),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -763,12 +829,14 @@ class _NavigationItem extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool selected;
+  final bool showLabel;
   final VoidCallback onTap;
 
   const _NavigationItem({
     required this.label,
     required this.icon,
     required this.selected,
+    required this.showLabel,
     required this.onTap,
   });
 
@@ -778,38 +846,11 @@ class _NavigationItem extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
+        child: Container(
           height: double.infinity,
           margin: const EdgeInsets.symmetric(horizontal: 2),
           padding: const EdgeInsets.symmetric(horizontal: 8),
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            gradient: selected
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.34),
-                      Colors.white.withValues(alpha: 0.16),
-                    ],
-                  )
-                : null,
-            border: selected
-                ? Border.all(color: Colors.white.withValues(alpha: 0.24))
-                : null,
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      blurRadius: 18,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -818,18 +859,20 @@ class _NavigationItem extends StatelessWidget {
                 size: 20,
                 color: selected ? Colors.white : Colors.white60,
               ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: selected ? Colors.white : Colors.white54,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              if (showLabel) ...[
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected ? Colors.white : Colors.white54,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
