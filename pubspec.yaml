@@ -43,6 +43,7 @@ dependencies:
   path: ^1.9.1
   smb_connect:
     path: third_party/smb_connect
+  xml: ^6.6.1
 
 dev_dependencies:
   flutter_test:

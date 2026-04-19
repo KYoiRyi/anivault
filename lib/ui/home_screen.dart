@@ -6,11 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/smb_service.dart';
+import 'package:anivault/ui/anime_series_screen.dart';
 import 'package:anivault/ui/downloads_view.dart';
-import 'package:anivault/ui/player_screen.dart';
 import 'package:anivault/ui/smb_viewer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -27,17 +28,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> _mediaPaths = [];
   bool _isSyncing = false;
+  bool _isScraping = false;
+  List<AnimeSeries> _animeSeries = [];
   HomeSection _currentSection = HomeSection.library;
 
   final _smbHostCtrl = TextEditingController();
   final _smbDomainCtrl = TextEditingController();
   final _smbUserCtrl = TextEditingController();
   final _smbPassCtrl = TextEditingController();
+  final _anidbClientCtrl = TextEditingController();
+  final _anidbClientVerCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadSmbFields();
+    _loadAniDbFields();
     _loadHomeSection();
     _syncMedia();
   }
@@ -48,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _smbDomainCtrl.dispose();
     _smbUserCtrl.dispose();
     _smbPassCtrl.dispose();
+    _anidbClientCtrl.dispose();
+    _anidbClientVerCtrl.dispose();
     super.dispose();
   }
 
@@ -56,6 +64,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _smbDomainCtrl.text = SMBService().savedDomain;
     _smbUserCtrl.text = SMBService().savedUser;
     _smbPassCtrl.text = SMBService().savedPass;
+  }
+
+  Future<void> _loadAniDbFields() async {
+    final prefs = await SharedPreferences.getInstance();
+    _anidbClientCtrl.text = prefs.getString('anidb_client') ?? '';
+    _anidbClientVerCtrl.text = '${prefs.getInt('anidb_clientver') ?? 1}';
   }
 
   Future<void> _loadHomeSection() async {
@@ -100,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() => _mediaPaths = mergedPaths);
       await prefs.setStringList('media_library', mergedPaths);
+      await _refreshAnimeLibrary(mergedPaths);
     } catch (e) {
       debugPrint('Error syncing media: $e');
     } finally {
@@ -211,10 +226,27 @@ class _HomeScreenState extends State<HomeScreen> {
     await _syncMedia();
   }
 
-  Future<void> _removeVideo(String path) async {
-    setState(() => _mediaPaths.remove(path));
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('media_library', _mediaPaths);
+  Future<void> _refreshAnimeLibrary([List<String>? paths]) async {
+    final sourcePaths = paths ?? _mediaPaths;
+    if (!mounted || sourcePaths.isEmpty) {
+      if (mounted) setState(() => _animeSeries = []);
+      return;
+    }
+
+    setState(() => _isScraping = true);
+    try {
+      final language =
+          Localizations.maybeLocaleOf(context)?.languageCode ??
+          Platform.localeName.split('_').first;
+      await AnimeLibraryService().refreshLibrary(
+        sourcePaths,
+        languageCode: language,
+      );
+      if (!mounted) return;
+      setState(() => _animeSeries = AnimeLibraryService().series);
+    } finally {
+      if (mounted) setState(() => _isScraping = false);
+    }
   }
 
   void _showLogsDialog() {
@@ -307,6 +339,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
+                  const Divider(),
+                  const Text(
+                    'AniDB API',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _anidbClientCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Client name',
+                      helperText:
+                          'Optional. Required only for cover/detail fetching.',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _anidbClientVerCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Client version',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.tonal(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString(
+                          'anidb_client',
+                          _anidbClientCtrl.text.trim(),
+                        );
+                        await prefs.setInt(
+                          'anidb_clientver',
+                          int.tryParse(_anidbClientVerCtrl.text.trim()) ?? 1,
+                        );
+                        if (context.mounted) Navigator.pop(context);
+                        await _refreshAnimeLibrary();
+                      },
+                      child: const Text('Save API settings'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -369,10 +443,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           if (_currentSection == HomeSection.library)
             _HeaderButton(
-              icon: _isSyncing ? null : Icons.add_rounded,
+              icon: _isSyncing || _isScraping ? null : Icons.add_rounded,
               tooltip: 'Import media',
-              onPressed: _isSyncing ? null : _importVideo,
-              child: _isSyncing
+              onPressed: _isSyncing || _isScraping ? null : _importVideo,
+              child: _isSyncing || _isScraping
                   ? const SizedBox(
                       width: 18,
                       height: 18,
@@ -410,50 +484,39 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-      itemCount: _mediaPaths.length,
-      itemBuilder: (context, index) {
-        final path = _mediaPaths[index];
-        final filename = File(path).uri.pathSegments.last;
+    if (_isScraping && _animeSeries.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF141414),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: ListTile(
-            leading: const Icon(
-              Icons.play_arrow_rounded,
-              color: Colors.white70,
-            ),
-            title: Text(
-              filename,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              path,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => _removeVideo(path),
-            ),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) =>
-                      PlayerScreen(videoPath: path, title: filename),
-                ),
-              );
-            },
-          ),
+    final series = _animeSeries;
+    if (series.isEmpty) {
+      return Center(
+        child: Text(
+          'Scraping media library...',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 220,
+        mainAxisExtent: 272,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+      ),
+      itemCount: series.length,
+      itemBuilder: (context, index) {
+        return _AnimeSeriesCard(
+          series: series[index],
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AnimeSeriesScreen(series: series[index]),
+              ),
+            );
+          },
         );
       },
     );
@@ -554,6 +617,143 @@ class _HeaderButton extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         icon: child ?? Icon(icon),
+      ),
+    );
+  }
+}
+
+class _AnimeSeriesCard extends StatelessWidget {
+  final AnimeSeries series;
+  final VoidCallback onTap;
+
+  const _AnimeSeriesCard({required this.series, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF141414),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(8),
+                ),
+                child: _SeriesCover(series: series),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          series.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            height: 1.16,
+                          ),
+                        ),
+                      ),
+                      if (series.isUnknown)
+                        Container(
+                          margin: const EdgeInsets.only(left: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orangeAccent.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Unknown',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.orangeAccent,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${series.episodes.length} episodes  -  ${series.fileCount} files',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.48),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SeriesCover extends StatelessWidget {
+  final AnimeSeries series;
+
+  const _SeriesCover({required this.series});
+
+  @override
+  Widget build(BuildContext context) {
+    final coverUrl = series.coverUrl;
+    if (coverUrl != null) {
+      return Image.network(
+        coverUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _CoverFallback(series: series);
+        },
+      );
+    }
+    return _CoverFallback(series: series);
+  }
+}
+
+class _CoverFallback extends StatelessWidget {
+  final AnimeSeries series;
+
+  const _CoverFallback({required this.series});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF202020), Color(0xFF101010)],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          series.isUnknown
+              ? Icons.help_outline_rounded
+              : Icons.movie_creation_outlined,
+          color: Colors.white54,
+          size: 42,
+        ),
       ),
     );
   }
