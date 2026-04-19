@@ -3,15 +3,17 @@ import 'package:media_kit/media_kit.dart';
 import 'package:anivault/ui/home_screen.dart';
 import 'package:anivault/services/shader_service.dart';
 import 'package:anivault/services/cache_manager_service.dart';
+import 'package:anivault/services/smb_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
-  
+
   // Extract shaders from assets to local filesystem for native hook support
   await ShaderService().initializeShaders();
   await CacheManagerService().initialize();
-  
+  await SMBService().init();
+
   runApp(const AniVaultApp());
 }
 

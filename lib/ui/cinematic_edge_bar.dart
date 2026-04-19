@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
-import 'dart:ui';
 
 class CinematicEdgeBar extends StatefulWidget {
   final Player player;
@@ -44,7 +43,9 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
             actualProgress = actualProgress.clamp(0.0, 1.0);
           }
 
-          final effectiveProgress = _isDragging ? _dragProgress : actualProgress;
+          final effectiveProgress = _isDragging
+              ? _dragProgress
+              : actualProgress;
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -59,12 +60,14 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                 },
                 onHorizontalDragEnd: (details) {
                   setState(() => _isDragging = false);
-                  final targetMillis = (_dragProgress * total.inMilliseconds).toInt();
+                  final targetMillis = (_dragProgress * total.inMilliseconds)
+                      .toInt();
                   widget.player.seek(Duration(milliseconds: targetMillis));
                 },
                 onTapDown: (details) {
                   _updateProgress(details.localPosition, constraints.maxWidth);
-                  final targetMillis = (_dragProgress * total.inMilliseconds).toInt();
+                  final targetMillis = (_dragProgress * total.inMilliseconds)
+                      .toInt();
                   widget.player.seek(Duration(milliseconds: targetMillis));
                 },
                 child: AnimatedContainer(
@@ -82,10 +85,12 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                         height: double.infinity,
                         color: Colors.black.withValues(alpha: 0.2),
                       ),
-                      
+
                       // Volumetric Light Strip (Progress)
                       AnimatedContainer(
-                        duration: _isDragging ? Duration.zero : const Duration(milliseconds: 150),
+                        duration: _isDragging
+                            ? Duration.zero
+                            : const Duration(milliseconds: 150),
                         curve: Curves.easeOutCubic,
                         width: constraints.maxWidth * effectiveProgress,
                         height: double.infinity,
@@ -102,11 +107,16 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                             BoxShadow(
                               color: Colors.white.withValues(alpha: 0.4),
                               blurRadius: 20,
-                              offset: const Offset(0, -10), // Glow upwards into the video!
+                              offset: const Offset(
+                                0,
+                                -10,
+                              ), // Glow upwards into the video!
                               spreadRadius: 2,
                             ),
                             BoxShadow(
-                              color: const Color(0xFF4A90E2).withValues(alpha: 0.3), // Cyan/Blueish tint
+                              color: const Color(
+                                0xFF4A90E2,
+                              ).withValues(alpha: 0.3), // Cyan/Blueish tint
                               blurRadius: 40,
                               offset: const Offset(0, -20),
                               spreadRadius: 5,

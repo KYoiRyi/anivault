@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
@@ -20,9 +19,7 @@ class PlayerScreen extends StatefulWidget {
 
 class _PlayerScreenState extends State<PlayerScreen> {
   late final Player player = Player(
-    configuration: const PlayerConfiguration(
-      vo: 'gpu-next',
-    ),
+    configuration: const PlayerConfiguration(vo: 'gpu-next'),
   );
   late final VideoController controller = VideoController(player);
   // Swapped to Anime4K: ArtCNN uses Compute Shaders incompatible with media_kit's vo=libmpv D3D11 layer.
@@ -32,7 +29,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _isAnime4KEnabled = true;
   String _currentModelKey = 'Balanced';
   bool _showHUD = false;
-  
+
   String _getDynamicShaderPath() {
     return ShaderService().getShaderPath(_currentModelKey) ?? '';
   }
@@ -43,13 +40,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
     player.stream.log.listen((event) {
       LoggerService().log('[MPV] [${event.level}]: ${event.text}');
     });
-    
+
     Future.microtask(() async {
       try {
         final nativePlayer = player.platform as NativePlayer;
         // MUST use 'auto-copy' so the hardware decoder transfers the CVPixelBuffer/d3d11 back to system RAM to allow Fragment Shaders to hook it!
-        await nativePlayer.setProperty('hwdec', _isAnime4KEnabled ? 'auto-copy' : 'auto');
-        await nativePlayer.setProperty('glsl-shaders', _isAnime4KEnabled ? _getDynamicShaderPath() : '');
+        await nativePlayer.setProperty(
+          'hwdec',
+          _isAnime4KEnabled ? 'auto-copy' : 'auto',
+        );
+        await nativePlayer.setProperty(
+          'glsl-shaders',
+          _isAnime4KEnabled ? _getDynamicShaderPath() : '',
+        );
 
         // Open provided video file
         await player.open(Media(widget.videoPath));
@@ -63,9 +66,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _applyAnime4KConfig() async {
     try {
       final nativePlayer = player.platform as NativePlayer;
-      await nativePlayer.setProperty('hwdec', _isAnime4KEnabled ? 'auto-copy' : 'auto');
-      await nativePlayer.setProperty('glsl-shaders', _isAnime4KEnabled ? _getDynamicShaderPath() : '');
-      
+      await nativePlayer.setProperty(
+        'hwdec',
+        _isAnime4KEnabled ? 'auto-copy' : 'auto',
+      );
+      await nativePlayer.setProperty(
+        'glsl-shaders',
+        _isAnime4KEnabled ? _getDynamicShaderPath() : '',
+      );
+
       // Force dirty frame redraw if video is paused
       if (!player.state.playing) {
         player.seek(player.state.position);
@@ -75,7 +84,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  void _showGlassmorphismSettings() {
+  void _showVideoSettings() {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -93,9 +102,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                   child: Container(
                     width: 440,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 32,
+                    ),
                     decoration: BoxDecoration(
-                      color: const Color(0x1A000000), // Hex 1A = 10% opacity black
+                      color: const Color(
+                        0x1A000000,
+                      ), // Hex 1A = 10% opacity black
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.15),
@@ -103,26 +117,43 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _currentModelKey == 'Extreme' && _isAnime4KEnabled 
-                              ? Colors.redAccent.withValues(alpha: 0.15) 
+                          color:
+                              _currentModelKey == 'Extreme' && _isAnime4KEnabled
+                              ? Colors.redAccent.withValues(alpha: 0.15)
                               : Colors.black12,
                           blurRadius: 40,
                           spreadRadius: 10,
-                        )
-                      ]
+                        ),
+                      ],
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Title
-                        const Text('NEURAL MATRIX', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                        const Text(
+                          'Video Enhancement',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 32),
                         // Master Toggle
                         SwitchListTile(
-                          title: const Text('Anime4K Core', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                          subtitle: const Text('Fragment-based Neural Sharpening'),
+                          title: const Text(
+                            'Anime4K upscaling',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Sharper playback for anime video',
+                          ),
                           value: _isAnime4KEnabled,
-                          activeColor: _currentModelKey == 'Extreme' ? Colors.redAccent : Theme.of(context).colorScheme.primary,
+                          activeThumbColor: _currentModelKey == 'Extreme'
+                              ? Colors.redAccent
+                              : Theme.of(context).colorScheme.primary,
                           secondary: const Icon(Icons.auto_awesome),
                           onChanged: (val) {
                             setDialogState(() => _isAnime4KEnabled = val);
@@ -130,30 +161,72 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             _applyAnime4KConfig();
                           },
                         ),
-                        // Matrix Segments
+                        // Quality presets
                         AnimatedOpacity(
                           duration: const Duration(milliseconds: 200),
                           opacity: _isAnime4KEnabled ? 1.0 : 0.3,
                           child: IgnorePointer(
                             ignoring: !_isAnime4KEnabled,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 24,
+                                horizontal: 8,
+                              ),
                               child: SegmentedButton<String>(
                                 showSelectedIcon: false,
                                 segments: const [
-                                  ButtonSegment(value: 'Speed', label: Text('S', style: TextStyle(fontWeight: FontWeight.bold))),
-                                  ButtonSegment(value: 'Balanced', label: Text('M', style: TextStyle(fontWeight: FontWeight.bold))),
-                                  ButtonSegment(value: 'Quality', label: Text('L', style: TextStyle(fontWeight: FontWeight.bold))),
-                                  ButtonSegment(value: 'Extreme', label: Text('VL', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  ButtonSegment(
+                                    value: 'Speed',
+                                    label: Text(
+                                      'Speed',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  ButtonSegment(
+                                    value: 'Balanced',
+                                    label: Text(
+                                      'Balanced',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  ButtonSegment(
+                                    value: 'Quality',
+                                    label: Text(
+                                      'Quality',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  ButtonSegment(
+                                    value: 'Extreme',
+                                    label: Text(
+                                      'Max',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                                 selected: {_currentModelKey},
                                 style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                                    if (states.contains(WidgetState.selected)) {
-                                      return _currentModelKey == 'Extreme' ? Colors.redAccent.shade700 : Theme.of(context).colorScheme.primary;
-                                    }
-                                    return Colors.transparent;
-                                  }),
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                        if (states.contains(
+                                          WidgetState.selected,
+                                        )) {
+                                          return _currentModelKey == 'Extreme'
+                                              ? Colors.redAccent.shade700
+                                              : Theme.of(
+                                                  context,
+                                                ).colorScheme.primary;
+                                        }
+                                        return Colors.transparent;
+                                      }),
                                 ),
                                 onSelectionChanged: (Set<String> newSelection) {
                                   setDialogState(() {
@@ -169,11 +242,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           ),
                         ),
                         // HUD Toggle
-                         SwitchListTile(
-                          title: const Text('Telemetry HUD', style: TextStyle(fontWeight: FontWeight.w500)),
-                          subtitle: const Text('Performance Radar'),
+                        SwitchListTile(
+                          title: const Text(
+                            'Performance overlay',
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          subtitle: const Text('Show playback stats'),
                           value: _showHUD,
-                          activeColor: Theme.of(context).colorScheme.primary,
+                          activeThumbColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
                           secondary: const Icon(Icons.memory_rounded),
                           onChanged: (val) {
                             setDialogState(() => _showHUD = val);
@@ -184,18 +262,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                   ),
                 );
-              }
+              },
             ),
           ),
         );
       },
       transitionBuilder: (context, anim1, anim2, child) {
         return Transform.scale(
-          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack).value,
-          child: Opacity(
-            opacity: anim1.value,
-            child: child,
-          ),
+          scale: CurvedAnimation(
+            parent: anim1,
+            curve: Curves.easeOutBack,
+          ).value,
+          child: Opacity(opacity: anim1.value, child: child),
         );
       },
     );
@@ -222,10 +300,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           // 1. mpv Video Texture Layer
           Transform.scale(
             scale: _scale,
-            child: Video(
-              controller: controller,
-              controls: NoVideoControls,
-            ),
+            child: Video(controller: controller, controls: NoVideoControls),
           ),
 
           // 2. Gesture Detector Layer
@@ -261,7 +336,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       children: [
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 24),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Text(
@@ -270,13 +349,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
-                            letterSpacing: 1.0,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  
+
                   // Center Right Floating Settings Pill
                   Align(
                     alignment: Alignment.centerRight,
@@ -287,23 +365,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: InkWell(
-                            onTap: _showGlassmorphismSettings,
+                            onTap: _showVideoSettings,
                             borderRadius: BorderRadius.circular(24),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 48,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.1),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
                                 borderRadius: BorderRadius.circular(24),
                               ),
-                              child: const Icon(Icons.layers_rounded, color: Colors.white70, size: 28),
+                              child: const Icon(
+                                Icons.layers_rounded,
+                                color: Colors.white70,
+                                size: 28,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                  
+
                   // Center Play/Pause Floating Island
                   Align(
                     alignment: Alignment.center,
@@ -314,12 +401,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         return FilledButton.tonal(
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.all(24),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.8),
                           ),
                           onPressed: () => player.playOrPause(),
                           child: Icon(
-                            isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                            isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
                             size: 64,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
@@ -333,13 +427,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    child: SafeArea(top: false, child: CinematicEdgeBar(player: player)),
+                    child: SafeArea(
+                      top: false,
+                      child: CinematicEdgeBar(player: player),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          
+
           // 5. Performance HUD (Independent from controls but over video)
           if (_showHUD)
             Positioned(

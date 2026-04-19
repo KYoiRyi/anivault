@@ -1,5 +1,6 @@
+// ignore_for_file: implementation_imports
+
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smb_connect/smb_connect.dart';
@@ -15,8 +16,7 @@ class SMBService extends ChangeNotifier {
 
   SmbConnect? _connection;
   String _host = '';
-  String _share = '';
-  
+
   String _savedUser = '';
   String _savedPass = '';
   String _savedDomain = '';
@@ -33,14 +33,23 @@ class SMBService extends ChangeNotifier {
     _host = prefs.getString('smb_host') ?? '';
     _savedUser = prefs.getString('smb_user') ?? '';
     _savedPass = prefs.getString('smb_pass') ?? '';
+    _savedDomain = prefs.getString('smb_domain') ?? '';
   }
-  
-  Future<bool> connect(String host, String domain, String username, String password) async {
+
+  Future<bool> connect(
+    String host,
+    String domain,
+    String username,
+    String password,
+  ) async {
     try {
-      LoggerService().log('[SMB] Connecting to $host (Injecting 1MB Buffers)...');
+      LoggerService().log('[SMB] Connecting to $host...');
 
       final creds = NtlmPasswordAuthenticator(
-        type: AuthenticationType.USER, domain: domain, username: username, password: password
+        type: AuthenticationType.USER,
+        domain: domain,
+        username: username,
+        password: password,
       );
 
       final config = BaseConfiguration(
@@ -48,8 +57,9 @@ class SMBService extends ChangeNotifier {
         username: username,
         password: password,
         domain: domain,
-        bufferCacheSize: 0xFFFF,  // 64K cache pools
-        maximumBufferSize: 1048576, // 1MB Maximum throughput
+        bufferCacheSize: 32,
+        maximumBufferSize: 1048576,
+        transactionBufferSize: 1048576,
         receiveBufferSize: 1048576,
         sendBufferSize: 1048576,
       );
@@ -61,7 +71,7 @@ class SMBService extends ChangeNotifier {
           LoggerService().log('[SMB] Connection dropped unexpectedly.');
           _connection = null;
           notifyListeners();
-        }
+        },
       );
 
       _host = host;
@@ -74,8 +84,9 @@ class SMBService extends ChangeNotifier {
       await prefs.setString('smb_host', host);
       await prefs.setString('smb_user', username);
       await prefs.setString('smb_pass', password);
+      await prefs.setString('smb_domain', domain);
 
-      LoggerService().log('[SMB] Connected successfully (High Throughput Tunnel Active).');
+      LoggerService().log('[SMB] Connected successfully.');
       notifyListeners();
       return true;
     } catch (e) {
@@ -106,7 +117,7 @@ class SMBService extends ChangeNotifier {
       return [];
     }
   }
-  
+
   SmbConnect? get connection => _connection;
 
   Future<void> disconnect() async {

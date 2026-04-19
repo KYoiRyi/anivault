@@ -15,7 +15,7 @@ class ShaderService {
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final shaderDir = Directory(p.join(appDir.path, 'shaders'));
-      
+
       if (!await shaderDir.exists()) {
         await shaderDir.create(recursive: true);
       }
@@ -30,13 +30,18 @@ class ShaderService {
       for (var model in models) {
         final destFile = File(p.join(shaderDir.path, model));
         if (!await destFile.exists()) {
-          LoggerService().log('Sys: Unpacking shader $model from asset bundle...');
+          LoggerService().log('Shader: preparing $model...');
           final byteData = await rootBundle.load('assets/shaders/$model');
-          await destFile.writeAsBytes(byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+          await destFile.writeAsBytes(
+            byteData.buffer.asUint8List(
+              byteData.offsetInBytes,
+              byteData.lengthInBytes,
+            ),
+          );
         } else {
-          LoggerService().log('Sys: Shader $model mapped natively at ${destFile.path}');
+          LoggerService().log('Shader: ready at ${destFile.path}');
         }
-        
+
         switch (model) {
           case 'Anime4K_Restore_CNN_S.glsl':
             _shaderPaths['Speed'] = destFile.path;
@@ -52,7 +57,7 @@ class ShaderService {
             break;
         }
       }
-      LoggerService().log('Sys: Shader Neural Matrix initialized successfully.');
+      LoggerService().log('Shader: initialized successfully.');
     } catch (e) {
       LoggerService().log('ERROR: Failed to unpack shaders: $e');
     }
