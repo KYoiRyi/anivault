@@ -7,3 +7,5 @@ native/**/*.a
 native/**/*.7z
 native/**/*.mkv
 native/**/*.mp4
+/AniVault-android-release.apk
+/AniVault-windows-release/

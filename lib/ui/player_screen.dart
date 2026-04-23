@@ -6,6 +6,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:anivault/ui/cinematic_edge_bar.dart';
 import 'package:anivault/ui/performance_hud.dart';
 import 'package:anivault/services/shader_service.dart';
+import 'package:anivault/services/ffi_engine.dart';
 import 'package:anivault/services/logger_service.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -27,7 +28,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   // Anime4K uses standard fragment shaders, perfectly compatible with our SuperSampling frame buffer trick!
   bool _showControls = true;
   double _scale = 1.0;
-  bool _isAnime4KEnabled = true;
+  bool _isEnhancementEnabled = true;
+  String _currentEngine = 'Anime4K';
   String _currentModelKey = 'Balanced';
   bool _showHUD = false;
 
@@ -49,11 +51,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
         // MUST use 'auto-copy' so the hardware decoder transfers the CVPixelBuffer/d3d11 back to system RAM to allow Fragment Shaders to hook it!
         await nativePlayer.setProperty(
           'hwdec',
-          _isAnime4KEnabled ? 'auto-copy' : 'auto',
+          _isEnhancementEnabled ? 'auto-copy' : 'auto',
         );
         await nativePlayer.setProperty(
           'glsl-shaders',
-          _isAnime4KEnabled ? _getDynamicShaderPath() : '',
+          _isEnhancementEnabled && _currentEngine == 'Anime4K' ? _getDynamicShaderPath() : '',
         );
 
         // Open provided video file
@@ -89,24 +91,47 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  Future<void> _applyAnime4KConfig() async {
+  Future<void> _applyEnhancementConfig() async {
     try {
       final nativePlayer = player.platform as NativePlayer;
-      await nativePlayer.setProperty(
-        'hwdec',
-        _isAnime4KEnabled ? 'auto-copy' : 'auto',
-      );
-      await nativePlayer.setProperty(
-        'glsl-shaders',
-        _isAnime4KEnabled ? _getDynamicShaderPath() : '',
-      );
+
+      if (_currentEngine == 'Anime4K') {
+        await nativePlayer.setProperty(
+          'hwdec',
+          _isEnhancementEnabled ? 'auto-copy' : 'auto',
+        );
+        await nativePlayer.setProperty(
+          'glsl-shaders',
+          _isEnhancementEnabled ? _getDynamicShaderPath() : '',
+        );
+        // Clear native VF intercepts if they were set
+        await nativePlayer.setProperty('vf', '');
+      } else if (_currentEngine == 'ArtCNN') {
+        await nativePlayer.setProperty('glsl-shaders', '');
+        
+        if (_isEnhancementEnabled) {
+          final artCnnModelPath = ShaderService().artCnnPath;
+          await nativePlayer.setProperty('hwdec', 'auto-copy');
+
+          // Initialize ONNX CoreML/DirectML Session in Native Rust Core concurrently
+          FFIEngine().initializeArtCNN(artCnnModelPath);
+
+          // Signal the Rust anivault_core plugin to intercept and run ONNX Runtime logic
+          await nativePlayer.setProperty('script-opts', 'artcnn-model=$artCnnModelPath');
+          await nativePlayer.setProperty('vf', 'add=@artcnn_onnx:format=fmt=rgb24');
+        } else {
+          await nativePlayer.setProperty('hwdec', 'auto');
+          await nativePlayer.setProperty('vf', '');
+          await nativePlayer.setProperty('script-opts', 'artcnn-model=');
+        }
+      }
 
       // Force dirty frame redraw if video is paused
       if (!player.state.playing) {
         player.seek(player.state.position);
       }
     } catch (e) {
-      debugPrint('Error toggling Anime4K: $e');
+      debugPrint('Error toggling enhancement: $e');
     }
   }
 
@@ -144,7 +169,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       boxShadow: [
                         BoxShadow(
                           color:
-                              _currentModelKey == 'Extreme' && _isAnime4KEnabled
+                              _currentModelKey == 'Extreme' && _isEnhancementEnabled
                               ? Colors.redAccent.withValues(alpha: 0.15)
                               : Colors.black12,
                           blurRadius: 40,
@@ -167,32 +192,69 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         // Master Toggle
                         SwitchListTile(
                           title: const Text(
-                            'Anime4K upscaling',
+                            'AI Video Enhancement',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 16,
                             ),
                           ),
                           subtitle: const Text(
-                            'Sharper playback for anime video',
+                            'AI Neural Network Upscaling Engine',
                           ),
-                          value: _isAnime4KEnabled,
+                          value: _isEnhancementEnabled,
                           activeThumbColor: _currentModelKey == 'Extreme'
                               ? Colors.redAccent
                               : Theme.of(context).colorScheme.primary,
                           secondary: const Icon(Icons.auto_awesome),
                           onChanged: (val) {
-                            setDialogState(() => _isAnime4KEnabled = val);
-                            setState(() => _isAnime4KEnabled = val);
-                            _applyAnime4KConfig();
+                            setDialogState(() => _isEnhancementEnabled = val);
+                            setState(() => _isEnhancementEnabled = val);
+                            _applyEnhancementConfig();
                           },
                         ),
+                        
+                        // Engine Selection Toggle
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: _isEnhancementEnabled ? 1.0 : 0.3,
+                          child: IgnorePointer(
+                            ignoring: !_isEnhancementEnabled,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 16,
+                              ),
+                              child: SegmentedButton<String>(
+                                showSelectedIcon: true,
+                                segments: const [
+                                  ButtonSegment(
+                                    value: 'Anime4K',
+                                    label: Text('Anime4K', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                    icon: Icon(Icons.bolt_rounded, size: 16),
+                                  ),
+                                  ButtonSegment(
+                                    value: 'ArtCNN',
+                                    label: Text('ArtCNN', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                    icon: Icon(Icons.memory_rounded, size: 16),
+                                  ),
+                                ],
+                                selected: {_currentEngine},
+                                onSelectionChanged: (Set<String> newSelection) {
+                                  setDialogState(() => _currentEngine = newSelection.first);
+                                  setState(() => _currentEngine = newSelection.first);
+                                  _applyEnhancementConfig();
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+
                         // Quality presets
                         AnimatedOpacity(
                           duration: const Duration(milliseconds: 200),
-                          opacity: _isAnime4KEnabled ? 1.0 : 0.3,
+                          opacity: _isEnhancementEnabled && _currentEngine == 'Anime4K' ? 1.0 : 0.3,
                           child: IgnorePointer(
-                            ignoring: !_isAnime4KEnabled,
+                            ignoring: !_isEnhancementEnabled || _currentEngine != 'Anime4K',
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 24,
@@ -261,7 +323,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                   setState(() {
                                     _currentModelKey = newSelection.first;
                                   });
-                                  _applyAnime4KConfig();
+                                  _applyEnhancementConfig();
                                 },
                               ),
                             ),

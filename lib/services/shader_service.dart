@@ -10,6 +10,7 @@ class ShaderService {
   ShaderService._internal();
 
   final Map<String, String> _shaderPaths = {};
+  String _artCnnPath = '';
 
   Future<void> initializeShaders() async {
     try {
@@ -25,6 +26,7 @@ class ShaderService {
         'Anime4K_Restore_CNN_M.glsl',
         'Anime4K_Restore_CNN_L.glsl',
         'Anime4K_Restore_CNN_VL.glsl',
+        'ArtCNN_C4F32.onnx',
       ];
 
       for (var model in models) {
@@ -55,13 +57,17 @@ class ShaderService {
           case 'Anime4K_Restore_CNN_VL.glsl':
             _shaderPaths['Extreme'] = destFile.path;
             break;
+          case 'ArtCNN_C4F32.onnx':
+            _artCnnPath = destFile.path;
+            break;
         }
       }
-      LoggerService().log('Shader: initialized successfully.');
+      LoggerService().log('Shader & ML Models: initialized successfully.');
     } catch (e) {
       LoggerService().log('ERROR: Failed to unpack shaders: $e');
     }
   }
 
   String? getShaderPath(String key) => _shaderPaths[key];
+  String get artCnnPath => _artCnnPath;
 }
