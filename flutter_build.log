@@ -1,0 +1,42 @@
+Resolving dependencies...
+Downloading packages...
+  hooks 1.0.2 (1.0.3 available)
+  meta 1.17.0 (1.18.2 available)
+  native_toolchain_c 0.17.6 (0.18.0 available)
+  package_info_plus 10.0.0 (10.1.0 available)
+  package_info_plus_platform_interface 4.0.0 (4.1.0 available)
+  pointycastle 3.9.1 (4.0.0 available)
+  synchronized 3.4.0 (3.4.0+1 available)
+  test_api 0.7.10 (0.7.11 available)
+  vector_math 2.2.0 (2.3.0 available)
+  win32 6.0.1 (6.1.0 available)
+Got dependencies!
+10 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Warning: Building for device with codesigning disabled. You will have to manually codesign before deploying to device.
+Building com.anivault.anivault for device (ios-release)...
+Running pod install...                                           1,273ms
+Running Xcode build...                                          
+Xcode build done.                                           30.3s
+Failed to build iOS app
+════════════════════════════════════════════════════════════════════════════════
+Building a deployable iOS app requires a selected Development Team with a 
+Provisioning Profile. Please ensure that a Development Team is selected by:
+  1- Open the Flutter project's Xcode target with
+       open ios/Runner.xcworkspace
+  2- Select the 'Runner' project in the navigator then the 'Runner' target
+     in the project settings
+  3- Make sure a 'Development Team' is selected under Signing & Capabilities > Team. 
+     You may need to:
+         - Log in with your Apple ID in Xcode first
+         - Ensure you have a valid unique Bundle ID
+         - Register your device with your Apple Developer Account
+         - Let Xcode automatically provision a profile for your app
+  4- Build or run your project again
+
+For more information, please visit:
+  https://flutter.dev/to/ios-development-team
+
+Or run on an iOS simulator without code signing
+════════════════════════════════════════════════════════════════════════════════
+Encountered error while building for device.
