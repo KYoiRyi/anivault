@@ -14,4 +14,4 @@ path = "src/main.rs"
 [dependencies]
 libmpv = "2.0.1"
 libmpv-sys = "3.1.0"
-ort = { version = "2.0.0-rc.12", features = ["coreml", "directml"] }
+ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "ndarray", "tracing", "coreml", "directml", "copy-dylibs", "load-dynamic", "api-24"] }
