@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
@@ -23,7 +24,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   late final Player player = Player(
     configuration: const PlayerConfiguration(vo: 'gpu-next'),
   );
-  late final VideoController controller = VideoController(player);
+  late VideoController controller;
   // Swapped to Anime4K: ArtCNN uses Compute Shaders incompatible with media_kit's vo=libmpv D3D11 layer.
   // Anime4K uses standard fragment shaders, perfectly compatible with our SuperSampling frame buffer trick!
   bool _showControls = true;
@@ -31,16 +32,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _isEnhancementEnabled = true;
   String _currentEngine = 'Anime4K';
   String _currentModelKey = 'Balanced';
+  bool _isHwAccelerated = true;
   bool _showHUD = false;
 
   String _getDynamicShaderPath() {
     return ShaderService().getShaderPath(_currentModelKey) ?? '';
   }
-
-  @override
   void initState() {
     super.initState();
     _enterFullscreen();
+    controller = VideoController(player); // Default creates HW accelerated controller
+    _isHwAccelerated = true;
     player.stream.log.listen((event) {
       LoggerService().log('[MPV] [${event.level}]: ${event.text}');
     });
@@ -48,6 +50,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     Future.microtask(() async {
       try {
         final nativePlayer = player.platform as NativePlayer;
+        
+        // --- Windows Native Hang Prevention ---
+        // Disable youtube-dl hook which causes "ytdl_hook: scraping" to block endlessly on some SMB streams.
+        await nativePlayer.setProperty('ytdl', 'no');
+        // Impose a strict native network timeout to gracefully fail rather than deadlocking the Windows C++ loop.
+        await nativePlayer.setProperty('network-timeout', '10');
+
         // MUST use 'auto-copy' so the hardware decoder transfers the CVPixelBuffer/d3d11 back to system RAM to allow Fragment Shaders to hook it!
         await nativePlayer.setProperty(
           'hwdec',
@@ -58,9 +67,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
           _isEnhancementEnabled && _currentEngine == 'Anime4K' ? _getDynamicShaderPath() : '',
         );
 
-        // Open provided video file
-        await player.open(Media(widget.videoPath));
-        player.play();
+        // Open provided video file with Dart UI timeout feedback
+        try {
+          await player.open(Media(widget.videoPath)).timeout(
+            const Duration(seconds: 12),
+          );
+          player.play();
+        } on TimeoutException {
+          LoggerService().log('[Player Error] Timed out waiting for media info.');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to load video: Network timed out.')),
+            );
+            Navigator.of(context).pop();
+          }
+        }
       } catch (e) {
         debugPrint('Media load error: $e');
       }
@@ -96,6 +117,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
       final nativePlayer = player.platform as NativePlayer;
 
       if (_currentEngine == 'Anime4K') {
+        // Disable ArtCNN native C++ hook globally
+        FFIEngine().setPipelineHookEnabled(false);
+        
+        // Ensure Hardware Acceleration is enabled for Native GLSL GPU-Next
+        if (!_isHwAccelerated) {
+          controller = VideoController(player, configuration: const VideoControllerConfiguration(enableHardwareAcceleration: true));
+          _isHwAccelerated = true;
+        }
+        
         await nativePlayer.setProperty(
           'hwdec',
           _isEnhancementEnabled ? 'auto-copy' : 'auto',
@@ -104,25 +134,31 @@ class _PlayerScreenState extends State<PlayerScreen> {
           'glsl-shaders',
           _isEnhancementEnabled ? _getDynamicShaderPath() : '',
         );
-        // Clear native VF intercepts if they were set
-        await nativePlayer.setProperty('vf', '');
       } else if (_currentEngine == 'ArtCNN') {
         await nativePlayer.setProperty('glsl-shaders', '');
         
         if (_isEnhancementEnabled) {
           final artCnnModelPath = ShaderService().artCnnPath;
-          await nativePlayer.setProperty('hwdec', 'auto-copy');
+          
+          // Recreate VideoController and FORCE Software rendering to allow Memory interop for the C++ Native Hook!
+          if (_isHwAccelerated) {
+            controller = VideoController(player, configuration: const VideoControllerConfiguration(enableHardwareAcceleration: false));
+            _isHwAccelerated = false;
+          }
 
           // Initialize ONNX CoreML/DirectML Session in Native Rust Core concurrently
           FFIEngine().initializeArtCNN(artCnnModelPath);
 
-          // Signal the Rust anivault_core plugin to intercept and run ONNX Runtime logic
-          await nativePlayer.setProperty('script-opts', 'artcnn-model=$artCnnModelPath');
-          await nativePlayer.setProperty('vf', 'add=@artcnn_onnx:format=fmt=rgb24');
+          // Enable C++ pipeline hook in media_kit_video
+          FFIEngine().setPipelineHookEnabled(true);
         } else {
+          FFIEngine().setPipelineHookEnabled(false);
+          // Restore HW acceleration if enhancement is fully turned off
+          if (!_isHwAccelerated) {
+            controller = VideoController(player, configuration: const VideoControllerConfiguration(enableHardwareAcceleration: true));
+            _isHwAccelerated = true;
+          }
           await nativePlayer.setProperty('hwdec', 'auto');
-          await nativePlayer.setProperty('vf', '');
-          await nativePlayer.setProperty('script-opts', 'artcnn-model=');
         }
       }
 

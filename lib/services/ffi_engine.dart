@@ -20,6 +20,9 @@ typedef ArtCnnProcessFrameDart = int Function(
   int height,
 );
 
+typedef MediaKitSetArtCnnC = ffi.Void Function(ffi.Bool);
+typedef MediaKitSetArtCnnDart = void Function(bool);
+
 class FFIEngine {
   static final FFIEngine _instance = FFIEngine._internal();
   factory FFIEngine() => _instance;
@@ -27,6 +30,7 @@ class FFIEngine {
   late final ffi.DynamicLibrary _lib;
   late final ArtCnnInitDart _initModel;
   late final ArtCnnProcessFrameDart _processFrame;
+  MediaKitSetArtCnnDart? _setMediaKitArtCnnFlag;
   bool _isLoaded = false;
 
   FFIEngine._internal() {
@@ -37,6 +41,15 @@ class FFIEngine {
     try {
       if (Platform.isWindows) {
         _lib = ffi.DynamicLibrary.open('anivault_core.dll');
+        try {
+          final mkLib = ffi.DynamicLibrary.open('media_kit_video_plugin.dll');
+          _setMediaKitArtCnnFlag = mkLib
+              .lookup<ffi.NativeFunction<MediaKitSetArtCnnC>>(
+                  'media_kit_video_set_artcnn_enabled')
+              .asFunction();
+        } catch (e) {
+          LoggerService().log('[FFI] media_kit C++ hook missing or not compiled yet.');
+        }
       } else if (Platform.isIOS || Platform.isMacOS) {
         _lib = ffi.DynamicLibrary.process(); // iOS statically links Rust archives
       } else if (Platform.isAndroid || Platform.isLinux) {
@@ -56,6 +69,13 @@ class FFIEngine {
       LoggerService().log('[FFI] anivault_core successfully linked!');
     } catch (e) {
       LoggerService().log('[FFI Error] Failed to load anivault_core: $e');
+    }
+  }
+
+  void setPipelineHookEnabled(bool enabled) {
+    if (_setMediaKitArtCnnFlag != null) {
+      _setMediaKitArtCnnFlag!(enabled);
+      LoggerService().log('[FFI] Set media_kit C++ ArtCNN flag to: $enabled');
     }
   }
 
