@@ -7,9 +7,6 @@ edition = "2021"
 name = "anivault_core"
 crate-type = ["cdylib", "rlib", "staticlib"]
 
-[[bin]]
-name = "anivault_core_bin"
-path = "src/main.rs"
 
 [dependencies]
 libmpv = "2.0.1"
