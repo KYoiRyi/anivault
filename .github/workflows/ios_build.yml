@@ -25,6 +25,19 @@ jobs:
       - name: Fetch dependencies
         run: flutter pub get
         
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+          
+      - name: Build anivault_core for iOS (Compile from source)
+        env:
+          ORT_STRATEGY: compile
+        run: |
+          cd native/anivault_core
+          cargo build --target aarch64-apple-ios --release
+          cd ../..
+
       - name: Setup CocoaPods
         run: |
           cd ios
@@ -34,7 +47,7 @@ jobs:
         run: |
           flutter build ios --release --no-codesign > flutter_build.log 2>&1 || true
           cd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > ../xcodebuild.log 2>&1 || true
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" OTHER_LDFLAGS="-force_load $(pwd)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -framework CoreML" > ../xcodebuild.log 2>&1 || true
           cd ..
           if [ ! -d "build/ios/iphoneos/Runner.app" ]; then
             echo "Build failed!"
