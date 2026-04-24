@@ -44,6 +44,7 @@ dependencies:
   smb_connect:
     path: third_party/smb_connect
   xml: ^6.6.1
+  ffi: ^2.2.0
 
 dev_dependencies:
   flutter_test:
