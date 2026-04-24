@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "anivault_core"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "rlib", "staticlib"]
 
 [[bin]]
 name = "anivault_core_bin"
@@ -14,4 +14,4 @@ path = "src/main.rs"
 [dependencies]
 libmpv = "2.0.1"
 libmpv-sys = "3.1.0"
-ort = "2.0.0-rc.12"
+ort = { version = "2.0.0-rc.12", features = ["coreml", "directml"] }

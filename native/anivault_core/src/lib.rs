@@ -14,6 +14,11 @@ impl ArtCnnEngine {
             .map_err(|e| e.to_string())?
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(|e| e.to_string())?
+            .with_execution_providers([
+                ort::execution_providers::CoreMLExecutionProvider::default().with_subgraphs(true).build(),
+                ort::execution_providers::DirectMLExecutionProvider::default().build(),
+            ])
+            .map_err(|e| e.to_string())?
             .commit_from_file(model_path)
             .map_err(|e| e.to_string())?;
 
