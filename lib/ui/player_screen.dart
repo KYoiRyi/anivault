@@ -38,6 +38,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   String _getDynamicShaderPath() {
     return ShaderService().getShaderPath(_currentModelKey) ?? '';
   }
+
+  @override
   void initState() {
     super.initState();
     _enterFullscreen();
