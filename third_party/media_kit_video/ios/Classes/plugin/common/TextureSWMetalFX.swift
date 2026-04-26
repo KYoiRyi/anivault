@@ -28,10 +28,7 @@ public class TextureSWMetalFX: NSObject, FlutterTexture, ResizableTextureProtoco
     skipCheckArgs: true
   )
   private let scale: Double
-  #if canImport(MetalFX)
-    @available(iOS 16.0, macOS 13.0, *)
-    private lazy var processor = MetalFXSpatialScalerProcessor()
-  #endif
+  private var processorStorage: Any?
 
   init(
     handle: OpaquePointer,
@@ -43,6 +40,12 @@ public class TextureSWMetalFX: NSObject, FlutterTexture, ResizableTextureProtoco
     self.updateCallback = updateCallback
 
     super.init()
+
+    #if canImport(MetalFX)
+      if #available(iOS 16.0, macOS 13.0, *) {
+        processorStorage = MetalFXSpatialScalerProcessor()
+      }
+    #endif
 
     DispatchQueue.main.async {
       self.initMPV()
@@ -170,7 +173,7 @@ public class TextureSWMetalFX: NSObject, FlutterTexture, ResizableTextureProtoco
 
     #if canImport(MetalFX)
       if #available(iOS 16.0, macOS 13.0, *) {
-        processor?.upscale(
+        (processorStorage as? MetalFXSpatialScalerProcessor)?.upscale(
           inputPixelBuffer: textureContext!.inputPixelBuffer,
           outputPixelBuffer: textureContext!.outputPixelBuffer
         )
