@@ -16,9 +16,9 @@ Got dependencies!
 Try `flutter pub outdated` for more information.
 Warning: Building for device with codesigning disabled. You will have to manually codesign before deploying to device.
 Building com.anivault.anivault for device (ios-release)...
-Running pod install...                                           1,094ms
+Running pod install...                                           1,070ms
 Running Xcode build...                                          
-Xcode build done.                                           11.2s
+Xcode build done.                                           10.9s
 Failed to build iOS app
 Swift Compiler Error (Xcode): Stored properties cannot be marked potentially unavailable with '@available'
 /Users/runner/work/anivault/anivault/third_party/media_kit_video/ios/Classes/plugin/common/TextureSWMetalFX.swift:31:5
