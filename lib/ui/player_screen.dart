@@ -37,6 +37,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _useMetalFX = false;
   MetalFXPreset _metalFXPreset = MetalFXPreset.balanced;
   bool _isReconfiguring = false;
+  String? _loadError;
 
   bool get _supportsMetalFX => Platform.isIOS || Platform.isMacOS;
 
@@ -71,6 +72,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final previousPlayer = _player;
     final previousSubscription = _logSubscription;
 
+    if (mounted) {
+      setState(() {
+        _loadError = null;
+      });
+    } else {
+      _loadError = null;
+    }
+
     final nextPlayer = Player(
       configuration: const PlayerConfiguration(vo: 'gpu-next'),
     );
@@ -99,7 +108,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     try {
       await _applyVideoConfig(nextPlayer);
-      await nextPlayer.open(Media(widget.videoPath));
+      await nextPlayer
+          .open(Media(widget.videoPath))
+          .timeout(const Duration(seconds: 20));
       if (resumePosition != null && resumePosition > Duration.zero) {
         await nextPlayer.seek(resumePosition);
       }
@@ -109,9 +120,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } catch (e) {
       LoggerService().log('[Player ERROR] Failed to initialize playback: $e');
       debugPrint('Media load error: $e');
+      if (mounted) {
+        setState(() {
+          _loadError = e.toString();
+        });
+      } else {
+        _loadError = e.toString();
+      }
     } finally {
-      await previousSubscription?.cancel();
-      await previousPlayer?.dispose();
+      unawaited(previousSubscription?.cancel());
+      unawaited(previousPlayer?.dispose());
     }
   }
 
@@ -138,13 +156,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Future<void> _reconfigurePlayback() async {
     if (_player == null || _isReconfiguring) return;
-    _isReconfiguring = true;
+    setState(() => _isReconfiguring = true);
     final position = _activePlayer.state.position;
     final wasPlaying = _activePlayer.state.playing;
     try {
       await _initializePlayback(resumePosition: position, autoplay: wasPlaying);
     } finally {
-      _isReconfiguring = false;
+      if (mounted) {
+        setState(() => _isReconfiguring = false);
+      } else {
+        _isReconfiguring = false;
+      }
     }
   }
 
@@ -502,7 +524,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
         fit: StackFit.expand,
         children: [
           if (player == null || controller == null)
-            const Center(child: CircularProgressIndicator())
+            Center(
+              child: _loadError == null
+                  ? const CircularProgressIndicator()
+                  : _PlayerError(
+                      message: _loadError!,
+                      onRetry: () => _initializePlayback(autoplay: true),
+                    ),
+            )
           else
             Transform.scale(
               scale: _scale,
@@ -652,6 +681,44 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlayerError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _PlayerError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Colors.redAccent,
+            size: 40,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Playback failed to initialize.',
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.65)),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );
