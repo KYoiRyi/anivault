@@ -1,12 +1,18 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+
+import 'package:anivault/services/logger_service.dart';
+import 'package:anivault/services/shader_service.dart';
 import 'package:anivault/ui/cinematic_edge_bar.dart';
 import 'package:anivault/ui/performance_hud.dart';
-import 'package:anivault/services/shader_service.dart';
-import 'package:anivault/services/logger_service.dart';
+
+enum MetalFXPreset { quality, balanced, performance }
 
 class PlayerScreen extends StatefulWidget {
   final String videoPath;
@@ -19,50 +25,127 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
-  late final Player player = Player(
-    configuration: const PlayerConfiguration(vo: 'gpu-next'),
-  );
-  late final VideoController controller = VideoController(player);
-  // Swapped to Anime4K: ArtCNN uses Compute Shaders incompatible with media_kit's vo=libmpv D3D11 layer.
-  // Anime4K uses standard fragment shaders, perfectly compatible with our SuperSampling frame buffer trick!
+  Player? _player;
+  VideoController? _controller;
+  StreamSubscription<dynamic>? _logSubscription;
+
   bool _showControls = true;
   double _scale = 1.0;
   bool _isAnime4KEnabled = true;
   String _currentModelKey = 'Balanced';
   bool _showHUD = false;
+  bool _useMetalFX = false;
+  MetalFXPreset _metalFXPreset = MetalFXPreset.balanced;
+  bool _isReconfiguring = false;
 
+  bool get _supportsMetalFX => Platform.isIOS || Platform.isMacOS;
+
+  Player get _activePlayer => _player!;
   String _getDynamicShaderPath() {
+    if (_useMetalFX) return '';
     return ShaderService().getShaderPath(_currentModelKey) ?? '';
+  }
+
+  double get _metalFXScale {
+    switch (_metalFXPreset) {
+      case MetalFXPreset.quality:
+        return 0.77;
+      case MetalFXPreset.balanced:
+        return 0.67;
+      case MetalFXPreset.performance:
+        return 0.50;
+    }
   }
 
   @override
   void initState() {
     super.initState();
     _enterFullscreen();
-    player.stream.log.listen((event) {
+    _initializePlayback();
+  }
+
+  Future<void> _initializePlayback({
+    Duration? resumePosition,
+    bool autoplay = true,
+  }) async {
+    final previousPlayer = _player;
+    final previousSubscription = _logSubscription;
+
+    final nextPlayer = Player(
+      configuration: const PlayerConfiguration(vo: 'gpu-next'),
+    );
+    final nextController = VideoController(
+      nextPlayer,
+      configuration: VideoControllerConfiguration(
+        enableHardwareAcceleration: !_useMetalFX,
+        enableMetalFX: _useMetalFX,
+        metalFXScale: _metalFXScale,
+      ),
+    );
+
+    _logSubscription = nextPlayer.stream.log.listen((event) {
       LoggerService().log('[MPV] [${event.level}]: ${event.text}');
     });
 
-    Future.microtask(() async {
-      try {
-        final nativePlayer = player.platform as NativePlayer;
-        // MUST use 'auto-copy' so the hardware decoder transfers the CVPixelBuffer/d3d11 back to system RAM to allow Fragment Shaders to hook it!
-        await nativePlayer.setProperty(
-          'hwdec',
-          _isAnime4KEnabled ? 'auto-copy' : 'auto',
-        );
-        await nativePlayer.setProperty(
-          'glsl-shaders',
-          _isAnime4KEnabled ? _getDynamicShaderPath() : '',
-        );
+    if (mounted) {
+      setState(() {
+        _player = nextPlayer;
+        _controller = nextController;
+      });
+    } else {
+      _player = nextPlayer;
+      _controller = nextController;
+    }
 
-        // Open provided video file
-        await player.open(Media(widget.videoPath));
-        player.play();
-      } catch (e) {
-        debugPrint('Media load error: $e');
+    try {
+      await _applyVideoConfig(nextPlayer);
+      await nextPlayer.open(Media(widget.videoPath));
+      if (resumePosition != null && resumePosition > Duration.zero) {
+        await nextPlayer.seek(resumePosition);
       }
-    });
+      if (autoplay) {
+        nextPlayer.play();
+      }
+    } catch (e) {
+      LoggerService().log('[Player ERROR] Failed to initialize playback: $e');
+      debugPrint('Media load error: $e');
+    } finally {
+      await previousSubscription?.cancel();
+      await previousPlayer?.dispose();
+    }
+  }
+
+  Future<void> _applyVideoConfig(Player targetPlayer) async {
+    try {
+      final nativePlayer = targetPlayer.platform as NativePlayer;
+      final shaderPath = _getDynamicShaderPath();
+
+      await nativePlayer.setProperty(
+        'hwdec',
+        _useMetalFX ? 'auto-copy' : (_isAnime4KEnabled ? 'auto-copy' : 'auto'),
+      );
+      await nativePlayer.setProperty('glsl-shaders', shaderPath);
+
+      LoggerService().log(
+        _useMetalFX
+            ? '[MetalFX] enabled preset=${_metalFXPreset.name} scale=${_metalFXScale.toStringAsFixed(2)}'
+            : '[Shader] Anime4K=${_isAnime4KEnabled ? _currentModelKey : 'off'}',
+      );
+    } catch (e) {
+      LoggerService().log('[Player ERROR] Failed to apply video config: $e');
+    }
+  }
+
+  Future<void> _reconfigurePlayback() async {
+    if (_player == null || _isReconfiguring) return;
+    _isReconfiguring = true;
+    final position = _activePlayer.state.position;
+    final wasPlaying = _activePlayer.state.playing;
+    try {
+      await _initializePlayback(resumePosition: position, autoplay: wasPlaying);
+    } finally {
+      _isReconfiguring = false;
+    }
   }
 
   Future<void> _enterFullscreen() async {
@@ -90,23 +173,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Future<void> _applyAnime4KConfig() async {
-    try {
-      final nativePlayer = player.platform as NativePlayer;
-      await nativePlayer.setProperty(
-        'hwdec',
-        _isAnime4KEnabled ? 'auto-copy' : 'auto',
-      );
-      await nativePlayer.setProperty(
-        'glsl-shaders',
-        _isAnime4KEnabled ? _getDynamicShaderPath() : '',
-      );
-
-      // Force dirty frame redraw if video is paused
-      if (!player.state.playing) {
-        player.seek(player.state.position);
-      }
-    } catch (e) {
-      debugPrint('Error toggling Anime4K: $e');
+    if (_player == null) return;
+    await _applyVideoConfig(_activePlayer);
+    if (!_activePlayer.state.playing) {
+      _activePlayer.seek(_activePlayer.state.position);
     }
   }
 
@@ -115,7 +185,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withValues(alpha: 0.3), // gentle darkening
+      barrierColor: Colors.black.withValues(alpha: 0.3),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, anim1, anim2) {
         return Align(
@@ -127,15 +197,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 return BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                   child: Container(
-                    width: 440,
+                    width: 460,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
                       vertical: 32,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(
-                        0x1A000000,
-                      ), // Hex 1A = 10% opacity black
+                      color: const Color(0x1A000000),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.15),
@@ -143,8 +211,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              _currentModelKey == 'Extreme' && _isAnime4KEnabled
+                          color: _useMetalFX
+                              ? Colors.lightBlueAccent.withValues(alpha: 0.14)
+                              : _currentModelKey == 'Extreme' &&
+                                    _isAnime4KEnabled
                               ? Colors.redAccent.withValues(alpha: 0.15)
                               : Colors.black12,
                           blurRadius: 40,
@@ -152,139 +222,242 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         ),
                       ],
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Video Enhancement',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        // Master Toggle
-                        SwitchListTile(
-                          title: const Text(
-                            'Anime4K upscaling',
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Video Enhancement',
                             style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          subtitle: const Text(
-                            'Sharper playback for anime video',
-                          ),
-                          value: _isAnime4KEnabled,
-                          activeThumbColor: _currentModelKey == 'Extreme'
-                              ? Colors.redAccent
-                              : Theme.of(context).colorScheme.primary,
-                          secondary: const Icon(Icons.auto_awesome),
-                          onChanged: (val) {
-                            setDialogState(() => _isAnime4KEnabled = val);
-                            setState(() => _isAnime4KEnabled = val);
-                            _applyAnime4KConfig();
-                          },
-                        ),
-                        // Quality presets
-                        AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          opacity: _isAnime4KEnabled ? 1.0 : 0.3,
-                          child: IgnorePointer(
-                            ignoring: !_isAnime4KEnabled,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 24,
-                                horizontal: 8,
+                          const SizedBox(height: 24),
+                          if (_supportsMetalFX) ...[
+                            SwitchListTile(
+                              title: const Text(
+                                'MetalFX upscale',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
                               ),
-                              child: SegmentedButton<String>(
-                                showSelectedIcon: false,
-                                segments: const [
-                                  ButtonSegment(
-                                    value: 'Speed',
-                                    label: Text(
-                                      'Speed',
+                              subtitle: const Text(
+                                'Apple GPU spatial upscaling using MetalFX.',
+                              ),
+                              value: _useMetalFX,
+                              activeThumbColor: Colors.lightBlueAccent,
+                              secondary: const Icon(Icons.auto_fix_high),
+                              onChanged: (value) async {
+                                setDialogState(() => _useMetalFX = value);
+                                setState(() {
+                                  _useMetalFX = value;
+                                  if (value) {
+                                    _isAnime4KEnabled = false;
+                                  }
+                                });
+                                await _reconfigurePlayback();
+                              },
+                            ),
+                            AnimatedOpacity(
+                              duration: const Duration(milliseconds: 200),
+                              opacity: _useMetalFX ? 1.0 : 0.35,
+                              child: IgnorePointer(
+                                ignoring: !_useMetalFX,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                    horizontal: 8,
+                                  ),
+                                  child: SegmentedButton<MetalFXPreset>(
+                                    showSelectedIcon: false,
+                                    segments: const [
+                                      ButtonSegment(
+                                        value: MetalFXPreset.quality,
+                                        label: Text('Quality'),
+                                      ),
+                                      ButtonSegment(
+                                        value: MetalFXPreset.balanced,
+                                        label: Text('Balanced'),
+                                      ),
+                                      ButtonSegment(
+                                        value: MetalFXPreset.performance,
+                                        label: Text('Performance'),
+                                      ),
+                                    ],
+                                    selected: {_metalFXPreset},
+                                    style: ButtonStyle(
+                                      backgroundColor:
+                                          WidgetStateProperty.resolveWith((
+                                            states,
+                                          ) {
+                                            if (states.contains(
+                                              WidgetState.selected,
+                                            )) {
+                                              return Colors.lightBlueAccent
+                                                  .withValues(alpha: 0.35);
+                                            }
+                                            return Colors.transparent;
+                                          }),
+                                    ),
+                                    onSelectionChanged: (values) async {
+                                      final preset = values.first;
+                                      setDialogState(
+                                        () => _metalFXPreset = preset,
+                                      );
+                                      setState(() => _metalFXPreset = preset);
+                                      await _reconfigurePlayback();
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.lightBlueAccent.withValues(
+                                  alpha: 0.08,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.lightBlueAccent.withValues(
+                                    alpha: 0.18,
+                                  ),
+                                ),
+                              ),
+                              child: const Text(
+                                'MetalFX uses a lower internal render size and upscales it on Apple GPUs. It is available only on supported Apple OS and hardware.',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                          ],
+                          AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: _useMetalFX ? 0.35 : 1.0,
+                            child: IgnorePointer(
+                              ignoring: _useMetalFX,
+                              child: Column(
+                                children: [
+                                  SwitchListTile(
+                                    title: const Text(
+                                      'Anime4K upscaling',
                                       style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
                                       ),
                                     ),
-                                  ),
-                                  ButtonSegment(
-                                    value: 'Balanced',
-                                    label: Text(
-                                      'Balanced',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    subtitle: Text(
+                                      _useMetalFX
+                                          ? 'Disabled while MetalFX is active.'
+                                          : 'Sharper playback for anime video',
                                     ),
+                                    value: _isAnime4KEnabled,
+                                    activeThumbColor:
+                                        _currentModelKey == 'Extreme'
+                                        ? Colors.redAccent
+                                        : Theme.of(context).colorScheme.primary,
+                                    secondary: const Icon(Icons.auto_awesome),
+                                    onChanged: (val) async {
+                                      setDialogState(
+                                        () => _isAnime4KEnabled = val,
+                                      );
+                                      setState(() => _isAnime4KEnabled = val);
+                                      await _applyAnime4KConfig();
+                                    },
                                   ),
-                                  ButtonSegment(
-                                    value: 'Quality',
-                                    label: Text(
-                                      'Quality',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  ButtonSegment(
-                                    value: 'Extreme',
-                                    label: Text(
-                                      'Max',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                  AnimatedOpacity(
+                                    duration: const Duration(milliseconds: 200),
+                                    opacity: _isAnime4KEnabled ? 1.0 : 0.3,
+                                    child: IgnorePointer(
+                                      ignoring: !_isAnime4KEnabled,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 24,
+                                          horizontal: 8,
+                                        ),
+                                        child: SegmentedButton<String>(
+                                          showSelectedIcon: false,
+                                          segments: const [
+                                            ButtonSegment(
+                                              value: 'Speed',
+                                              label: Text('Speed'),
+                                            ),
+                                            ButtonSegment(
+                                              value: 'Balanced',
+                                              label: Text('Balanced'),
+                                            ),
+                                            ButtonSegment(
+                                              value: 'Quality',
+                                              label: Text('Quality'),
+                                            ),
+                                            ButtonSegment(
+                                              value: 'Extreme',
+                                              label: Text('Max'),
+                                            ),
+                                          ],
+                                          selected: {_currentModelKey},
+                                          style: ButtonStyle(
+                                            backgroundColor:
+                                                WidgetStateProperty.resolveWith(
+                                                  (states) {
+                                                    if (states.contains(
+                                                      WidgetState.selected,
+                                                    )) {
+                                                      return _currentModelKey ==
+                                                              'Extreme'
+                                                          ? Colors
+                                                                .redAccent
+                                                                .shade700
+                                                          : Theme.of(context)
+                                                                .colorScheme
+                                                                .primary;
+                                                    }
+                                                    return Colors.transparent;
+                                                  },
+                                                ),
+                                          ),
+                                          onSelectionChanged:
+                                              (newSelection) async {
+                                                setDialogState(() {
+                                                  _currentModelKey =
+                                                      newSelection.first;
+                                                });
+                                                setState(() {
+                                                  _currentModelKey =
+                                                      newSelection.first;
+                                                });
+                                                await _applyAnime4KConfig();
+                                              },
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ],
-                                selected: {_currentModelKey},
-                                style: ButtonStyle(
-                                  backgroundColor:
-                                      WidgetStateProperty.resolveWith((states) {
-                                        if (states.contains(
-                                          WidgetState.selected,
-                                        )) {
-                                          return _currentModelKey == 'Extreme'
-                                              ? Colors.redAccent.shade700
-                                              : Theme.of(
-                                                  context,
-                                                ).colorScheme.primary;
-                                        }
-                                        return Colors.transparent;
-                                      }),
-                                ),
-                                onSelectionChanged: (Set<String> newSelection) {
-                                  setDialogState(() {
-                                    _currentModelKey = newSelection.first;
-                                  });
-                                  setState(() {
-                                    _currentModelKey = newSelection.first;
-                                  });
-                                  _applyAnime4KConfig();
-                                },
                               ),
                             ),
                           ),
-                        ),
-                        // HUD Toggle
-                        SwitchListTile(
-                          title: const Text(
-                            'Performance overlay',
-                            style: TextStyle(fontWeight: FontWeight.w500),
+                          SwitchListTile(
+                            title: const Text(
+                              'Performance overlay',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            subtitle: const Text('Show playback stats'),
+                            value: _showHUD,
+                            activeThumbColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            secondary: const Icon(Icons.memory_rounded),
+                            onChanged: (val) {
+                              setDialogState(() => _showHUD = val);
+                              setState(() => _showHUD = val);
+                            },
                           ),
-                          subtitle: const Text('Show playback stats'),
-                          value: _showHUD,
-                          activeThumbColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          secondary: const Icon(Icons.memory_rounded),
-                          onChanged: (val) {
-                            setDialogState(() => _showHUD = val);
-                            setState(() => _showHUD = val);
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -308,7 +481,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _exitFullscreen();
-    player.dispose();
+    _logSubscription?.cancel();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -320,23 +494,28 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final player = _player;
+    final controller = _controller;
+
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. mpv Video Texture Layer
-          Transform.scale(
-            scale: _scale,
-            child: Video(controller: controller, controls: NoVideoControls),
-          ),
-
-          // 2. Gesture Detector Layer
+          if (player == null || controller == null)
+            const Center(child: CircularProgressIndicator())
+          else
+            Transform.scale(
+              scale: _scale,
+              child: Video(controller: controller, controls: NoVideoControls),
+            ),
           GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTap: _toggleControls,
             onDoubleTap: () {
-              final pos = player.state.position;
-              player.seek(pos + const Duration(seconds: 10));
+              final active = _player;
+              if (active == null) return;
+              final pos = active.state.position;
+              active.seek(pos + const Duration(seconds: 10));
             },
             onScaleUpdate: (details) {
               setState(() {
@@ -345,8 +524,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
             },
             child: const SizedBox.expand(),
           ),
-
-          // 3. Floating Floating Controls Island
           AnimatedOpacity(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOutCubic,
@@ -355,7 +532,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ignoring: !_showControls,
               child: Stack(
                 children: [
-                  // Top left back button & Title
                   Positioned(
                     top: 40,
                     left: 24,
@@ -381,8 +557,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ],
                     ),
                   ),
-
-                  // Center Right Floating Settings Pill
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
@@ -406,8 +580,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                 ),
                                 borderRadius: BorderRadius.circular(24),
                               ),
-                              child: const Icon(
-                                Icons.layers_rounded,
+                              child: Icon(
+                                _useMetalFX
+                                    ? Icons.auto_fix_high
+                                    : Icons.layers_rounded,
                                 color: Colors.white70,
                                 size: 28,
                               ),
@@ -417,59 +593,64 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ),
                     ),
                   ),
-
-                  // Center Play/Pause Floating Island
-                  Align(
-                    alignment: Alignment.center,
-                    child: StreamBuilder<bool>(
-                      stream: player.stream.playing,
-                      builder: (context, playing) {
-                        final isPlaying = playing.data ?? false;
-                        return FilledButton.tonal(
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.all(24),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
+                  if (player != null)
+                    Align(
+                      alignment: Alignment.center,
+                      child: StreamBuilder<bool>(
+                        stream: player.stream.playing,
+                        builder: (context, playing) {
+                          final isPlaying = playing.data ?? false;
+                          return FilledButton.tonal(
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.all(24),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.8),
                             ),
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.8),
-                          ),
-                          onPressed: () => player.playOrPause(),
-                          child: Icon(
-                            isPlaying
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        );
-                      },
+                            onPressed: () => player.playOrPause(),
+                            child: Icon(
+                              isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              size: 64,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-
-                  // 4. Cinematic Edge Bar (Edge-to-Edge)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: SafeArea(
-                      top: false,
-                      child: CinematicEdgeBar(player: player),
+                  if (player != null)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: SafeArea(
+                        top: false,
+                        child: CinematicEdgeBar(player: player),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
           ),
-
-          // 5. Performance HUD (Independent from controls but over video)
-          if (_showHUD)
+          if (_showHUD && player != null)
             Positioned(
               top: 100,
               left: 24,
               child: PerformanceHUD(player: player),
+            ),
+          if (_isReconfiguring)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.24),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+              ),
             ),
         ],
       ),
