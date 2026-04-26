@@ -11,8 +11,6 @@ jobs:
   build_ios:
     name: Build iOS IPA
     runs-on: macos-latest
-    permissions:
-      contents: write
       
     steps:
       - name: Checkout repository
@@ -42,14 +40,14 @@ jobs:
             exit 1
           fi
           
-      - name: Push logs on failure
+      - name: Upload build logs on failure
         if: failure()
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add *.log
-          git commit -m "chore: upload build logs [skip ci]" || true
-          git push || true
+        uses: actions/upload-artifact@v4
+        with:
+          name: anivault-ios-build-logs
+          path: |
+            flutter_build.log
+            xcodebuild.log
         
       - name: Generate IPA archive
         run: |
