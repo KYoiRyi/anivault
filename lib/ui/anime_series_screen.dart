@@ -41,6 +41,7 @@ class AnimeSeriesScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onTap: () => Navigator.pop(context),
         ),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [

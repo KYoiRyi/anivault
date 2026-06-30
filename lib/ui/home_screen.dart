@@ -224,21 +224,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(width: 8),
                           GlassButton.custom(
                             shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                            onTap: connecting
-                                ? null
-                                : () async {
-                                    setDialogState(() => connecting = true);
-                                    final success = await SMBService().connect(
-                                      _smbHostCtrl.text.trim(),
-                                      _smbDomainCtrl.text.trim(),
-                                      _smbUserCtrl.text.trim(),
-                                      _smbPassCtrl.text,
-                                    );
-                                    setDialogState(() => connecting = false);
-                                    if (success && context.mounted) {
-                                      Navigator.pop(context);
-                                    }
-                                  },
+                            onTap: () async {
+                              if (connecting) return;
+                              setDialogState(() => connecting = true);
+                              final success = await SMBService().connect(
+                                _smbHostCtrl.text.trim(),
+                                _smbDomainCtrl.text.trim(),
+                                _smbUserCtrl.text.trim(),
+                                _smbPassCtrl.text,
+                              );
+                              setDialogState(() => connecting = false);
+                              if (success && context.mounted) {
+                                Navigator.pop(context);
+                              }
+                            },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               child: connecting
@@ -508,7 +507,10 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_currentSection == HomeSection.library)
             GlassButton.custom(
               shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-              onTap: _isSyncing || _isScraping ? null : _importVideo,
+              onTap: () {
+                if (_isSyncing || _isScraping) return;
+                _importVideo();
+              },
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: _isSyncing || _isScraping
