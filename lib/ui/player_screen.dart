@@ -310,10 +310,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(42),
-                          child: Material(
-                            color: const Color(0xFF161618),
+                        AdaptiveLiquidGlassLayer(
+                          settings: RecommendedGlassSettings.playerPanel,
+                          clipExpansion: const EdgeInsets.all(16),
+                          child: GlassCard(
+                            padding: EdgeInsets.zero,
+                            shape: const LiquidRoundedSuperellipse(borderRadius: 42),
                             child: Stack(
                               clipBehavior: Clip.hardEdge,
                               children: [
@@ -773,8 +775,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     required Widget child,
   }) {
     return GlassCard(
-      useOwnLayer: true,
-      quality: GlassQuality.standard,
+      useOwnLayer: false, // Inherit root playerPanel layer to avoid nested BackdropFilter repaint lags
       settings: RecommendedGlassSettings.playerSection,
       padding: const EdgeInsets.all(16),
       shape: const LiquidRoundedSuperellipse(borderRadius: 34),

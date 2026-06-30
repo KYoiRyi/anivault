@@ -579,7 +579,7 @@ class _AnimeSeriesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassCard(
       padding: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.none, // Disable card-level clip to avoid border cut-offs and white outline glitches
       shape: const LiquidRoundedSuperellipse(borderRadius: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -588,7 +588,13 @@ class _AnimeSeriesCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: _SeriesCover(series: series),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+                child: _SeriesCover(series: series),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
