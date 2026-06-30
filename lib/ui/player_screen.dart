@@ -848,7 +848,8 @@ class _PlayerScreenState extends State<PlayerScreen>
         ),
         Expanded(
           child: GlassSlider(
-            useOwnLayer: true,
+            useOwnLayer: false, // Share the parent dialog's glass layer
+            quality: GlassQuality.premium, // Force premium native BackdropFilter to prevent any blur/low-res capture issues
             settings: RecommendedGlassSettings.playerHighlight,
             glowColor: const Color(0xFF8FEAFF),
             glowRadius: 2.0,
@@ -956,6 +957,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       GlassSlider(
+                        useOwnLayer: false, // Share the parent dialog's glass layer
+                        quality: GlassQuality.premium, // Force premium native BackdropFilter to prevent any blur/low-res capture issues
                         settings: RecommendedGlassSettings.playerHighlight,
                         value: 0.5,
                         min: 0,
@@ -1172,43 +1175,43 @@ class _PlayerScreenState extends State<PlayerScreen>
 
 class RecommendedGlassSettings {
   static const playerPanel = LiquidGlassSettings(
-    blur: 3,
-    thickness: 30,
-    glassColor: Color(0x3DFFFFFF),
+    blur: 25, // Deep frosted premium blur
+    thickness: 16, // Elegant subtle boundary highlight rim
+    glassColor: Color(0x1FFFFFFF), // Transparent frosted white tint (12% opacity)
     lightAngle: 0.75 * math.pi,
-    lightIntensity: 0.6,
-    ambientStrength: 1,
-    saturation: 0.7,
-    refractiveIndex: 1.59,
-    chromaticAberration: 0.3,
+    lightIntensity: 1.2,
+    ambientStrength: 0.2, // Low ambient wash to preserve transparency
+    saturation: 1.25,
+    refractiveIndex: 1.2,
+    chromaticAberration: 0.0, // Sharp text readability
     specularSharpness: GlassSpecularSharpness.medium,
   );
 
   static const playerSection = LiquidGlassSettings(
-    blur: 3,
-    thickness: 32,
+    blur: 0, // Inherits root layer's blur
+    thickness: 14, // Delicate section highlight rim
     glassColor: Colors.transparent,
     lightAngle: 0.7 * math.pi,
-    lightIntensity: 2.05,
-    ambientStrength: 0,
+    lightIntensity: 1.5,
+    ambientStrength: 0.0,
     saturation: 1.32,
-    refractiveIndex: 1.56,
-    chromaticAberration: 0.22,
-    glowIntensity: 0.68,
+    refractiveIndex: 1.2,
+    chromaticAberration: 0.0, // Sharp text readability
+    glowIntensity: 0.4,
     specularSharpness: GlassSpecularSharpness.sharp,
   );
 
   static const playerHighlight = LiquidGlassSettings(
     blur: 0,
-    thickness: 32,
+    thickness: 8, // Refined thin highlight rim for small slider thumbs
     glassColor: Colors.transparent,
     lightAngle: 0.7 * math.pi,
-    lightIntensity: 3.4,
+    lightIntensity: 1.5,
     ambientStrength: 0.0,
     saturation: 1.35,
-    refractiveIndex: 1.68,
-    chromaticAberration: 0.55,
-    glowIntensity: 1.45,
+    refractiveIndex: 1.2,
+    chromaticAberration: 0.0, // Sharp highlights without dispersion fringing
+    glowIntensity: 0.6,
     specularSharpness: GlassSpecularSharpness.sharp,
   );
 
