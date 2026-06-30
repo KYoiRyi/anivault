@@ -310,16 +310,14 @@ class _PlayerScreenState extends State<PlayerScreen>
 
                 return SizedBox(
                   width: panelWidth,
-                  child: AdaptiveLiquidGlassLayer(
-                    settings: RecommendedGlassSettings.playerPanel,
-                    quality: GlassQuality.standard,
-                    blendAmount: 10,
-                    child: ConstrainedBox(
+                  child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: panelMaxHeight),
                       child: GlassCard(
-                        useOwnLayer: false,
+                        useOwnLayer: true,
+                        quality: GlassQuality.standard,
+                        settings: RecommendedGlassSettings.playerPanel,
                         clipBehavior: Clip.antiAlias,
-                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                        padding: EdgeInsets.zero,
                         shape: const LiquidRoundedSuperellipse(
                           borderRadius: 42,
                         ),
@@ -335,11 +333,18 @@ class _PlayerScreenState extends State<PlayerScreen>
                               ),
                               SingleChildScrollView(
                                 clipBehavior: Clip.hardEdge,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    20,
+                                    24,
+                                    24,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
                                     Row(
                                       children: [
                                         Expanded(
@@ -746,6 +751,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                   ),
                                 ],
                               ),
+                                ),
                             ),
                               Positioned.fill(
                                 child: IgnorePointer(
@@ -766,7 +772,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                           ),
                         ),
                       ),
-                    ),
                   ),
                 );
               },
@@ -1176,20 +1181,20 @@ class _LiquidGlassSweepPainter extends CustomPainter {
       const Radius.circular(42),
     );
     final ambientRimPaint = Paint()
-      ..blendMode = BlendMode.screen
+      ..blendMode = BlendMode.srcOver
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          const Color(0xFF65F7FF).withValues(alpha: 0.44),
-          const Color(0xFFFFFFFF).withValues(alpha: 0.12),
-          const Color(0xFFFF73E8).withValues(alpha: 0.38),
-          const Color(0xFF75A7FF).withValues(alpha: 0.30),
+          const Color(0xFF65F7FF).withValues(alpha: 0.72),
+          const Color(0xFFFFFFFF).withValues(alpha: 0.18),
+          const Color(0xFFFF73E8).withValues(alpha: 0.64),
+          const Color(0xFF75A7FF).withValues(alpha: 0.50),
         ],
         stops: const [0.0, 0.42, 0.72, 1.0],
       ).createShader(panelRect)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.35;
+      ..strokeWidth = 1.8;
     canvas.drawRRect(panelRRect.deflate(0.8), ambientRimPaint);
 
     final innerRimPaint = Paint()
@@ -1209,16 +1214,16 @@ class _LiquidGlassSweepPainter extends CustomPainter {
       size.height * 1.5,
     );
     final paint = Paint()
-      ..blendMode = BlendMode.screen
+      ..blendMode = BlendMode.srcOver
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
           Colors.transparent,
           Color.fromRGBO(0, 255, 255, 0.0),
-          Color.fromRGBO(90, 240, 255, 0.32),
-          Color.fromRGBO(255, 255, 255, 0.38),
-          Color.fromRGBO(255, 90, 230, 0.34),
+          Color.fromRGBO(90, 240, 255, 0.20),
+          Color.fromRGBO(255, 255, 255, 0.22),
+          Color.fromRGBO(255, 90, 230, 0.22),
           Colors.transparent,
         ],
         stops: [0.0, 0.32, 0.5, 0.68, 1.0],
@@ -1230,19 +1235,19 @@ class _LiquidGlassSweepPainter extends CustomPainter {
     canvas.restore();
 
     final movingRimPaint = Paint()
-      ..blendMode = BlendMode.screen
+      ..blendMode = BlendMode.srcOver
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          const Color(0xFF8FEAFF).withValues(alpha: 0.20),
-          Colors.white.withValues(alpha: 0.06),
-          const Color(0xFFFF9AF2).withValues(alpha: 0.18),
+          const Color(0xFF8FEAFF).withValues(alpha: 0.48),
+          Colors.white.withValues(alpha: 0.14),
+          const Color(0xFFFF9AF2).withValues(alpha: 0.44),
         ],
         transform: GradientRotation(progress * math.pi * 2),
       ).createShader(panelRect)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 2.4;
     canvas.drawRRect(panelRRect.deflate(1.4), movingRimPaint);
   }
 
