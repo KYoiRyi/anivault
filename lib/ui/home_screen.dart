@@ -481,14 +481,17 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _buildContent(),
-      bottomBar: GlassTabBar.bottom(
-        tabs: const [
-          GlassTab(icon: Icon(Icons.video_library_outlined), label: 'Library'),
-          GlassTab(icon: Icon(Icons.folder_shared_outlined), label: 'Network'),
-          GlassTab(icon: Icon(Icons.download_done_outlined), label: 'Downloads'),
-        ],
-        selectedIndex: _currentSection.index,
-        onTabSelected: (index) => _setSection(HomeSection.values[index]),
+      bottomBar: GlassAdaptiveScope(
+        minQuality: GlassQuality.premium,
+        child: GlassTabBar.bottom(
+          tabs: const [
+            GlassTab(icon: Icon(Icons.video_library_outlined), label: 'Library'),
+            GlassTab(icon: Icon(Icons.folder_shared_outlined), label: 'Network'),
+            GlassTab(icon: Icon(Icons.download_done_outlined), label: 'Downloads'),
+          ],
+          selectedIndex: _currentSection.index,
+          onTabSelected: (index) => _setSection(HomeSection.values[index]),
+        ),
       ),
     );
   }
