@@ -75,7 +75,6 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
       body: CustomScrollView(
         controller: _scrollController,
         primary: false,
-        scrollCacheExtent: 1200,
         slivers: [
           SliverPadding(
             padding: EdgeInsets.fromLTRB(20, topSpacer, 20, 32),
