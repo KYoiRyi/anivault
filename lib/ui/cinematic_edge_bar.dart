@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -13,55 +14,192 @@ class CinematicEdgeBar extends StatefulWidget {
 
 class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
   bool _isDragging = false;
-  double _dragValue = 0.0;
+  bool _isHovering = false;
+  double _dragProgress = 0.0;
+  double _dragX = 0.0;
+  DateTime _lastSeekTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+  void _updateProgress(Offset localPosition, double width) {
+    double newProgress = localPosition.dx / width;
+    newProgress = newProgress.clamp(0.0, 1.0);
+    setState(() {
+      _dragProgress = newProgress;
+      _dragX = localPosition.dx.clamp(0.0, width);
+    });
+  }
+
+  void _throttledSeek(Duration target) {
+    final now = DateTime.now();
+    if (now.difference(_lastSeekTime).inMilliseconds > 180) {
+      widget.player.seek(target);
+      _lastSeekTime = now;
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    } else {
+      return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Duration>(
-      stream: widget.player.stream.position,
-      builder: (context, positionSnapshot) {
-        final pos = positionSnapshot.data ?? Duration.zero;
-        final total = widget.player.state.duration;
-        final totalMs = total.inMilliseconds.toDouble();
+    final height = _isHovering || _isDragging ? 28.0 : 12.0;
 
-        double sliderValue = 0.0;
-        if (totalMs > 0) {
-          sliderValue = pos.inMilliseconds.toDouble().clamp(0.0, totalMs);
-        }
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: StreamBuilder<Duration>(
+        stream: widget.player.stream.position,
+        builder: (context, position) {
+          final pos = position.data ?? Duration.zero;
+          final total = widget.player.state.duration;
 
-        final displayValue = _isDragging ? _dragValue : sliderValue;
+          double actualProgress = 0.0;
+          if (total.inMilliseconds > 0) {
+            actualProgress = pos.inMilliseconds / total.inMilliseconds;
+            actualProgress = actualProgress.clamp(0.0, 1.0);
+          }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: GlassSlider(
-            useOwnLayer: true,
-            value: displayValue.clamp(0.0, totalMs > 0 ? totalMs : 1.0),
-            min: 0.0,
-            max: totalMs > 0 ? totalMs : 1.0,
-            activeColor: Colors.white,
-            thumbColor: Colors.white,
-            trackHeight: 6.0,
-            thumbRadius: 10.0,
-            onChangeStart: (val) {
-              setState(() {
-                _isDragging = true;
-                _dragValue = val;
-              });
+          final effectiveProgress = _isDragging ? _dragProgress : actualProgress;
+          final targetMillis = (effectiveProgress * total.inMilliseconds).toInt();
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final tooltipWidth = 100.0;
+              final leftOffset = (_dragX - tooltipWidth / 2).clamp(8.0, constraints.maxWidth - tooltipWidth - 8.0);
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Volumetric Glass Scrub Tooltip
+                    if (_isDragging)
+                      Positioned(
+                        left: leftOffset,
+                        bottom: height + 16,
+                        child: SizedBox(
+                          width: tooltipWidth,
+                          child: GlassCard(
+                            useOwnLayer: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+                            child: Center(
+                              child: Text(
+                                _formatDuration(Duration(milliseconds: targetMillis)),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Consolas',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Progress Bar Track
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onHorizontalDragStart: (details) {
+                        setState(() => _isDragging = true);
+                        _updateProgress(details.localPosition, constraints.maxWidth);
+                        _throttledSeek(Duration(milliseconds: targetMillis));
+                      },
+                      onHorizontalDragUpdate: (details) {
+                        _updateProgress(details.localPosition, constraints.maxWidth);
+                        _throttledSeek(Duration(milliseconds: targetMillis));
+                      },
+                      onHorizontalDragEnd: (details) {
+                        setState(() => _isDragging = false);
+                        widget.player.seek(Duration(milliseconds: targetMillis));
+                      },
+                      onTapDown: (details) {
+                        _updateProgress(details.localPosition, constraints.maxWidth);
+                        widget.player.seek(Duration(milliseconds: targetMillis));
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOutCubic,
+                        height: height,
+                        width: double.infinity,
+                        child: GlassCard(
+                          useOwnLayer: true,
+                          padding: EdgeInsets.zero,
+                          shape: const LiquidRoundedSuperellipse(borderRadius: 8),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.bottomLeft,
+                            children: [
+                              // Dark transparent background strip inside GlassCard
+                              Container(
+                                width: double.infinity,
+                                height: double.infinity,
+                                color: Colors.black.withValues(alpha: 0.15),
+                              ),
+
+                              // Volumetric Light Strip (Progress)
+                              AnimatedContainer(
+                                duration: _isDragging
+                                    ? Duration.zero
+                                    : const Duration(milliseconds: 150),
+                                curve: Curves.easeOutCubic,
+                                width: constraints.maxWidth * effectiveProgress,
+                                height: double.infinity,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.white,
+                                      Color(0xFFE2F0FF),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.white.withValues(alpha: 0.45),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, -6),
+                                      spreadRadius: 1,
+                                    ),
+                                    BoxShadow(
+                                      color: const Color(0xFF4A90E2).withValues(alpha: 0.4),
+                                      blurRadius: 32,
+                                      offset: const Offset(0, -12),
+                                      spreadRadius: 3,
+                                    ),
+                                  ],
+                                ),
+                                // Inner surface reflection
+                                child: Align(
+                                  alignment: Alignment.topCenter,
+                                  child: Container(
+                                    height: 1.5,
+                                    width: double.infinity,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
             },
-            onChanged: (val) {
-              setState(() {
-                _dragValue = val;
-              });
-            },
-            onChangeEnd: (val) {
-              setState(() {
-                _isDragging = false;
-              });
-              widget.player.seek(Duration(milliseconds: val.toInt()));
-            },
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
