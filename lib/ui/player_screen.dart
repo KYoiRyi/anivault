@@ -329,13 +329,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Container(
+                            GlassCard(
+                              useOwnLayer: false,
                               padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                              ),
+                              shape: const LiquidRoundedSuperellipse(borderRadius: 16),
                               child: Column(
                                 children: [
                                   Row(
@@ -453,13 +450,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Container(
+                            GlassCard(
+                              useOwnLayer: false,
                               padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                              ),
+                              shape: const LiquidRoundedSuperellipse(borderRadius: 16),
                               child: Column(
                                 children: [
                                   // Subtitle Size Slider
@@ -584,13 +578,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             const SizedBox(height: 16),
 
                             // Section 3: Performance HUD Card
-                            Container(
+                            GlassCard(
+                              useOwnLayer: false,
                               padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                              ),
+                              shape: const LiquidRoundedSuperellipse(borderRadius: 16),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -762,7 +753,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     child: Row(
                       children: [
                         GlassButton.custom(
-                          useOwnLayer: true,
+                          useOwnLayer: false,
                           width: 48,
                           height: 48,
                           shape: const LiquidOval(),
@@ -792,7 +783,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     child: Padding(
                       padding: const EdgeInsets.only(right: 16),
                       child: GlassButton.custom(
-                        useOwnLayer: true,
+                        useOwnLayer: false,
                         width: 56,
                         height: 56,
                         shape: const LiquidOval(),
@@ -814,7 +805,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       builder: (context, playing) {
                         final isPlaying = playing.data ?? false;
                         return GlassButton.custom(
-                          useOwnLayer: true,
+                          useOwnLayer: false,
                           width: 96,
                           height: 96,
                           shape: const LiquidOval(),
@@ -892,14 +883,14 @@ class RecommendedGlassSettings {
   );
 
   static const surface = LiquidGlassSettings(
-    blur: 10,
-    thickness: 10,
-    glassColor: Color.fromRGBO(255, 255, 255, 0.2),
-    lightAngle: 0.75 * math.pi, // 135° — upper-left, matches iOS 26
-    lightIntensity: 0.7,
-    ambientStrength: 0.3,
+    blur: 20, // Deep heavy frost
+    thickness: 15, // Volumetric edge rim
+    glassColor: Color.fromRGBO(255, 255, 255, 0.25), // Strong misty translucent white
+    lightAngle: 0.75 * math.pi, // 135° Apple standard upper-left light
+    lightIntensity: 1.5, // Brighter highlight glow
+    ambientStrength: 0.4,
     saturation: 1.2,
-    refractiveIndex: 1.15,
-    chromaticAberration: 0.0,
+    refractiveIndex: 1.3, // Bold prominent rim highlights
+    chromaticAberration: 0.01,
   );
 }
