@@ -350,8 +350,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                                         glowColor: Colors.white,
                                         glowOpacity: 0.5,
                                         glowBlurRadius: 18,
-                                        interactionBehavior:
-                                            GlassInteractionBehavior.full,
                                         interactionScale: 1.08,
                                         stretch: 0.75,
                                         shape: const LiquidOval(),
@@ -676,8 +674,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                                             glowColor: Colors.white,
                                             glowOpacity: 0.45,
                                             glowBlurRadius: 16,
-                                            interactionBehavior:
-                                                GlassInteractionBehavior.full,
                                             interactionScale: 1.06,
                                             stretch: 0.7,
                                             shape:
@@ -1025,7 +1021,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                           width: 48,
                           height: 48,
                           settings: RecommendedGlassSettings.playerHighlight,
-                          interactionBehavior: GlassInteractionBehavior.full,
                           interactionScale: 1.08,
                           stretch: 0.75,
                           glowColor: const Color(0xFF8FEAFF),
@@ -1062,7 +1057,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                         width: 56,
                         height: 56,
                         settings: RecommendedGlassSettings.playerHighlight,
-                        interactionBehavior: GlassInteractionBehavior.full,
                         interactionScale: 1.08,
                         stretch: 0.75,
                         glowColor: const Color(0xFFFF9AF2),
@@ -1091,7 +1085,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                           width: 96,
                           height: 96,
                           settings: RecommendedGlassSettings.playerHighlight,
-                          interactionBehavior: GlassInteractionBehavior.full,
                           interactionScale: 1.05,
                           stretch: 0.6,
                           glowColor: Colors.white,

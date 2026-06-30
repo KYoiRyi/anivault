@@ -63,10 +63,10 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
         ),
         leading: GlassButton(
           shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-          interactionBehavior: GlassInteractionBehavior.full,
           glowColor: const Color(0xFF8FEAFF),
           glowOpacity: 0.45,
           glowBlurRadius: 16,
+          interactionScale: 1.08,
           stretch: 0.7,
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onTap: () => Navigator.pop(context),
@@ -75,7 +75,7 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
       body: CustomScrollView(
         controller: _scrollController,
         primary: false,
-        cacheExtent: 1200,
+        scrollCacheExtent: 1200,
         slivers: [
           SliverPadding(
             padding: EdgeInsets.fromLTRB(20, topSpacer, 20, 32),
@@ -265,7 +265,7 @@ class _EpisodeBlock extends StatelessWidget {
 }
 
 class _EpisodeFileButton extends StatelessWidget {
-  final ParsedAnimeFile file;
+  final AnimeMediaFile file;
 
   const _EpisodeFileButton({required this.file});
 
@@ -282,7 +282,6 @@ class _EpisodeFileButton extends StatelessWidget {
       height: 72,
       settings: _SeriesGlassSettings.button,
       shape: const LiquidRoundedSuperellipse(borderRadius: 18),
-      interactionBehavior: GlassInteractionBehavior.full,
       interactionScale: 1.025,
       stretch: 0.65,
       glowColor: const Color(0xFF8FEAFF),
