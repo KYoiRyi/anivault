@@ -153,48 +153,64 @@ class _PlayerScreenState extends State<PlayerScreen>
         await nativePlayer.setProperty('resample-filter', 'soxr');
         await nativePlayer.setProperty('audio-pitch-correction', 'no');
 
-        // Configure previewPlayer options (muted, hardware decoder auto, no shaders for instant seeking)
-        await nativePreviewPlayer.setProperty('ytdl', 'no');
-        await nativePreviewPlayer.setProperty('network-timeout', '10');
-        await nativePreviewPlayer.setProperty('hwdec', 'auto');
-        await previewPlayer.setVolume(0);
-        await nativePreviewPlayer.setProperty('audio-format', 'float');
-        await nativePreviewPlayer.setProperty('audio-channels', 'auto-safe');
-        await nativePreviewPlayer.setProperty('resample-filter', 'soxr');
+        // Open main player first to split the heavy startup loading workload
+        await player.open(Media(widget.videoPath), play: false).timeout(
+          const Duration(seconds: 12),
+        );
 
-        // Open provided video file with Dart UI timeout feedback
-        try {
-          await player.open(Media(widget.videoPath), play: false).timeout(
-            const Duration(seconds: 12),
-          );
-          await previewPlayer.open(Media(widget.videoPath), play: false).timeout(
-            const Duration(seconds: 12),
-          );
+        // Wait for duration stream to emit a valid duration (> 0) indicating player has parsed the media
+        await player.stream.duration.firstWhere((d) => d > Duration.zero).timeout(const Duration(seconds: 5));
+        
+        final prefs = await SharedPreferences.getInstance();
+        final savedPos = prefs.getInt('pos_${widget.videoPath}') ?? 0;
+        if (savedPos > 0) {
+          await player.seek(Duration(milliseconds: savedPos));
+        }
+        player.play();
+        _applySubtitleSettings();
 
-          // Wait for duration stream to emit a valid duration (> 0) indicating player has parsed the media
-          await player.stream.duration.firstWhere((d) => d > Duration.zero).timeout(const Duration(seconds: 5));
-          await previewPlayer.stream.duration.firstWhere((d) => d > Duration.zero).timeout(const Duration(seconds: 5));
-          
-          final prefs = await SharedPreferences.getInstance();
-          final savedPos = prefs.getInt('pos_${widget.videoPath}') ?? 0;
-          if (savedPos > 0) {
-            await player.seek(Duration(milliseconds: savedPos));
-            await previewPlayer.seek(Duration(milliseconds: savedPos));
-          }
-          player.play();
-          previewPlayer.pause();
-          _applySubtitleSettings();
-        } on TimeoutException {
-          LoggerService().log('[Player Error] Timed out waiting for media info.');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to load video: Network timed out.')),
+        // Delay previewPlayer initialization to avoid video resource congestion & socket errors on SMB streams
+        Future.delayed(const Duration(milliseconds: 600), () async {
+          if (!mounted) return;
+          try {
+            // Configure previewPlayer options (muted, hardware decoder auto, no shaders for instant seeking)
+            await nativePreviewPlayer.setProperty('ytdl', 'no');
+            await nativePreviewPlayer.setProperty('network-timeout', '10');
+            await nativePreviewPlayer.setProperty('hwdec', 'auto');
+            await previewPlayer.setVolume(0);
+            await nativePreviewPlayer.setProperty('audio-format', 'float');
+            await nativePreviewPlayer.setProperty('audio-channels', 'auto-safe');
+            await nativePreviewPlayer.setProperty('resample-filter', 'soxr');
+
+            await previewPlayer.open(Media(widget.videoPath), play: false).timeout(
+              const Duration(seconds: 8),
             );
-            Navigator.of(context).pop();
+            await previewPlayer.stream.duration.firstWhere((d) => d > Duration.zero).timeout(const Duration(seconds: 5));
+            if (savedPos > 0) {
+              await previewPlayer.seek(Duration(milliseconds: savedPos));
+            }
+            previewPlayer.pause();
+          } catch (e) {
+            debugPrint('Preview player background init error: $e');
           }
+        });
+
+      } on TimeoutException {
+        LoggerService().log('[Player Error] Timed out waiting for media info.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to load video: Network timed out.')),
+          );
+          Navigator.of(context).pop();
         }
       } catch (e) {
         debugPrint('Media load error: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Play failed: $e')),
+          );
+          Navigator.of(context).pop();
+        }
       }
     });
   }
@@ -287,8 +303,8 @@ class _PlayerScreenState extends State<PlayerScreen>
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 300),
+      barrierColor: Colors.black26, // Elegant translucent barrier tint
+      transitionDuration: const Duration(milliseconds: 350),
       pageBuilder: (context, anim1, anim2) {
         return Align(
           alignment: Alignment.center,
@@ -299,9 +315,10 @@ class _PlayerScreenState extends State<PlayerScreen>
                 final viewSize = MediaQuery.sizeOf(context);
                 final panelWidth = math.min(
                   math.max(viewSize.width - 32, 280.0),
-                  560.0,
+                  520.0,
                 );
-                final panelMaxHeight = math.max(viewSize.height - 48, 280.0);
+                // Keep the menu short, centered, and don't occupy full screen height
+                final panelMaxHeight = math.min(viewSize.height * 0.72, 460.0);
 
                 return SizedBox(
                   width: panelWidth,
@@ -755,14 +772,18 @@ class _PlayerScreenState extends State<PlayerScreen>
         );
       },
       transitionBuilder: (context, anim1, anim2, child) {
-        final curved = CurvedAnimation(
-          parent: anim1,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return Transform.scale(
-          scale: 0.96 + curved.value * 0.04,
-          child: Opacity(opacity: anim1.value, child: child),
+        // Slide up slightly from bottom-center. No Opacity to prevent off-screen buffer white flashes
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.22),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(
+              parent: anim1,
+              curve: Curves.easeOutQuart,
+            ),
+          ),
+          child: child,
         );
       },
     );
@@ -1175,14 +1196,14 @@ class _PlayerScreenState extends State<PlayerScreen>
 
 class RecommendedGlassSettings {
   static const playerPanel = LiquidGlassSettings(
-    blur: 25, // Deep frosted premium blur
-    thickness: 16, // Elegant subtle boundary highlight rim
-    glassColor: Color(0x1FFFFFFF), // Transparent frosted white tint (12% opacity)
+    blur: 10, // Lighter frosted Gaussian blur
+    thickness: 12, // Subtle and elegant boundary highlight rim
+    glassColor: Color(0x0DFFFFFF), // Transparent frosted white tint (5% opacity)
     lightAngle: 0.75 * math.pi,
-    lightIntensity: 1.2,
-    ambientStrength: 0.2, // Low ambient wash to preserve transparency
-    saturation: 1.25,
-    refractiveIndex: 1.2,
+    lightIntensity: 0.8,
+    ambientStrength: 0.1, // Minimal ambient wash to keep it almost fully transparent
+    saturation: 1.1,
+    refractiveIndex: 1.1,
     chromaticAberration: 0.0, // Sharp text readability
     specularSharpness: GlassSpecularSharpness.medium,
   );
