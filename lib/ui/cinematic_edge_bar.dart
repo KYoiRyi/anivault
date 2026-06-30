@@ -4,8 +4,15 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 class CinematicEdgeBar extends StatefulWidget {
   final Player player;
+  final Player? previewPlayer;
+  final VideoController? previewController;
 
-  const CinematicEdgeBar({super.key, required this.player});
+  const CinematicEdgeBar({
+    super.key,
+    required this.player,
+    this.previewPlayer,
+    this.previewController,
+  });
 
   @override
   State<CinematicEdgeBar> createState() => _CinematicEdgeBarState();
@@ -82,24 +89,40 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                     // Volumetric Glass Scrub Tooltip
                     if (_isDragging)
                       Positioned(
-                        left: leftOffset,
+                        left: (_dragX - 168.0 / 2).clamp(8.0, constraints.maxWidth - 168.0 - 8.0),
                         bottom: height + 16,
                         child: SizedBox(
-                          width: tooltipWidth,
+                          width: 168.0,
                           child: GlassCard(
                             useOwnLayer: true,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-                            child: Center(
-                              child: Text(
-                                _formatDuration(Duration(milliseconds: targetMillis)),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  fontFamily: 'Consolas',
+                            padding: const EdgeInsets.all(4),
+                            shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (widget.previewController != null)
+                                  SizedBox(
+                                    width: 160,
+                                    height: 90,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Video(
+                                        controller: widget.previewController!,
+                                        controls: NoVideoControls,
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _formatDuration(Duration(milliseconds: targetMillis)),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Consolas',
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                           ),
                         ),
@@ -111,15 +134,26 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                       onHorizontalDragStart: (details) {
                         setState(() => _isDragging = true);
                         _updateProgress(details.localPosition, constraints.maxWidth);
-                        _throttledSeek(Duration(milliseconds: targetMillis));
+                        if (widget.previewPlayer != null) {
+                          widget.previewPlayer!.seek(Duration(milliseconds: targetMillis));
+                        } else {
+                          _throttledSeek(Duration(milliseconds: targetMillis));
+                        }
                       },
                       onHorizontalDragUpdate: (details) {
                         _updateProgress(details.localPosition, constraints.maxWidth);
-                        _throttledSeek(Duration(milliseconds: targetMillis));
+                        if (widget.previewPlayer != null) {
+                          widget.previewPlayer!.seek(Duration(milliseconds: targetMillis));
+                        } else {
+                          _throttledSeek(Duration(milliseconds: targetMillis));
+                        }
                       },
-                      onHorizontalDragEnd: (details) {
-                        setState(() => _isDragging = false);
-                        widget.player.seek(Duration(milliseconds: targetMillis));
+                      onHorizontalDragEnd: (details) async {
+                        final target = Duration(milliseconds: targetMillis);
+                        await widget.player.seek(target);
+                        if (mounted) {
+                          setState(() => _isDragging = false);
+                        }
                       },
                       onTapDown: (details) {
                         _updateProgress(details.localPosition, constraints.maxWidth);

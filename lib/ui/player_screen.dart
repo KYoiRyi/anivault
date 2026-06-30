@@ -24,7 +24,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
   late final Player player = Player(
     configuration: const PlayerConfiguration(vo: 'gpu-next'),
   );
+  late final Player previewPlayer = Player(
+    configuration: const PlayerConfiguration(vo: 'gpu-next'),
+  );
   late VideoController controller;
+  late VideoController previewController;
   // Swapped to Anime4K: ArtCNN uses Compute Shaders incompatible with media_kit's vo=libmpv D3D11 layer.
   // Anime4K uses standard fragment shaders, perfectly compatible with our SuperSampling frame buffer trick!
   bool _showControls = true;
@@ -44,6 +48,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     super.initState();
     _enterFullscreen();
     controller = VideoController(player); // Default creates HW accelerated controller
+    previewController = VideoController(previewPlayer);
     _isHwAccelerated = true;
     player.stream.log.listen((event) {
       LoggerService().log('[MPV] [${event.level}]: ${event.text}');
@@ -69,12 +74,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
           _isEnhancementEnabled && _currentEngine == 'Anime4K' ? _getDynamicShaderPath() : '',
         );
 
+        // Configure previewPlayer options (muted, hardware decoder auto, no shaders for instant seeking)
+        await nativePreviewPlayer.setProperty('ytdl', 'no');
+        await nativePreviewPlayer.setProperty('network-timeout', '10');
+        await nativePreviewPlayer.setProperty('hwdec', 'auto');
+        await previewPlayer.setVolume(0);
+
         // Open provided video file with Dart UI timeout feedback
         try {
           await player.open(Media(widget.videoPath)).timeout(
             const Duration(seconds: 12),
           );
+          await previewPlayer.open(Media(widget.videoPath)).timeout(
+            const Duration(seconds: 12),
+          );
           player.play();
+          previewPlayer.pause();
         } on TimeoutException {
           LoggerService().log('[Player Error] Timed out waiting for media info.');
           if (mounted) {
@@ -189,10 +204,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
               builder: (context, setDialogState) {
                 return SizedBox(
                   width: 440,
-                  child: GlassCard(
-                    useOwnLayer: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    shape: const LiquidRoundedSuperellipse(borderRadius: 24),
+                  child: AdaptiveLiquidGlassLayer(
+                    settings: RecommendedGlassSettings.surface,
+                    child: GlassCard(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                      shape: const LiquidRoundedSuperellipse(borderRadius: 24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -344,6 +360,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                           ],
                         ),
                       ],
+                      ),
                     ),
                   ),
                 );
@@ -379,41 +396,41 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 1. mpv Video Texture Layer
-          Transform.scale(
-            scale: _scale,
-            child: Video(controller: controller, controls: NoVideoControls),
-          ),
+    return GlassPage(
+      background: Transform.scale(
+        scale: _scale,
+        child: Video(controller: controller, controls: NoVideoControls),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 2. Gesture Detector Layer
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _toggleControls,
+              onDoubleTap: () {
+                final pos = player.state.position;
+                player.seek(pos + const Duration(seconds: 10));
+              },
+              onScaleUpdate: (details) {
+                setState(() {
+                  _scale = details.scale.clamp(1.0, 3.0);
+                });
+              },
+              child: const SizedBox.expand(),
+            ),
 
-          // 2. Gesture Detector Layer
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _toggleControls,
-            onDoubleTap: () {
-              final pos = player.state.position;
-              player.seek(pos + const Duration(seconds: 10));
-            },
-            onScaleUpdate: (details) {
-              setState(() {
-                _scale = details.scale.clamp(1.0, 3.0);
-              });
-            },
-            child: const SizedBox.expand(),
-          ),
-
-          // 3. Floating Floating Controls Island
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            opacity: _showControls ? 1.0 : 0.0,
-            child: IgnorePointer(
-              ignoring: !_showControls,
-              child: Stack(
-                children: [
+            // 3. Floating Floating Controls Island
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              opacity: _showControls ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !_showControls,
+                child: Stack(
+                  children: [
                   // Top left back button & Title
                   Positioned(
                     top: 40,
@@ -503,7 +520,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     right: 0,
                     child: SafeArea(
                       top: false,
-                      child: CinematicEdgeBar(player: player),
+                      child: CinematicEdgeBar(
+                        player: player,
+                        previewPlayer: previewPlayer,
+                        previewController: previewController,
+                      ),
                     ),
                   ),
                 ],
@@ -518,7 +539,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
               left: 24,
               child: PerformanceHUD(player: player),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

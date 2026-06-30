@@ -132,96 +132,98 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, setDialogState) {
             return Dialog(
               backgroundColor: Colors.transparent,
-              child: GlassCard(
-                useOwnLayer: true,
-                padding: const EdgeInsets.all(20),
-                shape: const LiquidRoundedSuperellipse(borderRadius: 16),
-                child: SizedBox(
-                  width: 340,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Connect to Network Share',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+              child: AdaptiveLiquidGlassLayer(
+                settings: RecommendedGlassSettings.surface,
+                child: GlassCard(
+                  padding: const EdgeInsets.all(20),
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                  child: SizedBox(
+                    width: 340,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Connect to Network Share',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      GlassTextField(
-                        useOwnLayer: true,
-                        controller: _smbHostCtrl,
-                        placeholder: 'Host IP or name',
-                        textStyle: const TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 12),
-                      GlassTextField(
-                        useOwnLayer: true,
-                        controller: _smbDomainCtrl,
-                        placeholder: 'Domain',
-                        textStyle: const TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 12),
-                      GlassTextField(
-                        useOwnLayer: true,
-                        controller: _smbUserCtrl,
-                        placeholder: 'Username',
-                        textStyle: const TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 12),
-                      GlassTextField(
-                        useOwnLayer: true,
-                        controller: _smbPassCtrl,
-                        placeholder: 'Password',
-                        obscureText: true,
-                        textStyle: const TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          GlassButton.custom(
-                            shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                            onTap: () => Navigator.pop(context),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              child: Text('Cancel', style: TextStyle(color: Colors.white54)),
+                        const SizedBox(height: 16),
+                        GlassTextField(
+                          useOwnLayer: true,
+                          controller: _smbHostCtrl,
+                          placeholder: 'Host IP or name',
+                          textStyle: const TextStyle(color: Colors.white),
+                        ),
+                        const SizedBox(height: 12),
+                        GlassTextField(
+                          useOwnLayer: true,
+                          controller: _smbDomainCtrl,
+                          placeholder: 'Domain',
+                          textStyle: const TextStyle(color: Colors.white),
+                        ),
+                        const SizedBox(height: 12),
+                        GlassTextField(
+                          useOwnLayer: true,
+                          controller: _smbUserCtrl,
+                          placeholder: 'Username',
+                          textStyle: const TextStyle(color: Colors.white),
+                        ),
+                        const SizedBox(height: 12),
+                        GlassTextField(
+                          useOwnLayer: true,
+                          controller: _smbPassCtrl,
+                          placeholder: 'Password',
+                          obscureText: true,
+                          textStyle: const TextStyle(color: Colors.white),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            GlassButton.custom(
+                              shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                              onTap: () => Navigator.pop(context),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                child: Text('Cancel', style: TextStyle(color: Colors.white54)),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          GlassButton.custom(
-                            shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                            onTap: () async {
-                              if (connecting) return;
-                              setDialogState(() => connecting = true);
-                              final success = await SMBService().connect(
-                                _smbHostCtrl.text.trim(),
-                                _smbDomainCtrl.text.trim(),
-                                _smbUserCtrl.text.trim(),
-                                _smbPassCtrl.text,
-                              );
-                              setDialogState(() => connecting = false);
-                              if (success && context.mounted) {
-                                Navigator.pop(context);
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              child: connecting
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 8),
+                            GlassButton.custom(
+                              shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                              onTap: () async {
+                                if (connecting) return;
+                                setDialogState(() => connecting = true);
+                                final success = await SMBService().connect(
+                                  _smbHostCtrl.text.trim(),
+                                  _smbDomainCtrl.text.trim(),
+                                  _smbUserCtrl.text.trim(),
+                                  _smbPassCtrl.text,
+                                );
+                                setDialogState(() => connecting = false);
+                                if (success && context.mounted) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                child: connecting
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -573,6 +575,7 @@ class _AnimeSeriesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassCard(
       padding: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
       shape: const LiquidRoundedSuperellipse(borderRadius: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -581,12 +584,7 @@ class _AnimeSeriesCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-                child: _SeriesCover(series: series),
-              ),
+              child: _SeriesCover(series: series),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
