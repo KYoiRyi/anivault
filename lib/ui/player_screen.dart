@@ -42,18 +42,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _showHUD = false;
 
   // Subtitle custom settings
-  double _subtitleSize = 55.0;
-  double _subtitlePosition = 100.0;
+  double _subtitleSize = 24.0; // Restoring default size (24.0) suitable for custom layout
+  double _subtitlePosition = 24.0; // Restoring default position (24.0) suitable for custom layout
   double _subtitleBgOpacity = 0.0;
   String _subtitleFontFamily = 'Default';
+  List<String> _activeSubtitles = [];
 
 
 
   Future<void> _loadSubtitleSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _subtitleSize = prefs.getDouble('sub_size') ?? 55.0;
-      _subtitlePosition = prefs.getDouble('sub_position') ?? 100.0;
+      _subtitleSize = prefs.getDouble('sub_size') ?? 24.0;
+      _subtitlePosition = prefs.getDouble('sub_position') ?? 24.0;
       _subtitleBgOpacity = prefs.getDouble('sub_opacity') ?? 0.0;
       _subtitleFontFamily = prefs.getString('sub_font') ?? 'Default';
     });
@@ -69,8 +70,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   void _resetSubtitleSettings() {
     setState(() {
-      _subtitleSize = 55.0;
-      _subtitlePosition = 100.0;
+      _subtitleSize = 24.0;
+      _subtitlePosition = 24.0;
       _subtitleBgOpacity = 0.0;
       _subtitleFontFamily = 'Default';
     });
@@ -78,18 +79,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Future<void> _applySubtitleSettings() async {
-    try {
-      final nativePlayer = player.platform as NativePlayer;
-      await nativePlayer.setProperty('sub-font-size', _subtitleSize.toInt().toString());
-      await nativePlayer.setProperty('sub-pos', _subtitlePosition.toInt().toString());
-      final alphaHex = (_subtitleBgOpacity * 255).round().toRadixString(16).padLeft(2, '0').toUpperCase();
-      final colorStr = '#${alphaHex}000000';
-      await nativePlayer.setProperty('sub-back-color', colorStr);
-      final fontStr = _subtitleFontFamily == 'Default' ? '' : _subtitleFontFamily;
-      await nativePlayer.setProperty('sub-font', fontStr);
-    } catch (e) {
-      debugPrint('Error applying subtitle settings: $e');
-    }
+    // Subtitles are rendered customly in Flutter layout to handle multiple speakers and sign coordinate overlap perfectly.
   }
 
   String _getDynamicShaderPath() {
@@ -108,6 +98,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
 
     _loadSubtitleSettings();
+
+    // Listen to subtitle stream and parse active lines (filtering duplicates, sorting, stripping ASS tags)
+    player.stream.subtitle.listen((subtitle) {
+      final uniqueLines = <String>{};
+      for (final rawLine in subtitle.text) {
+        final cleanLine = rawLine.replaceAll(RegExp(r'\{[^}]*\}'), '').trim();
+        if (cleanLine.isNotEmpty) {
+          uniqueLines.add(cleanLine);
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _activeSubtitles = uniqueLines.toList();
+        });
+      }
+    });
 
     // Listen to position stream to store current position in real-time directly to SharedPreferences
     player.stream.position.listen((pos) {
@@ -323,9 +329,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            GlassCard(
+                            Container(
                               padding: const EdgeInsets.all(16),
-                              shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                              ),
                               child: Column(
                                 children: [
                                   Row(
@@ -435,7 +445,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
                             // Section 2: Subtitle Customization Card
                             const Text(
-                              'Native Subtitle Customization',
+                              'Custom Subtitle Settings',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -443,9 +453,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            GlassCard(
+                            Container(
                               padding: const EdgeInsets.all(16),
-                              shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                              ),
                               child: Column(
                                 children: [
                                   // Subtitle Size Slider
@@ -456,20 +470,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                         child: GlassSlider(
                                           useOwnLayer: true,
                                           value: _subtitleSize,
-                                          min: 20.0,
-                                          max: 80.0,
+                                          min: 12.0,
+                                          max: 48.0,
                                           onChanged: (val) {
                                             setDialogState(() => _subtitleSize = val);
                                             setState(() => _subtitleSize = val);
                                             _saveSubtitleSettings();
-                                            _applySubtitleSettings();
                                           },
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  // Subtitle Position (sub-pos) Slider
+                                  // Subtitle Position Slider (上下移动)
                                   Row(
                                     children: [
                                       const SizedBox(width: 110, child: Text('Vertical Position', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
@@ -477,13 +490,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                         child: GlassSlider(
                                           useOwnLayer: true,
                                           value: _subtitlePosition,
-                                          min: 30.0,
-                                          max: 100.0,
+                                          min: 8.0,
+                                          max: 160.0,
                                           onChanged: (val) {
                                             setDialogState(() => _subtitlePosition = val);
                                             setState(() => _subtitlePosition = val);
                                             _saveSubtitleSettings();
-                                            _applySubtitleSettings();
                                           },
                                         ),
                                       ),
@@ -504,7 +516,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                             setDialogState(() => _subtitleBgOpacity = val);
                                             setState(() => _subtitleBgOpacity = val);
                                             _saveSubtitleSettings();
-                                            _applySubtitleSettings();
                                           },
                                         ),
                                       ),
@@ -545,7 +556,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                             setDialogState(() => _subtitleFontFamily = font);
                                             setState(() => _subtitleFontFamily = font);
                                             _saveSubtitleSettings();
-                                            _applySubtitleSettings();
                                           },
                                         ),
                                       ),
@@ -559,7 +569,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                       onTap: () {
                                         setDialogState(() {
                                           _resetSubtitleSettings();
-                                          _applySubtitleSettings();
                                         });
                                       },
                                       child: const Padding(
@@ -575,9 +584,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             const SizedBox(height: 16),
 
                             // Section 3: Performance HUD Card
-                            GlassCard(
+                            Container(
                               padding: const EdgeInsets.all(16),
-                              shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                              ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -652,6 +665,46 @@ class _PlayerScreenState extends State<PlayerScreen> {
     super.dispose();
   }
 
+  Widget _buildSubtitleOverlay() {
+    return Positioned(
+      bottom: _subtitlePosition,
+      left: 32,
+      right: 32,
+      child: IgnorePointer(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: _activeSubtitles.map((subText) {
+            return Container(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: _subtitleBgOpacity),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                subText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: _subtitleSize,
+                  fontFamily: _subtitleFontFamily == 'Default' ? null : _subtitleFontFamily,
+                  fontWeight: FontWeight.bold,
+                  shadows: const [
+                    Shadow(
+                      blurRadius: 4.0,
+                      color: Colors.black,
+                      offset: Offset(2.0, 2.0),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
   void _toggleControls() {
     setState(() {
       _showControls = !_showControls;
@@ -690,6 +743,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
               child: const SizedBox.expand(),
             ),
 
+            // Custom Subtitle Overlay Layer (always visible over video)
+            _buildSubtitleOverlay(),
+
             // 3. Floating Floating Controls Island
             AnimatedOpacity(
               duration: const Duration(milliseconds: 300),
@@ -699,18 +755,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ignoring: !_showControls,
                 child: Stack(
                   children: [
-                  // Top left back button & Title
+                  // Top left back button & Title (Round liquid glass button)
                   Positioned(
                     top: 40,
                     left: 24,
                     child: Row(
                       children: [
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(
+                        GlassButton(
+                          useOwnLayer: true,
+                          width: 48,
+                          height: 48,
+                          shape: const LiquidOval(),
+                          onTap: () => Navigator.of(context).pop(),
+                          child: const Icon(
                             Icons.arrow_back_ios_new_rounded,
                             color: Colors.white,
-                            size: 24,
+                            size: 18,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -726,55 +786,45 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                   ),
 
-                  // Center Right Floating Settings Pill
+                  // Center Right Floating Settings Button (Round liquid glass button)
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
                       padding: const EdgeInsets.only(right: 16),
-                      child: GlassCard(
+                      child: GlassButton(
                         useOwnLayer: true,
-                        padding: EdgeInsets.zero,
-                        shape: const LiquidRoundedSuperellipse(borderRadius: 24),
-                        child: InkWell(
-                          onTap: _showVideoSettings,
-                          borderRadius: BorderRadius.circular(24),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 48,
-                            ),
-                            child: const Icon(
-                              Icons.layers_rounded,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
+                        width: 56,
+                        height: 56,
+                        shape: const LiquidOval(),
+                        onTap: _showVideoSettings,
+                        child: const Icon(
+                          Icons.layers_rounded,
+                          color: Colors.white,
+                          size: 28,
                         ),
                       ),
                     ),
                   ),
 
-                  // Center Play/Pause Floating Island
+                  // Center Play/Pause Floating Island (Round liquid glass button)
                   Align(
                     alignment: Alignment.center,
                     child: StreamBuilder<bool>(
                       stream: player.stream.playing,
                       builder: (context, playing) {
                         final isPlaying = playing.data ?? false;
-                        return GlassButton.custom(
-                          shape: const LiquidRoundedSuperellipse(borderRadius: 36),
-                          width: 112,
-                          height: 112,
+                        return GlassButton(
+                          useOwnLayer: true,
+                          width: 96,
+                          height: 96,
+                          shape: const LiquidOval(),
                           onTap: () => player.playOrPause(),
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Icon(
-                              isPlaying
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded,
-                              size: 64,
-                              color: Colors.white,
-                            ),
+                          child: Icon(
+                            isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            size: 48,
+                            color: Colors.white,
                           ),
                         );
                       },
