@@ -311,40 +311,43 @@ class _PlayerScreenState extends State<PlayerScreen>
                 return SizedBox(
                   width: panelWidth,
                   child: ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: panelMaxHeight),
-                      child: GlassCard(
-                        useOwnLayer: true,
-                        quality: GlassQuality.standard,
-                        settings: RecommendedGlassSettings.playerPanel,
-                        clipBehavior: Clip.antiAlias,
-                        padding: EdgeInsets.zero,
-                        shape: const LiquidRoundedSuperellipse(
-                          borderRadius: 42,
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(42),
-                          child: Stack(
-                            clipBehavior: Clip.hardEdge,
-                            children: [
-                              Positioned.fill(
-                                child: ColoredBox(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              SingleChildScrollView(
-                                clipBehavior: Clip.hardEdge,
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    24,
-                                    20,
-                                    24,
-                                    24,
+                    constraints: BoxConstraints(maxHeight: panelMaxHeight),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        GlassCard(
+                          useOwnLayer: true,
+                          quality: GlassQuality.standard,
+                          settings: RecommendedGlassSettings.playerPanel,
+                          clipBehavior: Clip.antiAlias,
+                          padding: EdgeInsets.zero,
+                          shape: const LiquidRoundedSuperellipse(
+                            borderRadius: 42,
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(42),
+                            child: Stack(
+                              clipBehavior: Clip.hardEdge,
+                              children: [
+                                Positioned.fill(
+                                  child: ColoredBox(
+                                    color: Colors.black.withValues(alpha: 0.08),
                                   ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
+                                ),
+                                SingleChildScrollView(
+                                  clipBehavior: Clip.hardEdge,
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      24,
+                                      20,
+                                      24,
+                                      24,
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
                                     Row(
                                       children: [
                                         Expanded(
@@ -750,28 +753,27 @@ class _PlayerScreenState extends State<PlayerScreen>
                                     ),
                                   ),
                                 ],
-                              ),
                                 ),
+                              ),
                             ),
-                              Positioned.fill(
-                                child: IgnorePointer(
-                                  child: AnimatedBuilder(
-                                    animation: _glassSweepController,
-                                    builder: (context, _) {
-                                      return CustomPaint(
-                                        painter: _LiquidGlassSweepPainter(
-                                          progress:
-                                              _glassSweepController.value,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
                           ),
                         ),
-                      ),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: AnimatedBuilder(
+                              animation: _glassSweepController,
+                              builder: (context, _) {
+                                return CustomPaint(
+                                  painter: _LiquidGlassSweepPainter(
+                                    progress: _glassSweepController.value,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -1180,6 +1182,22 @@ class _LiquidGlassSweepPainter extends CustomPainter {
       panelRect,
       const Radius.circular(42),
     );
+    final glowPaint = Paint()
+      ..blendMode = BlendMode.srcOver
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFF30F7FF).withValues(alpha: 0.38),
+          const Color(0xFFFF54DF).withValues(alpha: 0.34),
+          const Color(0xFF70A7FF).withValues(alpha: 0.30),
+        ],
+      ).createShader(panelRect)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawRRect(panelRRect.deflate(3), glowPaint);
+
     final ambientRimPaint = Paint()
       ..blendMode = BlendMode.srcOver
       ..shader = LinearGradient(
@@ -1203,36 +1221,6 @@ class _LiquidGlassSweepPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.7;
     canvas.drawRRect(panelRRect.deflate(2.2), innerRimPaint);
-
-    final sweepWidth = size.width * 0.5;
-    final travel = size.width + sweepWidth * 2;
-    final x = -sweepWidth + travel * progress;
-    final rect = Rect.fromLTWH(
-      x,
-      -size.height * 0.25,
-      sweepWidth,
-      size.height * 1.5,
-    );
-    final paint = Paint()
-      ..blendMode = BlendMode.srcOver
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Colors.transparent,
-          Color.fromRGBO(0, 255, 255, 0.0),
-          Color.fromRGBO(90, 240, 255, 0.20),
-          Color.fromRGBO(255, 255, 255, 0.22),
-          Color.fromRGBO(255, 90, 230, 0.22),
-          Colors.transparent,
-        ],
-        stops: [0.0, 0.32, 0.5, 0.68, 1.0],
-      ).createShader(rect);
-
-    canvas.save();
-    canvas.rotate(-0.18);
-    canvas.drawRect(rect, paint);
-    canvas.restore();
 
     final movingRimPaint = Paint()
       ..blendMode = BlendMode.srcOver
