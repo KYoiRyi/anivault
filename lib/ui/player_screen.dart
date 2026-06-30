@@ -1192,10 +1192,10 @@ class _LiquidGlassSweepPainter extends CustomPainter {
     //   secondary  = Color(0xFF5856D6) (liquid_glass_widgets GlassThemeData.secondary)
     //   white specular (Fresnel rim) = Colors.white
     // These match the actual RGB the glass widget renders at its edges.
-    const Color _glassBlue = Color(0xFF5AC8FA);   // iOS info blue — R channel rim
-    const Color _glassWhite = Color(0xFFFFFFFF);  // Fresnel specular highlight
-    const Color _glassPurple = Color(0xFF5856D6); // iOS secondary — B channel rim
-    const Color _glassEdge = Color(0x3DFFFFFF);   // kBottomBarGlassDefaults.glassColor
+    const Color glassBlue = Color(0xFF5AC8FA);   // iOS info blue — R channel rim
+    const Color glassWhite = Color(0xFFFFFFFF);  // Fresnel specular highlight
+    const Color glassPurple = Color(0xFF5856D6); // iOS secondary — B channel rim
+    const Color glassEdge = Color(0x3DFFFFFF);   // kBottomBarGlassDefaults.glassColor
 
     // Outer glow — matches the soft luminous halo of the glass surface edge
     final glowPaint = Paint()
@@ -1204,9 +1204,9 @@ class _LiquidGlassSweepPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          _glassBlue.withValues(alpha: 0.32),
-          _glassEdge.withValues(alpha: 0.28),
-          _glassPurple.withValues(alpha: 0.28),
+          glassBlue.withValues(alpha: 0.32),
+          glassEdge.withValues(alpha: 0.28),
+          glassPurple.withValues(alpha: 0.28),
         ],
       ).createShader(panelRect)
       ..style = PaintingStyle.stroke
@@ -1221,10 +1221,10 @@ class _LiquidGlassSweepPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          _glassBlue.withValues(alpha: 0.72),
-          _glassWhite.withValues(alpha: 0.20),
-          _glassPurple.withValues(alpha: 0.60),
-          _glassBlue.withValues(alpha: 0.44),
+          glassBlue.withValues(alpha: 0.72),
+          glassWhite.withValues(alpha: 0.20),
+          glassPurple.withValues(alpha: 0.60),
+          glassBlue.withValues(alpha: 0.44),
         ],
         stops: const [0.0, 0.42, 0.72, 1.0],
       ).createShader(panelRect)
@@ -1235,7 +1235,7 @@ class _LiquidGlassSweepPainter extends CustomPainter {
     // Inner white Fresnel rim — matches glass widget's white specular
     final innerRimPaint = Paint()
       ..blendMode = BlendMode.screen
-      ..color = _glassWhite.withValues(alpha: 0.08)
+      ..color = glassWhite.withValues(alpha: 0.08)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.7;
     canvas.drawRRect(panelRRect.deflate(2.2), innerRimPaint);
@@ -1247,9 +1247,9 @@ class _LiquidGlassSweepPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          _glassBlue.withValues(alpha: 0.48),
-          _glassWhite.withValues(alpha: 0.16),
-          _glassPurple.withValues(alpha: 0.44),
+          glassBlue.withValues(alpha: 0.48),
+          glassWhite.withValues(alpha: 0.16),
+          glassPurple.withValues(alpha: 0.44),
         ],
         transform: GradientRotation(progress * math.pi * 2),
       ).createShader(panelRect)

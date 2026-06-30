@@ -481,6 +481,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _buildContent(),
+      // ignore: experimental_member_use
       bottomBar: GlassAdaptiveScope(
         minQuality: GlassQuality.premium,
         child: GlassTabBar.bottom(
