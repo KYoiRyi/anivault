@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/ui/player_screen.dart';
@@ -77,7 +78,8 @@ class _ActiveDownloadTile extends StatelessWidget {
     final hasFailed = task.hasFailed;
 
     return _DownloadSurface(
-      child: ListTile(
+      child: GlassListTile(
+        isLast: true,
         leading: Icon(
           hasFailed ? Icons.error_outline_rounded : Icons.downloading_rounded,
           color: hasFailed ? Colors.redAccent : Colors.lightBlueAccent,
@@ -86,7 +88,7 @@ class _ActiveDownloadTile extends StatelessWidget {
           task.fileName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8),
@@ -118,7 +120,7 @@ class _ActiveDownloadTile extends StatelessWidget {
           hasFailed ? 'Failed' : progressLabel,
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: hasFailed ? Colors.redAccent : null,
+            color: hasFailed ? Colors.redAccent : Colors.white,
           ),
         ),
       ),
@@ -134,7 +136,8 @@ class _CompletedDownloadTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _DownloadSurface(
-      child: ListTile(
+      child: GlassListTile(
+        isLast: true,
         leading: const Icon(
           Icons.movie_creation_outlined,
           color: Colors.white70,
@@ -143,7 +146,7 @@ class _CompletedDownloadTile extends StatelessWidget {
           item.fileName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
         ),
         subtitle: Text(
           '${_formatBytes(item.size)}  -  ${item.smbPath}',
@@ -156,7 +159,7 @@ class _CompletedDownloadTile extends StatelessWidget {
           children: [
             IconButton(
               tooltip: 'Play',
-              icon: const Icon(Icons.play_arrow_rounded),
+              icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -170,7 +173,7 @@ class _CompletedDownloadTile extends StatelessWidget {
             ),
             IconButton(
               tooltip: 'Delete download',
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(Icons.delete_outline, color: Colors.white70),
               onPressed: () => CacheManagerService().deleteDownload(item),
             ),
           ],
@@ -195,13 +198,10 @@ class _DownloadSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141414),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
+      padding: EdgeInsets.zero,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 12),
       child: child,
     );
   }

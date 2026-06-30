@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smb_connect/smb_connect.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/smb_service.dart';
@@ -146,14 +147,16 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
   void _showDownloadPanel(SmbFile file) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        return GlassCard(
+          padding: const EdgeInsets.all(24),
+          shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+          useOwnLayer: true,
+          child: SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -171,21 +174,31 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                 const SizedBox(height: 8),
                 Text(
                   '${_formatBytes(file.size)} will be saved for offline playback.',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 20),
-                FilledButton.icon(
-                  icon: const Icon(Icons.download_rounded),
-                  label: const Text('Download'),
-                  onPressed: () {
+                GlassButton(
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                  padding: const EdgeInsets.all(12),
+                  onTap: () {
                     Navigator.pop(context);
                     CacheManagerService().cacheFile(file);
                   },
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.download_rounded, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                GlassButton(
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                  padding: const EdgeInsets.all(12),
+                  onTap: () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
                 ),
               ],
             ),
@@ -219,9 +232,11 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
               ),
               if (SMBService().hasSavedConnection) ...[
                 const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: SMBService().connectSaved,
-                  child: const Text('Reconnect'),
+                GlassButton(
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  onTap: SMBService().connectSaved,
+                  child: const Text('Reconnect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ],
             ],
@@ -308,16 +323,21 @@ class _PathBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded),
-        onPressed: onBack,
-      ),
-      title: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+    return _ListSurface(
+      child: GlassListTile(
+        isLast: true,
+        leading: GlassButton(
+          shape: const LiquidRoundedSuperellipse(borderRadius: 8),
+          padding: const EdgeInsets.all(6),
+          onTap: onBack,
+          child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+        ),
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
       ),
     );
   }
@@ -334,14 +354,15 @@ class _ServerRoot extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
       children: [
         _ListSurface(
-          child: ListTile(
+          child: GlassListTile(
+            isLast: true,
             leading: const Icon(
               Icons.dns_rounded,
               color: Colors.lightBlueAccent,
             ),
-            title: const Text('Server'),
-            subtitle: Text(SMBService().currentHost),
-            trailing: const Icon(Icons.chevron_right_rounded),
+            title: const Text('Server', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            subtitle: Text(SMBService().currentHost, style: const TextStyle(color: Colors.white60)),
+            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white54),
             onTap: onOpen,
           ),
         ),
@@ -387,7 +408,7 @@ class _FileList extends StatelessWidget {
 
             Widget trailing;
             if (isDir) {
-              trailing = const Icon(Icons.chevron_right_rounded);
+              trailing = const Icon(Icons.chevron_right_rounded, color: Colors.white54);
             } else if (task != null && task.hasFailed) {
               trailing = const Icon(
                 Icons.error_outline_rounded,
@@ -405,11 +426,12 @@ class _FileList extends StatelessWidget {
                 color: Colors.greenAccent,
               );
             } else {
-              trailing = const Icon(Icons.download_outlined);
+              trailing = const Icon(Icons.download_outlined, color: Colors.white70);
             }
 
             return _ListSurface(
-              child: ListTile(
+              child: GlassListTile(
+                isLast: true,
                 leading: Icon(
                   isDir ? Icons.folder_outlined : Icons.movie_outlined,
                   color: isDir ? Colors.amber : Colors.white70,
@@ -418,7 +440,7 @@ class _FileList extends StatelessWidget {
                   file.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
                 ),
                 subtitle: isDir
                     ? null
@@ -427,7 +449,7 @@ class _FileList extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.45),
+                          color: Colors.white.withValues(alpha: 0.5),
                         ),
                       ),
                 trailing: trailing,
@@ -457,13 +479,10 @@ class _ListSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141414),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
+      padding: EdgeInsets.zero,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 12),
       child: child,
     );
   }

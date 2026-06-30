@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:anivault/ui/cinematic_edge_bar.dart';
 import 'package:anivault/ui/performance_hud.dart';
 import 'package:anivault/services/shader_service.dart';
@@ -173,12 +174,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  void _showVideoSettings() {
+    void _showVideoSettings() {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withValues(alpha: 0.3), // gentle darkening
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, anim1, anim2) {
         return Align(
@@ -187,34 +188,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
             color: Colors.transparent,
             child: StatefulBuilder(
               builder: (context, setDialogState) {
-                return BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                  child: Container(
-                    width: 440,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 32,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(
-                        0x1A000000,
-                      ), // Hex 1A = 10% opacity black
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              _currentModelKey == 'Extreme' && _isEnhancementEnabled
-                              ? Colors.redAccent.withValues(alpha: 0.15)
-                              : Colors.black12,
-                          blurRadius: 40,
-                          spreadRadius: 10,
-                        ),
-                      ],
-                    ),
+                return SizedBox(
+                  width: 440,
+                  child: GlassCard(
+                    useOwnLayer: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    shape: const LiquidRoundedSuperellipse(borderRadius: 24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -226,163 +205,144 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 32),
-                        // Master Toggle
-                        SwitchListTile(
-                          title: const Text(
-                            'AI Video Enhancement',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                        const SizedBox(height: 28),
+                        // Master Toggle Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'AI Video Enhancement',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'AI Neural Network Upscaling Engine',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white60,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          subtitle: const Text(
-                            'AI Neural Network Upscaling Engine',
-                          ),
-                          value: _isEnhancementEnabled,
-                          activeThumbColor: _currentModelKey == 'Extreme'
-                              ? Colors.redAccent
-                              : Theme.of(context).colorScheme.primary,
-                          secondary: const Icon(Icons.auto_awesome),
-                          onChanged: (val) {
-                            setDialogState(() => _isEnhancementEnabled = val);
-                            setState(() => _isEnhancementEnabled = val);
-                            _applyEnhancementConfig();
-                          },
+                            GlassSwitch(
+                              useOwnLayer: true,
+                              value: _isEnhancementEnabled,
+                              onChanged: (val) {
+                                setDialogState(() => _isEnhancementEnabled = val);
+                                setState(() => _isEnhancementEnabled = val);
+                                _applyEnhancementConfig();
+                              },
+                            ),
+                          ],
                         ),
-                        
+                        const SizedBox(height: 24),
                         // Engine Selection Toggle
                         AnimatedOpacity(
                           duration: const Duration(milliseconds: 200),
                           opacity: _isEnhancementEnabled ? 1.0 : 0.3,
                           child: IgnorePointer(
                             ignoring: !_isEnhancementEnabled,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
-                              ),
-                              child: SegmentedButton<String>(
-                                showSelectedIcon: true,
-                                segments: const [
-                                  ButtonSegment(
-                                    value: 'Anime4K',
-                                    label: Text('Anime4K', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                    icon: Icon(Icons.bolt_rounded, size: 16),
-                                  ),
-                                  ButtonSegment(
-                                    value: 'ArtCNN',
-                                    label: Text('ArtCNN', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                    icon: Icon(Icons.memory_rounded, size: 16),
-                                  ),
-                                ],
-                                selected: {_currentEngine},
-                                onSelectionChanged: (Set<String> newSelection) {
-                                  setDialogState(() => _currentEngine = newSelection.first);
-                                  setState(() => _currentEngine = newSelection.first);
-                                  _applyEnhancementConfig();
-                                },
-                              ),
+                            child: GlassSegmentedControl(
+                              useOwnLayer: true,
+                              segments: const [
+                                GlassSegment(
+                                  label: 'Anime4K',
+                                  icon: Icon(Icons.bolt_rounded, size: 16),
+                                ),
+                                GlassSegment(
+                                  label: 'ArtCNN',
+                                  icon: Icon(Icons.memory_rounded, size: 16),
+                                ),
+                              ],
+                              selectedIndex: _currentEngine == 'Anime4K' ? 0 : 1,
+                              onSegmentSelected: (index) {
+                                final engine = index == 0 ? 'Anime4K' : 'ArtCNN';
+                                setDialogState(() => _currentEngine = engine);
+                                setState(() => _currentEngine = engine);
+                                _applyEnhancementConfig();
+                              },
                             ),
                           ),
                         ),
-
+                        const SizedBox(height: 24),
                         // Quality presets
                         AnimatedOpacity(
                           duration: const Duration(milliseconds: 200),
                           opacity: _isEnhancementEnabled && _currentEngine == 'Anime4K' ? 1.0 : 0.3,
                           child: IgnorePointer(
                             ignoring: !_isEnhancementEnabled || _currentEngine != 'Anime4K',
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 24,
-                                horizontal: 8,
-                              ),
-                              child: SegmentedButton<String>(
-                                showSelectedIcon: false,
-                                segments: const [
-                                  ButtonSegment(
-                                    value: 'Speed',
-                                    label: Text(
-                                      'Speed',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  ButtonSegment(
-                                    value: 'Balanced',
-                                    label: Text(
-                                      'Balanced',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  ButtonSegment(
-                                    value: 'Quality',
-                                    label: Text(
-                                      'Quality',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  ButtonSegment(
-                                    value: 'Extreme',
-                                    label: Text(
-                                      'Max',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                selected: {_currentModelKey},
-                                style: ButtonStyle(
-                                  backgroundColor:
-                                      WidgetStateProperty.resolveWith((states) {
-                                        if (states.contains(
-                                          WidgetState.selected,
-                                        )) {
-                                          return _currentModelKey == 'Extreme'
-                                              ? Colors.redAccent.shade700
-                                              : Theme.of(
-                                                  context,
-                                                ).colorScheme.primary;
-                                        }
-                                        return Colors.transparent;
-                                      }),
-                                ),
-                                onSelectionChanged: (Set<String> newSelection) {
-                                  setDialogState(() {
-                                    _currentModelKey = newSelection.first;
-                                  });
-                                  setState(() {
-                                    _currentModelKey = newSelection.first;
-                                  });
-                                  _applyEnhancementConfig();
-                                },
-                              ),
+                            child: GlassSegmentedControl(
+                              useOwnLayer: true,
+                              segments: const [
+                                GlassSegment(label: 'Speed'),
+                                GlassSegment(label: 'Balanced'),
+                                GlassSegment(label: 'Quality'),
+                                GlassSegment(label: 'Max'),
+                              ],
+                              selectedIndex: switch (_currentModelKey) {
+                                'Speed' => 0,
+                                'Balanced' => 1,
+                                'Quality' => 2,
+                                'Extreme' => 3,
+                                _ => 1,
+                              },
+                              onSegmentSelected: (index) {
+                                final modelKey = switch (index) {
+                                  0 => 'Speed',
+                                  1 => 'Balanced',
+                                  2 => 'Quality',
+                                  3 => 'Extreme',
+                                  _ => 'Balanced',
+                                };
+                                setDialogState(() => _currentModelKey = modelKey);
+                                setState(() => _currentModelKey = modelKey);
+                                _applyEnhancementConfig();
+                              },
                             ),
                           ),
                         ),
-                        // HUD Toggle
-                        SwitchListTile(
-                          title: const Text(
-                            'Performance overlay',
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          subtitle: const Text('Show playback stats'),
-                          value: _showHUD,
-                          activeThumbColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          secondary: const Icon(Icons.memory_rounded),
-                          onChanged: (val) {
-                            setDialogState(() => _showHUD = val);
-                            setState(() => _showHUD = val);
-                          },
+                        const SizedBox(height: 24),
+                        // HUD Toggle Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Performance overlay',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Show playback stats',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white60,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            GlassSwitch(
+                              useOwnLayer: true,
+                              value: _showHUD,
+                              onChanged: (val) {
+                                setDialogState(() => _showHUD = val);
+                                setState(() => _showHUD = val);
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -405,7 +365,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
-  @override
+@override
   void dispose() {
     _exitFullscreen();
     player.dispose();
@@ -487,30 +447,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     alignment: Alignment.centerRight,
                     child: Padding(
                       padding: const EdgeInsets.only(right: 16),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: InkWell(
-                            onTap: _showVideoSettings,
-                            borderRadius: BorderRadius.circular(24),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 48,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                ),
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              child: const Icon(
-                                Icons.layers_rounded,
-                                color: Colors.white70,
-                                size: 28,
-                              ),
+                      child: GlassCard(
+                        useOwnLayer: true,
+                        padding: EdgeInsets.zero,
+                        shape: const LiquidRoundedSuperellipse(borderRadius: 24),
+                        child: InkWell(
+                          onTap: _showVideoSettings,
+                          borderRadius: BorderRadius.circular(24),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 48,
+                            ),
+                            child: const Icon(
+                              Icons.layers_rounded,
+                              color: Colors.white,
+                              size: 28,
                             ),
                           ),
                         ),
@@ -525,24 +477,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       stream: player.stream.playing,
                       builder: (context, playing) {
                         final isPlaying = playing.data ?? false;
-                        return FilledButton.tonal(
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.all(24),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.8),
-                          ),
-                          onPressed: () => player.playOrPause(),
+                        return GlassButton(
+                          shape: const LiquidRoundedSuperellipse(borderRadius: 36),
+                          padding: const EdgeInsets.all(24),
+                          onTap: () => player.playOrPause(),
                           child: Icon(
                             isPlaying
                                 ? Icons.pause_rounded
                                 : Icons.play_arrow_rounded,
                             size: 64,
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: Colors.white,
                           ),
                         );
                       },

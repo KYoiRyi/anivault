@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 class PerformanceHUD extends StatefulWidget {
   final Player player;
@@ -65,60 +65,51 @@ class _PerformanceHUDState extends State<PerformanceHUD> {
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            width: 220,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
-            ),
-            child: StreamBuilder<VideoParams>(
-              stream: widget.player.stream.videoParams,
-              builder: (context, snapshot) {
-                final vp = snapshot.data ?? widget.player.state.videoParams;
-                final res = vp.w != null ? '${vp.w}x${vp.h}' : 'Unknown';
+      child: GlassCard(
+        useOwnLayer: true,
+        width: 220,
+        padding: const EdgeInsets.all(16),
+        shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+        child: StreamBuilder<VideoParams>(
+          stream: widget.player.stream.videoParams,
+          builder: (context, snapshot) {
+            final vp = snapshot.data ?? widget.player.state.videoParams;
+            final res = vp.w != null ? '${vp.w}x${vp.h}' : 'Unknown';
 
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.speed_rounded, color: Colors.white70, size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          'SYSTEM TELEMETRY',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ],
+                    const Icon(Icons.speed_rounded, color: Colors.white70, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'SYSTEM TELEMETRY',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    _StatRow(label: 'RAM Use', value: '${_memMB.toStringAsFixed(1)} MB'),
-                    const SizedBox(height: 6),
-                    _StatRow(label: 'Video Res', value: res),
-                    const SizedBox(height: 6),
-                    _StatRow(label: 'V-FPS (Real)', value: _videoFps),
-                    const SizedBox(height: 6),
-                    _StatRow(label: 'UI-FPS', value: '$_uiFps'),
-                    const SizedBox(height: 6),
-                    _StatRow(label: 'Decoder', value: 'D3D11VA (Zero-Copy)'),
-                    const SizedBox(height: 6),
-                    _StatRow(label: 'Backend', value: 'MediaKit / GPU-NEXT'),
                   ],
-                );
-              },
-            ),
-          ),
+                ),
+                const SizedBox(height: 12),
+                _StatRow(label: 'RAM Use', value: '${_memMB.toStringAsFixed(1)} MB'),
+                const SizedBox(height: 6),
+                _StatRow(label: 'Video Res', value: res),
+                const SizedBox(height: 6),
+                _StatRow(label: 'V-FPS (Real)', value: _videoFps),
+                const SizedBox(height: 6),
+                _StatRow(label: 'UI-FPS', value: '$_uiFps'),
+                const SizedBox(height: 6),
+                _StatRow(label: 'Decoder', value: 'D3D11VA (Zero-Copy)'),
+                const SizedBox(height: 6),
+                _StatRow(label: 'Backend', value: 'MediaKit / GPU-NEXT'),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/cache_manager_service.dart';
-import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/smb_service.dart';
 import 'package:anivault/ui/anime_series_screen.dart';
 import 'package:anivault/ui/downloads_view.dart';
@@ -131,69 +131,127 @@ class _HomeScreenState extends State<HomeScreen> {
         var connecting = false;
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF111111),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              title: const Text('Connect to Network Share'),
-              content: SizedBox(
-                width: 340,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: _smbHostCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Host IP or name',
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              child: GlassCard(
+                useOwnLayer: true,
+                padding: const EdgeInsets.all(20),
+                shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                child: SizedBox(
+                  width: 340,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Connect to Network Share',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    TextField(
-                      controller: _smbDomainCtrl,
-                      decoration: const InputDecoration(labelText: 'Domain'),
-                    ),
-                    TextField(
-                      controller: _smbUserCtrl,
-                      decoration: const InputDecoration(labelText: 'Username'),
-                    ),
-                    TextField(
-                      controller: _smbPassCtrl,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Password'),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _smbHostCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Host IP or name',
+                          labelStyle: TextStyle(color: Colors.white54),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white30),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white70),
+                          ),
+                        ),
+                      ),
+                      TextField(
+                        controller: _smbDomainCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Domain',
+                          labelStyle: TextStyle(color: Colors.white54),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white30),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white70),
+                          ),
+                        ),
+                      ),
+                      TextField(
+                        controller: _smbUserCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Username',
+                          labelStyle: TextStyle(color: Colors.white54),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white30),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white70),
+                          ),
+                        ),
+                      ),
+                      TextField(
+                        controller: _smbPassCtrl,
+                        obscureText: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          labelStyle: TextStyle(color: Colors.white54),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white30),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white70),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          GlassButton(
+                            shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            onTap: () => Navigator.pop(context),
+                            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                          ),
+                          const SizedBox(width: 8),
+                          GlassButton(
+                            shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            onTap: connecting
+                                ? null
+                                : () async {
+                                    setDialogState(() => connecting = true);
+                                    final success = await SMBService().connect(
+                                      _smbHostCtrl.text.trim(),
+                                      _smbDomainCtrl.text.trim(),
+                                      _smbUserCtrl.text.trim(),
+                                      _smbPassCtrl.text,
+                                    );
+                                    setDialogState(() => connecting = false);
+                                    if (success && context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  },
+                            child: connecting
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: connecting
-                      ? null
-                      : () async {
-                          setDialogState(() => connecting = true);
-                          final success = await SMBService().connect(
-                            _smbHostCtrl.text.trim(),
-                            _smbDomainCtrl.text.trim(),
-                            _smbUserCtrl.text.trim(),
-                            _smbPassCtrl.text,
-                          );
-                          setDialogState(() => connecting = false);
-                          if (success && context.mounted) {
-                            Navigator.pop(context);
-                          }
-                        },
-                  child: connecting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Connect'),
-                ),
-              ],
             );
           },
         );
@@ -267,17 +325,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showLogsDialog() {
+  void _showSettingsDialog() {
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
-          backgroundColor: const Color(0xFF111111),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: SizedBox(
-            width: 640,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+          backgroundColor: Colors.transparent,
+          child: GlassCard(
+            useOwnLayer: true,
+            padding: const EdgeInsets.all(20),
+            shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+            child: SizedBox(
+              width: 420,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -286,70 +345,43 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Expanded(
                         child: Text(
-                          'Logs',
+                          'Settings',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded),
+                      GlassIconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
-                  const Divider(),
-                  SizedBox(
-                    height: 360,
-                    child: ListenableBuilder(
-                      listenable: LoggerService(),
-                      builder: (context, _) {
-                        final logs = LoggerService().logs;
-                        if (logs.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'No logs yet.',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.45),
-                              ),
-                            ),
-                          );
-                        }
-                        return ListView.builder(
-                          itemCount: logs.length,
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2),
-                              child: Text(
-                                logs[index],
-                                style: const TextStyle(
-                                  fontFamily: 'Consolas',
-                                  fontSize: 13,
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  const Divider(),
+                  const SizedBox(height: 12),
+                  const Divider(color: Colors.white12),
+                  const SizedBox(height: 12),
                   ListenableBuilder(
                     listenable: CacheManagerService(),
                     builder: (context, _) {
                       final limit = CacheManagerService().cacheLimitGB;
                       return Row(
                         children: [
-                          const Icon(Icons.storage_rounded, size: 20),
+                          const Icon(Icons.storage_rounded, size: 20, color: Colors.white70),
                           const SizedBox(width: 8),
-                          Text('Download limit: ${limit.toInt()} GB'),
+                          Text(
+                            'Download limit: ${limit.toInt()} GB',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
                           Expanded(
                             child: Slider(
                               value: limit,
                               min: 5,
                               max: 100,
                               divisions: 19,
+                              activeColor: Colors.white,
+                              inactiveColor: Colors.white24,
                               onChanged: CacheManagerService().setCacheLimit,
                             ),
                           ),
@@ -357,33 +389,53 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
-                  const Divider(),
+                  const SizedBox(height: 12),
+                  const Divider(color: Colors.white12),
+                  const SizedBox(height: 12),
                   const Text(
                     'AniDB API',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _anidbClientCtrl,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       labelText: 'Client name',
-                      helperText:
-                          'Optional. Required only for cover/detail fetching.',
+                      labelStyle: TextStyle(color: Colors.white54),
+                      helperStyle: TextStyle(color: Colors.white30),
+                      helperText: 'Optional. Required only for cover/detail fetching.',
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white30),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white70),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _anidbClientVerCtrl,
+                    style: const TextStyle(color: Colors.white),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Client version',
+                      labelStyle: TextStyle(color: Colors.white54),
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white30),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white70),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: FilledButton.tonal(
-                      onPressed: () async {
+                    child: GlassButton(
+                      shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      onTap: () async {
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.setString(
                           'anidb_client',
@@ -396,7 +448,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (context.mounted) Navigator.pop(context);
                         await _refreshAnimeLibrary();
                       },
-                      child: const Text('Save API settings'),
+                      child: const Text('Save API settings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ],
@@ -410,69 +462,69 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildContent()),
-          ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: _buildBottomNavigation(),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              _sectionTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-            ),
+    return GlassScaffold(
+      background: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0C0720), // Deep blue space
+              Color(0xFF1B0C30), // Deep purple space
+              Color(0xFF000000), // Pure black
+            ],
           ),
+        ),
+      ),
+      statusBarStyle: GlassStatusBarStyle.auto,
+      appBar: GlassAppBar(
+        backgroundColor: Colors.transparent,
+        title: Text(
+          _sectionTitle,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        actions: [
           if (_currentSection == HomeSection.network)
-            _HeaderButton(
-              icon: Icons.router_rounded,
-              tooltip: 'SMB settings',
-              onPressed: _showSMBDialog,
+            GlassButton(
+              shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+              padding: const EdgeInsets.all(8),
+              onTap: _showSMBDialog,
+              child: const Icon(Icons.router_rounded, color: Colors.white),
             ),
-          _HeaderButton(
-            icon: Icons.terminal_rounded,
-            tooltip: 'Logs',
-            onPressed: _showLogsDialog,
+          GlassButton(
+            shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+            padding: const EdgeInsets.all(8),
+            onTap: _showSettingsDialog,
+            child: const Icon(Icons.settings_rounded, color: Colors.white),
           ),
           if (_currentSection == HomeSection.library)
-            _HeaderButton(
-              icon: _isSyncing || _isScraping ? null : Icons.add_rounded,
-              tooltip: 'Import media',
-              onPressed: _isSyncing || _isScraping ? null : _importVideo,
+            GlassButton(
+              shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+              padding: const EdgeInsets.all(8),
+              onTap: _isSyncing || _isScraping ? null : _importVideo,
               child: _isSyncing || _isScraping
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : null,
+                  : const Icon(Icons.add_rounded, color: Colors.white),
             ),
         ],
+      ),
+      body: _buildContent(),
+      bottomBar: GlassTabBar.bottom(
+        tabs: const [
+          GlassTab(icon: Icon(Icons.video_library_outlined), label: 'Library'),
+          GlassTab(icon: Icon(Icons.folder_shared_outlined), label: 'Network'),
+          GlassTab(icon: Icon(Icons.download_done_outlined), label: 'Downloads'),
+        ],
+        selectedIndex: _currentSection.index,
+        onTabSelected: (index) => _setSection(HomeSection.values[index]),
       ),
     );
   }
@@ -540,151 +592,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomNavigation() {
-    final size = MediaQuery.sizeOf(context);
-    final aspectRatio = size.width / size.height;
-    final showLabels = size.width >= 430 || aspectRatio >= 0.58;
-
-    return Container(
-      height: 66,
-      margin: const EdgeInsets.fromLTRB(18, 8, 18, 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(33),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.34),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(33),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-          child: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(33),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: 0.24),
-                  Colors.white.withValues(alpha: 0.08),
-                  Colors.black.withValues(alpha: 0.18),
-                ],
-              ),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-            ),
-            child: Stack(
-              children: [
-                AnimatedAlign(
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutCubic,
-                  alignment: switch (_currentSection) {
-                    HomeSection.library => Alignment.centerLeft,
-                    HomeSection.network => Alignment.center,
-                    HomeSection.downloads => Alignment.centerRight,
-                  },
-                  child: FractionallySizedBox(
-                    widthFactor: 1 / HomeSection.values.length,
-                    heightFactor: 1,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.34),
-                            Colors.white.withValues(alpha: 0.16),
-                          ],
-                        ),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.24),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            blurRadius: 18,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    _NavigationItem(
-                      label: 'Library',
-                      icon: Icons.video_library_outlined,
-                      selected: _currentSection == HomeSection.library,
-                      showLabel: showLabels,
-                      onTap: () => _setSection(HomeSection.library),
-                    ),
-                    _NavigationItem(
-                      label: 'Network',
-                      icon: Icons.folder_shared_outlined,
-                      selected: _currentSection == HomeSection.network,
-                      showLabel: showLabels,
-                      onTap: () => _setSection(HomeSection.network),
-                    ),
-                    _NavigationItem(
-                      label: 'Downloads',
-                      icon: Icons.download_done_outlined,
-                      selected: _currentSection == HomeSection.downloads,
-                      showLabel: showLabels,
-                      onTap: () => _setSection(HomeSection.downloads),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   String get _sectionTitle {
     return switch (_currentSection) {
       HomeSection.library => 'Library',
       HomeSection.network => 'Network',
       HomeSection.downloads => 'Downloads',
     };
-  }
-}
-
-class _HeaderButton extends StatelessWidget {
-  final IconData? icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
-  final Widget? child;
-
-  const _HeaderButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-    this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8),
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onPressed,
-        style: IconButton.styleFrom(
-          backgroundColor: const Color(0xFF1B1B1B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        icon: child ?? Icon(icon),
-      ),
-    );
   }
 }
 
@@ -696,22 +609,19 @@ class _AnimeSeriesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF141414),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(8),
+                  top: Radius.circular(12),
                 ),
                 child: _SeriesCover(series: series),
               ),
@@ -731,6 +641,7 @@ class _AnimeSeriesCard extends StatelessWidget {
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             height: 1.16,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -819,62 +730,6 @@ class _CoverFallback extends StatelessWidget {
               : Icons.movie_creation_outlined,
           color: Colors.white54,
           size: 42,
-        ),
-      ),
-    );
-  }
-}
-
-class _NavigationItem extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final bool showLabel;
-  final VoidCallback onTap;
-
-  const _NavigationItem({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.showLabel,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(28),
-        onTap: onTap,
-        child: Container(
-          height: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: selected ? Colors.white : Colors.white60,
-              ),
-              if (showLabel) ...[
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: selected ? Colors.white : Colors.white54,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
         ),
       ),
     );

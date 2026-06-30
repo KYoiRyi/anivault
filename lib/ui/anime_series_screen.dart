@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/ui/player_screen.dart';
@@ -10,54 +11,64 @@ class AnimeSeriesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _Header(series: series),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                itemCount: series.episodes.length,
-                itemBuilder: (context, index) {
-                  final episode = series.episodes[index];
-                  return _EpisodeBlock(episode: episode);
-                },
-              ),
-            ),
-          ],
+    return GlassScaffold(
+      background: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0C0720), // Deep blue space
+              Color(0xFF1B0C30), // Deep purple space
+              Color(0xFF000000), // Pure black
+            ],
+          ),
         ),
+      ),
+      statusBarStyle: GlassStatusBarStyle.auto,
+      appBar: GlassAppBar(
+        backgroundColor: Colors.transparent,
+        title: Text(
+          series.title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        leading: GlassButton(
+          shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+          padding: const EdgeInsets.all(8),
+          onTap: () => Navigator.pop(context),
+          child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          _HeaderDetails(series: series),
+          const SizedBox(height: 16),
+          ...series.episodes.map((episode) => _EpisodeBlock(episode: episode)),
+        ],
       ),
     );
   }
 }
 
-class _Header extends StatelessWidget {
+class _HeaderDetails extends StatelessWidget {
   final AnimeSeries series;
 
-  const _Header({required this.series});
+  const _HeaderDetails({required this.series});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 20, 16),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-      ),
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      shape: const LiquidRoundedSuperellipse(borderRadius: 16),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          ),
-          const SizedBox(width: 4),
           _Cover(series: series, size: 72),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,14 +78,15 @@ class _Header extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '${series.episodes.length} episodes  -  ${series.fileCount} files',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.54)),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
                 ),
               ],
             ),
@@ -133,13 +145,11 @@ class _EpisodeBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final files = episode.files;
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF111111),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
+      padding: EdgeInsets.zero,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -153,44 +163,46 @@ class _EpisodeBlock extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-                if (episode.files.length > 1)
+                if (files.length > 1)
                   Text(
-                    '${episode.files.length} versions',
+                    '${files.length} versions',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.52),
+                      color: Colors.white.withValues(alpha: 0.6),
                     ),
                   ),
               ],
             ),
           ),
-          for (final file in episode.files)
-            ListTile(
-              leading: const Icon(Icons.play_arrow_rounded),
+          for (int i = 0; i < files.length; i++)
+            GlassListTile(
+              isLast: i == files.length - 1,
+              leading: const Icon(Icons.play_arrow_rounded, color: Colors.white70),
               title: Text(
-                file.fileName,
+                files[i].fileName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
               ),
               subtitle: Text(
                 [
-                  if (file.releaseGroup != null) file.releaseGroup,
-                  if (file.resolution != null) file.resolution,
-                  file.path,
+                  if (files[i].releaseGroup != null) files[i].releaseGroup,
+                  if (files[i].resolution != null) files[i].resolution,
+                  files[i].path,
                 ].join('  -  '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
               ),
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => PlayerScreen(
-                      videoPath: file.path,
-                      title: file.fileName,
+                      videoPath: files[i].path,
+                      title: files[i].fileName,
                     ),
                   ),
                 );

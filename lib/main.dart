@@ -4,6 +4,7 @@ import 'package:anivault/ui/home_screen.dart';
 import 'package:anivault/services/shader_service.dart';
 import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/smb_service.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +15,13 @@ void main() async {
   await CacheManagerService().initialize();
   await SMBService().init();
 
-  runApp(const AniVaultApp());
+  // Initialize liquid glass shaders
+  await LiquidGlassWidgets.initialize();
+
+  runApp(LiquidGlassWidgets.wrap(
+    child: const AniVaultApp(),
+    adaptiveQuality: true,
+  ));
 }
 
 class AniVaultApp extends StatelessWidget {
