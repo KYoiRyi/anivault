@@ -310,25 +310,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        GlassCard(
-                          useOwnLayer: true,
-                          quality: GlassQuality.premium,
-                          settings: RecommendedGlassSettings.playerPanel,
-                          clipBehavior: Clip.antiAlias,
-                          padding: EdgeInsets.zero,
-                          shape: const LiquidRoundedSuperellipse(
-                            borderRadius: 42,
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(42),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(42),
+                          child: Material(
+                            color: const Color(0xFF161618),
                             child: Stack(
                               clipBehavior: Clip.hardEdge,
                               children: [
-                                Positioned.fill(
-                                  child: ColoredBox(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                  ),
-                                ),
                                 SingleChildScrollView(
                                   clipBehavior: Clip.hardEdge,
                                   child: Padding(
