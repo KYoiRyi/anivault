@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return Dialog(
               backgroundColor: Colors.transparent,
               child: AdaptiveLiquidGlassLayer(
-                settings: RecommendedGlassSettings.surface,
+                settings: const LiquidGlassSettings(),
                 child: GlassCard(
                   padding: const EdgeInsets.all(20),
                   shape: const LiquidRoundedSuperellipse(borderRadius: 16),

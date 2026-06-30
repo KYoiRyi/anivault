@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 class CinematicEdgeBar extends StatefulWidget {
@@ -78,9 +79,6 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              final tooltipWidth = 100.0;
-              final leftOffset = (_dragX - tooltipWidth / 2).clamp(8.0, constraints.maxWidth - tooltipWidth - 8.0);
-
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Stack(

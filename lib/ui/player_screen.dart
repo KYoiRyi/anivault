@@ -57,6 +57,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     Future.microtask(() async {
       try {
         final nativePlayer = player.platform as NativePlayer;
+        final nativePreviewPlayer = previewPlayer.platform as NativePlayer;
         
         // --- Windows Native Hang Prevention ---
         // Disable youtube-dl hook which causes "ytdl_hook: scraping" to block endlessly on some SMB streams.
@@ -205,7 +206,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 return SizedBox(
                   width: 440,
                   child: AdaptiveLiquidGlassLayer(
-                    settings: RecommendedGlassSettings.surface,
+                    settings: const LiquidGlassSettings(),
                     child: GlassCard(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                       shape: const LiquidRoundedSuperellipse(borderRadius: 24),
