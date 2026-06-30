@@ -1150,16 +1150,15 @@ class _PlayerScreenState extends State<PlayerScreen>
 
 class RecommendedGlassSettings {
   static const playerPanel = LiquidGlassSettings(
-    blur: 5,
-    thickness: 36,
-    glassColor: Color(0xE6FFFFFF),
-    lightAngle: 0.7 * math.pi,
-    lightIntensity: 1.75,
-    ambientStrength: 0.0,
-    saturation: 1.28,
-    refractiveIndex: 1.5,
-    chromaticAberration: 0.28,
-    glowIntensity: 0.52,
+    blur: 3,
+    thickness: 30,
+    glassColor: Color(0x3DFFFFFF),
+    lightAngle: 0.75 * math.pi,
+    lightIntensity: 0.6,
+    ambientStrength: 1,
+    saturation: 0.7,
+    refractiveIndex: 1.59,
+    chromaticAberration: 0.3,
     specularSharpness: GlassSpecularSharpness.medium,
   );
 
