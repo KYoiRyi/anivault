@@ -102,7 +102,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // Listen to subtitle stream and parse active lines (filtering duplicates, sorting, stripping ASS tags)
     player.stream.subtitle.listen((subtitle) {
       final uniqueLines = <String>{};
-      for (final rawLine in subtitle.text) {
+      for (final rawLine in subtitle) {
         final cleanLine = rawLine.replaceAll(RegExp(r'\{[^}]*\}'), '').trim();
         if (cleanLine.isNotEmpty) {
           uniqueLines.add(cleanLine);
@@ -761,7 +761,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     left: 24,
                     child: Row(
                       children: [
-                        GlassButton(
+                        GlassButton.custom(
                           useOwnLayer: true,
                           width: 48,
                           height: 48,
@@ -791,7 +791,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     alignment: Alignment.centerRight,
                     child: Padding(
                       padding: const EdgeInsets.only(right: 16),
-                      child: GlassButton(
+                      child: GlassButton.custom(
                         useOwnLayer: true,
                         width: 56,
                         height: 56,
@@ -813,7 +813,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       stream: player.stream.playing,
                       builder: (context, playing) {
                         final isPlaying = playing.data ?? false;
-                        return GlassButton(
+                        return GlassButton.custom(
                           useOwnLayer: true,
                           width: 96,
                           height: 96,
