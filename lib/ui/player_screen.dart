@@ -941,14 +941,43 @@ class _PlayerScreenState extends State<PlayerScreen>
             width: 2,
             height: 2,
             child: AdaptiveLiquidGlassLayer(
-              settings: RecommendedGlassSettings.playerPanel,
+              settings: RecommendedGlassSettings.playerSection,
               quality: GlassQuality.standard,
               child: GlassCard(
                 useOwnLayer: false,
-                settings: RecommendedGlassSettings.playerPanel,
+                settings: RecommendedGlassSettings.playerSection,
                 padding: EdgeInsets.zero,
-                shape: const LiquidOval(),
-                child: const SizedBox.expand(),
+                shape: const LiquidRoundedSuperellipse(borderRadius: 34),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      GlassSlider(
+                        settings: RecommendedGlassSettings.playerHighlight,
+                        value: 0.5,
+                        min: 0,
+                        max: 1,
+                        onChanged: _noopSlider,
+                      ),
+                      const SizedBox(height: 12),
+                      GlassSwitch(
+                        value: false,
+                        onChanged: _noopSwitch,
+                      ),
+                      const SizedBox(height: 12),
+                      GlassSegmentedControl(
+                        segments: const [
+                          GlassSegment(label: 'A'),
+                          GlassSegment(label: 'B'),
+                        ],
+                        selectedIndex: 0,
+                        onSegmentSelected: _noopSeg,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -956,6 +985,10 @@ class _PlayerScreenState extends State<PlayerScreen>
       ),
     );
   }
+
+  void _noopSlider(double v) {}
+  void _noopSwitch(bool v) {}
+  void _noopSeg(int v) {}
 
   void _toggleControls() {
     setState(() {
