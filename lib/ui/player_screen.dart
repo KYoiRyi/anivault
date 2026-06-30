@@ -113,18 +113,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     _loadSubtitleSettings();
 
-    // Listen to position stream to store current position
+    // Listen to position stream to store current position in real-time directly to SharedPreferences
     player.stream.position.listen((pos) {
-      final posMs = pos.inMilliseconds.toDouble();
-      _currentPositionMs = posMs;
-    });
-
-    // Start high frequency saving timer (every 1 second)
-    _historyTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (_currentPositionMs > 0 && _currentPositionMs != _lastSavedPosition) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('pos_${widget.videoPath}', _currentPositionMs.toInt());
-        _lastSavedPosition = _currentPositionMs;
+      final posMs = pos.inMilliseconds;
+      if (posMs > 0) {
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setInt('pos_${widget.videoPath}', posMs);
+        });
       }
     });
 
@@ -172,6 +167,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
           await previewPlayer.open(Media(widget.videoPath), play: false).timeout(
             const Duration(seconds: 12),
           );
+
+          // Wait for duration stream to emit a valid duration (> 0) indicating player has parsed the media
+          await player.stream.duration.firstWhere((d) => d > Duration.zero).timeout(const Duration(seconds: 5));
+          await previewPlayer.stream.duration.firstWhere((d) => d > Duration.zero).timeout(const Duration(seconds: 5));
           
           final prefs = await SharedPreferences.getInstance();
           final savedPos = prefs.getInt('pos_${widget.videoPath}') ?? 0;
@@ -643,8 +642,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
 @override
   void dispose() {
+    // Save position one last time immediately on dispose
+    final posMs = player.state.position.inMilliseconds;
+    if (posMs > 0) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setInt('pos_${widget.videoPath}', posMs);
+      });
+    }
+    _historyTimer?.cancel();
     _exitFullscreen();
     player.dispose();
+    previewPlayer.dispose();
     super.dispose();
   }
 
