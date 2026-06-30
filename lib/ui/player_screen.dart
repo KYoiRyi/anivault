@@ -293,7 +293,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
       barrierColor: Colors.transparent,
-      transitionDuration: Duration.zero,
+      transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, anim1, anim2) {
         return Align(
           alignment: Alignment.center,
@@ -312,58 +312,69 @@ class _PlayerScreenState extends State<PlayerScreen>
                   width: panelWidth,
                   child: AdaptiveLiquidGlassLayer(
                     settings: RecommendedGlassSettings.playerPanel,
-                    quality: GlassQuality.premium,
-                    blendAmount: 18,
+                    quality: GlassQuality.standard,
+                    blendAmount: 10,
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: panelMaxHeight),
                       child: GlassCard(
-                        useOwnLayer: true,
-                        quality: GlassQuality.premium,
-                        settings: RecommendedGlassSettings.playerPanel,
+                        useOwnLayer: false,
                         clipBehavior: Clip.antiAlias,
                         padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                         shape: const LiquidRoundedSuperellipse(
                           borderRadius: 42,
                         ),
-                        child: Stack(
-                          children: [
-                            SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Expanded(
-                                        child: Text(
-                                          'Player Settings',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.w300,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(42),
+                          child: Stack(
+                            clipBehavior: Clip.hardEdge,
+                            children: [
+                              Positioned.fill(
+                                child: ColoredBox(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                ),
+                              ),
+                              SingleChildScrollView(
+                                clipBehavior: Clip.hardEdge,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Player Settings',
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.94,
+                                              ),
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w400,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      GlassButton.custom(
-                                        width: 40,
-                                        height: 40,
-                                        glowColor: Colors.white,
-                                        glowOpacity: 0.5,
-                                        glowBlurRadius: 18,
-                                        interactionScale: 1.08,
-                                        stretch: 0.75,
-                                        shape: const LiquidOval(),
-                                        onTap: () => Navigator.of(context).pop(),
-                                        child: const Icon(
-                                          Icons.close_rounded,
-                                          color: Colors.white,
-                                          size: 19,
+                                        GlassButton.custom(
+                                          width: 40,
+                                          height: 40,
+                                          glowColor: const Color(0xFF8FEAFF),
+                                          glowOpacity: 0.5,
+                                          glowBlurRadius: 18,
+                                          interactionScale: 1.08,
+                                          stretch: 0.75,
+                                          shape: const LiquidOval(),
+                                          onTap: () =>
+                                              Navigator.of(context).pop(),
+                                          child: const Icon(
+                                            Icons.close_rounded,
+                                            color: Colors.white,
+                                            size: 19,
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _glassSettingsSection(
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _glassSettingsSection(
                                     icon: Icons.auto_awesome_rounded,
                                     title: 'Video Quality',
                                     subtitle: 'AI upscaling engine',
@@ -736,21 +747,23 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 ],
                               ),
                             ),
-                            Positioned.fill(
-                              child: IgnorePointer(
-                                child: AnimatedBuilder(
-                                  animation: _glassSweepController,
-                                  builder: (context, _) {
-                                    return CustomPaint(
-                                      painter: _LiquidGlassSweepPainter(
-                                        progress: _glassSweepController.value,
-                                      ),
-                                    );
-                                  },
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: AnimatedBuilder(
+                                    animation: _glassSweepController,
+                                    builder: (context, _) {
+                                      return CustomPaint(
+                                        painter: _LiquidGlassSweepPainter(
+                                          progress:
+                                              _glassSweepController.value,
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -761,7 +774,17 @@ class _PlayerScreenState extends State<PlayerScreen>
           ),
         );
       },
-      transitionBuilder: (context, anim1, anim2, child) => child,
+      transitionBuilder: (context, anim1, anim2, child) {
+        final curved = CurvedAnimation(
+          parent: anim1,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return Transform.scale(
+          scale: 0.96 + curved.value * 0.04,
+          child: Opacity(opacity: anim1.value, child: child),
+        );
+      },
     );
   }
 
@@ -942,10 +965,9 @@ class _PlayerScreenState extends State<PlayerScreen>
             height: 2,
             child: AdaptiveLiquidGlassLayer(
               settings: RecommendedGlassSettings.playerPanel,
-              quality: GlassQuality.premium,
+              quality: GlassQuality.standard,
               child: GlassCard(
-                useOwnLayer: true,
-                quality: GlassQuality.premium,
+                useOwnLayer: false,
                 settings: RecommendedGlassSettings.playerPanel,
                 padding: EdgeInsets.zero,
                 shape: const LiquidOval(),
@@ -1148,10 +1170,44 @@ class _LiquidGlassSweepPainter extends CustomPainter {
       return;
     }
 
-    final sweepWidth = size.width * 0.42;
+    final panelRect = Offset.zero & size;
+    final panelRRect = RRect.fromRectAndRadius(
+      panelRect,
+      const Radius.circular(42),
+    );
+    final ambientRimPaint = Paint()
+      ..blendMode = BlendMode.screen
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFF65F7FF).withValues(alpha: 0.44),
+          const Color(0xFFFFFFFF).withValues(alpha: 0.12),
+          const Color(0xFFFF73E8).withValues(alpha: 0.38),
+          const Color(0xFF75A7FF).withValues(alpha: 0.30),
+        ],
+        stops: const [0.0, 0.42, 0.72, 1.0],
+      ).createShader(panelRect)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.35;
+    canvas.drawRRect(panelRRect.deflate(0.8), ambientRimPaint);
+
+    final innerRimPaint = Paint()
+      ..blendMode = BlendMode.screen
+      ..color = Colors.white.withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7;
+    canvas.drawRRect(panelRRect.deflate(2.2), innerRimPaint);
+
+    final sweepWidth = size.width * 0.5;
     final travel = size.width + sweepWidth * 2;
     final x = -sweepWidth + travel * progress;
-    final rect = Rect.fromLTWH(x, -size.height * 0.25, sweepWidth, size.height * 1.5);
+    final rect = Rect.fromLTWH(
+      x,
+      -size.height * 0.25,
+      sweepWidth,
+      size.height * 1.5,
+    );
     final paint = Paint()
       ..blendMode = BlendMode.screen
       ..shader = const LinearGradient(
@@ -1160,9 +1216,9 @@ class _LiquidGlassSweepPainter extends CustomPainter {
         colors: [
           Colors.transparent,
           Color.fromRGBO(0, 255, 255, 0.0),
-          Color.fromRGBO(90, 240, 255, 0.22),
-          Color.fromRGBO(255, 255, 255, 0.58),
-          Color.fromRGBO(255, 90, 230, 0.22),
+          Color.fromRGBO(90, 240, 255, 0.32),
+          Color.fromRGBO(255, 255, 255, 0.38),
+          Color.fromRGBO(255, 90, 230, 0.34),
           Colors.transparent,
         ],
         stops: [0.0, 0.32, 0.5, 0.68, 1.0],
@@ -1173,26 +1229,21 @@ class _LiquidGlassSweepPainter extends CustomPainter {
     canvas.drawRect(rect, paint);
     canvas.restore();
 
-    final rimPaint = Paint()
+    final movingRimPaint = Paint()
       ..blendMode = BlendMode.screen
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          const Color(0xFF8FEAFF).withValues(alpha: 0.46),
-          Colors.white.withValues(alpha: 0.04),
-          const Color(0xFFFF9AF2).withValues(alpha: 0.34),
+          const Color(0xFF8FEAFF).withValues(alpha: 0.20),
+          Colors.white.withValues(alpha: 0.06),
+          const Color(0xFFFF9AF2).withValues(alpha: 0.18),
         ],
-      ).createShader(Offset.zero & size)
+        transform: GradientRotation(progress * math.pi * 2),
+      ).createShader(panelRect)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.1;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Offset.zero & size,
-        const Radius.circular(42),
-      ).deflate(0.7),
-      rimPaint,
-    );
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(panelRRect.deflate(1.4), movingRimPaint);
   }
 
   @override
@@ -1204,30 +1255,30 @@ class _LiquidGlassSweepPainter extends CustomPainter {
 
 class RecommendedGlassSettings {
   static const playerPanel = LiquidGlassSettings(
-    blur: 3,
-    thickness: 42,
+    blur: 5,
+    thickness: 36,
     glassColor: Colors.transparent,
     lightAngle: 0.7 * math.pi,
-    lightIntensity: 3.2,
+    lightIntensity: 1.75,
     ambientStrength: 0.0,
     saturation: 1.28,
-    refractiveIndex: 1.62,
-    chromaticAberration: 0.42,
-    glowIntensity: 1.35,
-    specularSharpness: GlassSpecularSharpness.sharp,
+    refractiveIndex: 1.5,
+    chromaticAberration: 0.28,
+    glowIntensity: 0.52,
+    specularSharpness: GlassSpecularSharpness.medium,
   );
 
   static const playerSection = LiquidGlassSettings(
-    blur: 2,
-    thickness: 34,
+    blur: 3,
+    thickness: 32,
     glassColor: Colors.transparent,
     lightAngle: 0.7 * math.pi,
-    lightIntensity: 2.8,
+    lightIntensity: 2.05,
     ambientStrength: 0,
     saturation: 1.32,
     refractiveIndex: 1.56,
-    chromaticAberration: 0.28,
-    glowIntensity: 1.15,
+    chromaticAberration: 0.22,
+    glowIntensity: 0.68,
     specularSharpness: GlassSpecularSharpness.sharp,
   );
 
