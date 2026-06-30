@@ -478,6 +478,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         final isPlaying = playing.data ?? false;
                         return GlassButton.custom(
                           shape: const LiquidRoundedSuperellipse(borderRadius: 36),
+                          width: 112,
+                          height: 112,
                           onTap: () => player.playOrPause(),
                           child: Padding(
                             padding: const EdgeInsets.all(24),

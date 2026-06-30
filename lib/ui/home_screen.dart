@@ -151,62 +151,33 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      TextField(
+                      GlassTextField(
+                        useOwnLayer: true,
                         controller: _smbHostCtrl,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Host IP or name',
-                          labelStyle: TextStyle(color: Colors.white54),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white70),
-                          ),
-                        ),
+                        placeholder: 'Host IP or name',
+                        textStyle: const TextStyle(color: Colors.white),
                       ),
-                      TextField(
+                      const SizedBox(height: 12),
+                      GlassTextField(
+                        useOwnLayer: true,
                         controller: _smbDomainCtrl,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Domain',
-                          labelStyle: TextStyle(color: Colors.white54),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white70),
-                          ),
-                        ),
+                        placeholder: 'Domain',
+                        textStyle: const TextStyle(color: Colors.white),
                       ),
-                      TextField(
+                      const SizedBox(height: 12),
+                      GlassTextField(
+                        useOwnLayer: true,
                         controller: _smbUserCtrl,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Username',
-                          labelStyle: TextStyle(color: Colors.white54),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white70),
-                          ),
-                        ),
+                        placeholder: 'Username',
+                        textStyle: const TextStyle(color: Colors.white),
                       ),
-                      TextField(
+                      const SizedBox(height: 12),
+                      GlassTextField(
+                        useOwnLayer: true,
                         controller: _smbPassCtrl,
+                        placeholder: 'Password',
                         obscureText: true,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: TextStyle(color: Colors.white54),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white30),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white70),
-                          ),
-                        ),
+                        textStyle: const TextStyle(color: Colors.white),
                       ),
                       const SizedBox(height: 24),
                       Row(
@@ -377,13 +348,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: const TextStyle(color: Colors.white70),
                           ),
                           Expanded(
-                            child: Slider(
+                            child: GlassSlider(
+                              useOwnLayer: true,
                               value: limit,
-                              min: 5,
-                              max: 100,
+                              min: 5.0,
+                              max: 100.0,
                               divisions: 19,
                               activeColor: Colors.white,
-                              inactiveColor: Colors.white24,
+                              thumbColor: Colors.white,
                               onChanged: CacheManagerService().setCacheLimit,
                             ),
                           ),
@@ -399,37 +371,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  GlassTextField(
+                    useOwnLayer: true,
                     controller: _anidbClientCtrl,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Client name',
-                      labelStyle: TextStyle(color: Colors.white54),
-                      helperStyle: TextStyle(color: Colors.white30),
-                      helperText: 'Optional. Required only for cover/detail fetching.',
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white30),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white70),
-                      ),
-                    ),
+                    placeholder: 'Client name',
+                    textStyle: const TextStyle(color: Colors.white),
                   ),
-                  const SizedBox(height: 8),
-                  TextField(
+                  const SizedBox(height: 12),
+                  GlassTextField(
+                    useOwnLayer: true,
                     controller: _anidbClientVerCtrl,
-                    style: const TextStyle(color: Colors.white),
+                    placeholder: 'Client version',
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Client version',
-                      labelStyle: TextStyle(color: Colors.white54),
-                      enabledBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white30),
-                      ),
-                      focusedBorder: UnderlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white70),
-                      ),
-                    ),
+                    textStyle: const TextStyle(color: Colors.white),
                   ),
                   const SizedBox(height: 16),
                   Align(
@@ -467,6 +421,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
+      extendBody: false,
       background: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

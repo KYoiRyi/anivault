@@ -12,6 +12,7 @@ class AnimeSeriesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
+      extendBody: false,
       background: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
