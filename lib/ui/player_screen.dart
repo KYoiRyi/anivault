@@ -293,7 +293,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
       barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 300),
+      transitionDuration: Duration.zero,
       pageBuilder: (context, anim1, anim2) {
         return Align(
           alignment: Alignment.center,
@@ -312,9 +312,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                   width: panelWidth,
                   child: AdaptiveLiquidGlassLayer(
                     settings: RecommendedGlassSettings.playerPanel,
+                    quality: GlassQuality.premium,
+                    blendAmount: 18,
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: panelMaxHeight),
                       child: GlassCard(
+                        useOwnLayer: true,
+                        quality: GlassQuality.premium,
+                        settings: RecommendedGlassSettings.playerPanel,
                         clipBehavior: Clip.antiAlias,
                         padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                         shape: const LiquidRoundedSuperellipse(
@@ -343,8 +348,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                                         width: 40,
                                         height: 40,
                                         glowColor: Colors.white,
-                                        glowOpacity: 0.28,
+                                        glowOpacity: 0.5,
                                         glowBlurRadius: 18,
+                                        interactionBehavior:
+                                            GlassInteractionBehavior.full,
+                                        interactionScale: 1.08,
+                                        stretch: 0.75,
                                         shape: const LiquidOval(),
                                         onTap: () => Navigator.of(context).pop(),
                                         child: const Icon(
@@ -412,6 +421,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                                   indicatorSettings:
                                                       RecommendedGlassSettings
                                                           .playerHighlight,
+                                                  interactionBehavior:
+                                                      GlassInteractionBehavior
+                                                          .full,
+                                                  glowColor: const Color(
+                                                    0xFF8FEAFF,
+                                                  ),
+                                                  glowRadius: 2.0,
                                                   segments: const [
                                                     GlassSegment(
                                                       label: 'Anime4K',
@@ -461,6 +477,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                                     indicatorSettings:
                                                         RecommendedGlassSettings
                                                             .playerHighlight,
+                                                    interactionBehavior:
+                                                        GlassInteractionBehavior
+                                                            .full,
+                                                    glowColor: const Color(
+                                                      0xFFFF9AF2,
+                                                    ),
+                                                    glowRadius: 2.0,
                                                     segments: const [
                                                       GlassSegment(
                                                         label: 'Speed',
@@ -585,6 +608,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                                     indicatorSettings:
                                                         RecommendedGlassSettings
                                                             .playerHighlight,
+                                                    interactionBehavior:
+                                                        GlassInteractionBehavior
+                                                            .full,
+                                                    glowColor: const Color(
+                                                      0xFF8FEAFF,
+                                                    ),
+                                                    glowRadius: 2.0,
                                                     selectedTextStyle:
                                                         _selectedPillTextStyle,
                                                     unselectedTextStyle:
@@ -644,8 +674,12 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           child: GlassButton.custom(
                                             height: 42,
                                             glowColor: Colors.white,
-                                            glowOpacity: 0.2,
+                                            glowOpacity: 0.45,
                                             glowBlurRadius: 16,
+                                            interactionBehavior:
+                                                GlassInteractionBehavior.full,
+                                            interactionScale: 1.06,
+                                            stretch: 0.7,
                                             shape:
                                                 const LiquidRoundedSuperellipse(
                                                   borderRadius: 100,
@@ -731,16 +765,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           ),
         );
       },
-      transitionBuilder: (context, anim1, anim2, child) {
-        final curved = CurvedAnimation(
-          parent: anim1,
-          curve: Curves.easeOutCubic,
-        );
-        return Transform.scale(
-          scale: 0.96 + curved.value * 0.04,
-          child: Opacity(opacity: anim1.value, child: child),
-        );
-      },
+      transitionBuilder: (context, anim1, anim2, child) => child,
     );
   }
 
@@ -751,7 +776,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     required Widget child,
   }) {
     return GlassCard(
-      useOwnLayer: false,
+      useOwnLayer: true,
+      quality: GlassQuality.standard,
+      settings: RecommendedGlassSettings.playerSection,
       padding: const EdgeInsets.all(16),
       shape: const LiquidRoundedSuperellipse(borderRadius: 34),
       child: Column(
@@ -824,6 +851,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         Expanded(
           child: GlassSlider(
             useOwnLayer: true,
+            settings: RecommendedGlassSettings.playerHighlight,
+            glowColor: const Color(0xFF8FEAFF),
+            glowRadius: 2.0,
             value: value,
             min: min,
             max: max,
@@ -904,6 +934,34 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
+  Widget _buildGlassWarmupLayer() {
+    return Positioned(
+      right: 0,
+      bottom: 0,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: 0.01,
+          child: SizedBox(
+            width: 2,
+            height: 2,
+            child: AdaptiveLiquidGlassLayer(
+              settings: RecommendedGlassSettings.playerPanel,
+              quality: GlassQuality.premium,
+              child: GlassCard(
+                useOwnLayer: true,
+                quality: GlassQuality.premium,
+                settings: RecommendedGlassSettings.playerPanel,
+                padding: EdgeInsets.zero,
+                shape: const LiquidOval(),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _toggleControls() {
     setState(() {
       _showControls = !_showControls;
@@ -945,6 +1003,8 @@ class _PlayerScreenState extends State<PlayerScreen>
             // Custom Subtitle Overlay Layer (always visible over video)
             _buildSubtitleOverlay(),
 
+            _buildGlassWarmupLayer(),
+
             // 3. Floating Floating Controls Island
             AnimatedOpacity(
               duration: const Duration(milliseconds: 300),
@@ -964,6 +1024,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                           useOwnLayer: false,
                           width: 48,
                           height: 48,
+                          settings: RecommendedGlassSettings.playerHighlight,
+                          interactionBehavior: GlassInteractionBehavior.full,
+                          interactionScale: 1.08,
+                          stretch: 0.75,
+                          glowColor: const Color(0xFF8FEAFF),
+                          glowOpacity: 0.45,
+                          glowBlurRadius: 18,
                           shape: const LiquidOval(),
                           onTap: () => Navigator.of(context).pop(),
                           child: const Icon(
@@ -994,6 +1061,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                         useOwnLayer: false,
                         width: 56,
                         height: 56,
+                        settings: RecommendedGlassSettings.playerHighlight,
+                        interactionBehavior: GlassInteractionBehavior.full,
+                        interactionScale: 1.08,
+                        stretch: 0.75,
+                        glowColor: const Color(0xFFFF9AF2),
+                        glowOpacity: 0.45,
+                        glowBlurRadius: 18,
                         shape: const LiquidOval(),
                         onTap: _showVideoSettings,
                         child: const Icon(
@@ -1016,6 +1090,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                           useOwnLayer: false,
                           width: 96,
                           height: 96,
+                          settings: RecommendedGlassSettings.playerHighlight,
+                          interactionBehavior: GlassInteractionBehavior.full,
+                          interactionScale: 1.05,
+                          stretch: 0.6,
+                          glowColor: Colors.white,
+                          glowOpacity: 0.42,
+                          glowBlurRadius: 24,
                           shape: const LiquidOval(),
                           onTap: () => player.playOrPause(),
                           child: Icon(
@@ -1085,10 +1166,10 @@ class _LiquidGlassSweepPainter extends CustomPainter {
         end: Alignment.bottomRight,
         colors: [
           Colors.transparent,
-          Color.fromRGBO(255, 255, 255, 0.0),
-          Color.fromRGBO(255, 255, 255, 0.16),
-          Color.fromRGBO(255, 255, 255, 0.52),
-          Color.fromRGBO(255, 255, 255, 0.16),
+          Color.fromRGBO(0, 255, 255, 0.0),
+          Color.fromRGBO(90, 240, 255, 0.22),
+          Color.fromRGBO(255, 255, 255, 0.58),
+          Color.fromRGBO(255, 90, 230, 0.22),
           Colors.transparent,
         ],
         stops: [0.0, 0.32, 0.5, 0.68, 1.0],
@@ -1105,9 +1186,9 @@ class _LiquidGlassSweepPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.42),
-          Colors.white.withValues(alpha: 0.03),
-          Colors.white.withValues(alpha: 0.28),
+          const Color(0xFF8FEAFF).withValues(alpha: 0.46),
+          Colors.white.withValues(alpha: 0.04),
+          const Color(0xFFFF9AF2).withValues(alpha: 0.34),
         ],
       ).createShader(Offset.zero & size)
       ..style = PaintingStyle.stroke
@@ -1138,20 +1219,36 @@ class RecommendedGlassSettings {
     ambientStrength: 0.0,
     saturation: 1.28,
     refractiveIndex: 1.62,
-    chromaticAberration: 0.08,
+    chromaticAberration: 0.42,
+    glowIntensity: 1.35,
+    specularSharpness: GlassSpecularSharpness.sharp,
+  );
+
+  static const playerSection = LiquidGlassSettings(
+    blur: 2,
+    thickness: 34,
+    glassColor: Colors.transparent,
+    lightAngle: 0.7 * math.pi,
+    lightIntensity: 2.8,
+    ambientStrength: 0,
+    saturation: 1.32,
+    refractiveIndex: 1.56,
+    chromaticAberration: 0.28,
+    glowIntensity: 1.15,
     specularSharpness: GlassSpecularSharpness.sharp,
   );
 
   static const playerHighlight = LiquidGlassSettings(
-    blur: 2,
-    thickness: 34,
+    blur: 0,
+    thickness: 32,
     glassColor: Colors.transparent,
     lightAngle: 0.7 * math.pi,
     lightIntensity: 3.4,
     ambientStrength: 0.0,
     saturation: 1.35,
     refractiveIndex: 1.68,
-    chromaticAberration: 0.12,
+    chromaticAberration: 0.55,
+    glowIntensity: 1.45,
     specularSharpness: GlassSpecularSharpness.sharp,
   );
 
