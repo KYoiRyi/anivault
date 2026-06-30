@@ -47,11 +47,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   double _subtitleBgOpacity = 0.0;
   String _subtitleFontFamily = 'Default';
 
-  // Playback history saving
-  double _currentPositionMs = 0.0;
-  double _lastSavedPosition = 0.0;
-  // ignore: unused_field
-  Timer? _historyTimer;
+
 
   Future<void> _loadSubtitleSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -649,7 +645,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         prefs.setInt('pos_${widget.videoPath}', posMs);
       });
     }
-    _historyTimer?.cancel();
+
     _exitFullscreen();
     player.dispose();
     previewPlayer.dispose();
