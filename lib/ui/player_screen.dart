@@ -41,7 +41,6 @@ class _PlayerScreenState extends State<PlayerScreen>
   String _currentModelKey = 'Balanced';
   bool _isHwAccelerated = true;
   bool _showHUD = false;
-  late final AnimationController _glassSweepController;
 
   // Subtitle custom settings
   double _subtitleSize = 24.0; // Restoring default size (24.0) suitable for custom layout
@@ -91,10 +90,6 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void initState() {
     super.initState();
-    _glassSweepController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3600),
-    )..repeat();
     _enterFullscreen();
     controller = VideoController(player); // Default creates HW accelerated controller
     previewController = VideoController(previewPlayer);
@@ -317,7 +312,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       children: [
                         GlassCard(
                           useOwnLayer: true,
-                          quality: GlassQuality.standard,
+                          quality: GlassQuality.premium,
                           settings: RecommendedGlassSettings.playerPanel,
                           clipBehavior: Clip.antiAlias,
                           padding: EdgeInsets.zero,
@@ -760,20 +755,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                             ),
                           ),
                         ),
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: AnimatedBuilder(
-                              animation: _glassSweepController,
-                              builder: (context, _) {
-                                return CustomPaint(
-                                  painter: _LiquidGlassSweepPainter(
-                                    progress: _glassSweepController.value,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -914,7 +895,6 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
 
     _exitFullscreen();
-    _glassSweepController.dispose();
     player.dispose();
     previewPlayer.dispose();
     super.dispose();
@@ -1168,121 +1148,11 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 }
 
-class _LiquidGlassSweepPainter extends CustomPainter {
-  const _LiquidGlassSweepPainter({required this.progress});
-
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) {
-      return;
-    }
-
-    final panelRect = Offset.zero & size;
-    final panelRRect = RRect.fromRectAndRadius(
-      panelRect,
-      const Radius.circular(42),
-    );
-
-    // Colors sourced from the actual liquid_glass_widgets shader
-    // (liquid_glass_final_render.frag) — the glass widget renders these at its
-    // edges via chromatic aberration + Fresnel rim lighting:
-    //   - glassColor base = Color(0x3DFFFFFF) (white, ~24% alpha — the
-    //     kBottomBarGlassDefaults.glassColor used by GlassTabBar.bottom)
-    //   - Spectral RGB from chromatic aberration dispersion (see shader:
-    //     vec2 redOffset  = displacement * (1.0 + dispersionStrength);
-    //     vec2 blueOffset = displacement * (1.0 - dispersionStrength);)
-    //     → pure Red on one rim edge, pure Green at center, pure Blue on
-    //     the other rim edge. This is the iridescent rainbow fringe that
-    //     produces the iOS 26 "subtle white + prism" rim look.
-    //   - Fresnel rim = Color(0xFFFFFFFF) (the shader's
-    //     (1.0 - normalZ) * edgeFactor * 0.12 white specular boost)
-    const Color glassBase = Color(0x3DFFFFFF);   // kBottomBarGlassDefaults.glassColor
-    const Color glassRed = Color(0xFFFF0000);    // chromatic aberration R rim (high-end spectrum)
-    const Color glassGreen = Color(0xFF00FF00);  // chromatic aberration G center
-    const Color glassBlue = Color(0xFF0000FF);   // chromatic aberration B rim (low-end spectrum)
-    const Color glassWhite = Color(0xFFFFFFFF);  // Fresnel specular highlight
-
-    // Outer glow — soft luminous halo matching the glass surface edge
-    final glowPaint = Paint()
-      ..blendMode = BlendMode.srcOver
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          glassRed.withValues(alpha: 0.28),
-          glassBase.withValues(alpha: 0.32),
-          glassGreen.withValues(alpha: 0.24),
-          glassBase.withValues(alpha: 0.30),
-          glassBlue.withValues(alpha: 0.28),
-        ],
-        stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
-      ).createShader(panelRect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 7.0
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-    canvas.drawRRect(panelRRect.deflate(3), glowPaint);
-
-    // Ambient rim — chromatic aberration iridescent prism fringe (the
-    // "glass RGB" — full spectral Red→Green→Blue split across the rim)
-    final ambientRimPaint = Paint()
-      ..blendMode = BlendMode.srcOver
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          glassRed.withValues(alpha: 0.72),
-          glassWhite.withValues(alpha: 0.18),
-          glassGreen.withValues(alpha: 0.50),
-          glassWhite.withValues(alpha: 0.18),
-          glassBlue.withValues(alpha: 0.68),
-          glassRed.withValues(alpha: 0.42),
-        ],
-        stops: const [0.0, 0.18, 0.38, 0.58, 0.78, 1.0],
-      ).createShader(panelRect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8;
-    canvas.drawRRect(panelRRect.deflate(0.8), ambientRimPaint);
-
-    // Inner white Fresnel rim — matches glass widget's white specular boost
-    final innerRimPaint = Paint()
-      ..blendMode = BlendMode.screen
-      ..color = glassWhite.withValues(alpha: 0.08)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.7;
-    canvas.drawRRect(panelRRect.deflate(2.2), innerRimPaint);
-
-    // Animated sweep rim — rotating iridescent prism fringe (Red→Green→Blue)
-    final movingRimPaint = Paint()
-      ..blendMode = BlendMode.srcOver
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          glassRed.withValues(alpha: 0.48),
-          glassWhite.withValues(alpha: 0.20),
-          glassBlue.withValues(alpha: 0.44),
-        ],
-        transform: GradientRotation(progress * math.pi * 2),
-      ).createShader(panelRect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4;
-    canvas.drawRRect(panelRRect.deflate(1.4), movingRimPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _LiquidGlassSweepPainter oldDelegate) {
-    return oldDelegate.progress != progress;
-  }
-}
-
-
 class RecommendedGlassSettings {
   static const playerPanel = LiquidGlassSettings(
     blur: 5,
     thickness: 36,
-    glassColor: Colors.transparent,
+    glassColor: Color(0xE6FFFFFF),
     lightAngle: 0.7 * math.pi,
     lightIntensity: 1.75,
     ambientStrength: 0.0,
