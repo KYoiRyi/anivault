@@ -5,11 +5,12 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build_ios:
     name: Build iOS IPA
-    runs-on: macos-latest
+    runs-on: macos-14
     permissions:
       contents: write
       
@@ -21,6 +22,15 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          cache: true
+
+      - name: Cache Pub Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
           
       - name: Fetch dependencies
         run: flutter pub get
@@ -29,6 +39,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios
+
+      - name: Cache Rust Build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native/anivault_core -> target
+          key: ios-aarch64
           
       - name: Build anivault_core for iOS (Compile from source)
         env:
@@ -38,10 +54,30 @@ jobs:
           cargo build --target aarch64-apple-ios --release
           cd ../..
 
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pods-${{ hashFiles('pubspec.lock', 'ios/Podfile', 'ios/Podfile.lock', 'ios/Runner.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
       - name: Setup CocoaPods
         run: |
           cd ios
           pod install
+
+      - name: Xcode Cache
+        uses: irgaly/xcode-cache@v1
+        with:
+          key: xcode-cache-deriveddata-${{ github.workflow }}-${{ github.sha }}
+          restore-keys: |
+            xcode-cache-deriveddata-${{ github.workflow }}-
+          restore-mtime-targets: |
+            ios/**/*
+            native/anivault_core/**/*
           
       - name: Build iOS Application (No Sign)
         run: |
