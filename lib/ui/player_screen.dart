@@ -477,16 +477,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       stream: player.stream.playing,
                       builder: (context, playing) {
                         final isPlaying = playing.data ?? false;
-                        return GlassButton(
+                        return GlassButton.custom(
                           shape: const LiquidRoundedSuperellipse(borderRadius: 36),
-                          padding: const EdgeInsets.all(24),
                           onTap: () => player.playOrPause(),
-                          child: Icon(
-                            isPlaying
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            size: 64,
-                            color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Icon(
+                              isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              size: 64,
+                              color: Colors.white,
+                            ),
                           ),
                         );
                       },

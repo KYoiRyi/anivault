@@ -177,28 +177,32 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 20),
-                GlassButton(
+                GlassButton.custom(
                   shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                  padding: const EdgeInsets.all(12),
                   onTap: () {
                     Navigator.pop(context);
                     CacheManagerService().cacheFile(file);
                   },
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.download_rounded, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ],
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.download_rounded, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                GlassButton(
+                GlassButton.custom(
                   shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                  padding: const EdgeInsets.all(12),
                   onTap: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text('Cancel', style: TextStyle(color: Colors.white54)),
+                  ),
                 ),
               ],
             ),
@@ -232,11 +236,13 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
               ),
               if (SMBService().hasSavedConnection) ...[
                 const SizedBox(height: 16),
-                GlassButton(
+                GlassButton.custom(
                   shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   onTap: SMBService().connectSaved,
-                  child: const Text('Reconnect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Text('Reconnect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
                 ),
               ],
             ],
@@ -328,9 +334,11 @@ class _PathBar extends StatelessWidget {
         isLast: true,
         leading: GlassButton(
           shape: const LiquidRoundedSuperellipse(borderRadius: 8),
-          padding: const EdgeInsets.all(6),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          iconSize: 20,
+          width: 32,
+          height: 32,
           onTap: onBack,
-          child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
         ),
         title: Text(
           title,

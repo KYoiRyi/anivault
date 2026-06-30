@@ -213,16 +213,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          GlassButton(
+                          GlassButton.custom(
                             shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             onTap: () => Navigator.pop(context),
-                            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              child: Text('Cancel', style: TextStyle(color: Colors.white54)),
+                            ),
                           ),
                           const SizedBox(width: 8),
-                          GlassButton(
+                          GlassButton.custom(
                             shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             onTap: connecting
                                 ? null
                                 : () async {
@@ -238,13 +239,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Navigator.pop(context);
                                     }
                                   },
-                            child: connecting
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              child: connecting
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
                           ),
                         ],
                       ),
@@ -432,9 +436,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: GlassButton(
+                    child: GlassButton.custom(
                       shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       onTap: () async {
                         final prefs = await SharedPreferences.getInstance();
                         await prefs.setString(
@@ -448,7 +451,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (context.mounted) Navigator.pop(context);
                         await _refreshAnimeLibrary();
                       },
-                      child: const Text('Save API settings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Text('Save API settings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      ),
                     ),
                   ),
                 ],
@@ -491,28 +497,28 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_currentSection == HomeSection.network)
             GlassButton(
               shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-              padding: const EdgeInsets.all(8),
+              icon: const Icon(Icons.router_rounded, color: Colors.white),
               onTap: _showSMBDialog,
-              child: const Icon(Icons.router_rounded, color: Colors.white),
             ),
           GlassButton(
             shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-            padding: const EdgeInsets.all(8),
+            icon: const Icon(Icons.settings_rounded, color: Colors.white),
             onTap: _showSettingsDialog,
-            child: const Icon(Icons.settings_rounded, color: Colors.white),
           ),
           if (_currentSection == HomeSection.library)
-            GlassButton(
+            GlassButton.custom(
               shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-              padding: const EdgeInsets.all(8),
               onTap: _isSyncing || _isScraping ? null : _importVideo,
-              child: _isSyncing || _isScraping
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.add_rounded, color: Colors.white),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: _isSyncing || _isScraping
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.add_rounded, color: Colors.white),
+              ),
             ),
         ],
       ),
