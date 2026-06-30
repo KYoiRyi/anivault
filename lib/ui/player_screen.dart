@@ -49,6 +49,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   // Playback history saving
   double _currentPositionMs = 0.0;
   double _lastSavedPosition = 0.0;
+  // ignore: unused_field
   Timer? _historyTimer;
 
   Future<void> _loadSubtitleSettings() async {
@@ -615,7 +616,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               fontSize: _subtitleSize,
               fontFamily: _subtitleFontFamily == 'Default' ? null : _subtitleFontFamily,
               color: Colors.white,
-              backgroundColor: Colors.black.withOpacity(_subtitleBgOpacity),
+              backgroundColor: Colors.black.withValues(alpha: _subtitleBgOpacity),
               shadows: const [
                 Shadow(
                   blurRadius: 4.0,
