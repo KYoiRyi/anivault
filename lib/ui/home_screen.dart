@@ -434,8 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final textColor = isDark ? Colors.white : Colors.black87;
     final iconColor = isDark ? Colors.white : Colors.black87;
 
-    return GlassScaffold(
-      extendBody: true,
+    return GlassPage(
       background: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -450,98 +449,103 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       statusBarStyle: GlassStatusBarStyle.auto,
-      appBar: GlassAppBar(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        title: Text(
-          _sectionTitle,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: textColor,
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        appBar: GlassAppBar(
+          backgroundColor: Colors.transparent,
+          title: Text(
+            _sectionTitle,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
           ),
-        ),
-        actions: [
-          if (_currentSection == HomeSection.network)
+          actions: [
+            if (_currentSection == HomeSection.network)
+              GlassButton(
+                shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+                icon: Icon(Icons.router_rounded, color: iconColor),
+                onTap: _showSMBDialog,
+              ),
             GlassButton(
               shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-              icon: Icon(Icons.router_rounded, color: iconColor),
-              onTap: _showSMBDialog,
+              icon: Icon(Icons.settings_rounded, color: iconColor),
+              onTap: _showSettingsDialog,
             ),
-          GlassButton(
-            shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-            icon: Icon(Icons.settings_rounded, color: iconColor),
-            onTap: _showSettingsDialog,
-          ),
-          if (_currentSection == HomeSection.library)
-            GlassButton.custom(
-              shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-              onTap: () {
-                if (_isSyncing || _isScraping) return;
-                _importVideo();
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: _isSyncing || _isScraping
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: iconColor),
-                      )
-                    : Icon(Icons.add_rounded, color: iconColor),
+            if (_currentSection == HomeSection.library)
+              GlassButton.custom(
+                shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+                onTap: () {
+                  if (_isSyncing || _isScraping) return;
+                  _importVideo();
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: _isSyncing || _isScraping
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: iconColor),
+                        )
+                      : Icon(Icons.add_rounded, color: iconColor),
+                ),
               ),
+          ],
+        ),
+        body: _buildContent(),
+        bottomNavigationBar: GlassTabBar.bottom(
+          selectedIndex: _currentSection.index,
+          onTabSelected: (index) => _setSection(HomeSection.values[index]),
+          interactionBehavior: GlassInteractionBehavior.full,
+          quality: GlassQuality.premium,
+          maskingQuality: MaskingQuality.high,
+          settings: const LiquidGlassSettings(
+            glassColor: Color.fromRGBO(255, 255, 255, 0.08),
+            thickness: 30,
+            blur: 5,
+            chromaticAberration: 0.01,
+            lightAngle: GlassDefaults.lightAngle,
+            lightIntensity: 0.5,
+            ambientStrength: 0,
+            refractiveIndex: 1.2,
+            saturation: 1.2,
+            specularSharpness: GlassSpecularSharpness.medium,
+          ),
+          indicatorSettings: const LiquidGlassSettings(
+            glassColor: Color.fromRGBO(255, 255, 255, 0.18),
+            thickness: 25,
+            blur: 8,
+            chromaticAberration: 0.02,
+            lightAngle: GlassDefaults.lightAngle,
+            lightIntensity: 0.7,
+            ambientStrength: 0.1,
+            refractiveIndex: 1.4,
+            saturation: 1.3,
+            specularSharpness: GlassSpecularSharpness.sharp,
+          ),
+          selectedIconColor: isDark ? Colors.white : const Color(0xFF6366F1),
+          unselectedIconColor: isDark ? Colors.white54 : Colors.black54,
+          tabs: const [
+            GlassTab(
+              icon: Icon(Icons.video_library_outlined),
+              activeIcon: Icon(Icons.video_library_rounded),
+              label: 'Library',
             ),
-        ],
-      ),
-      body: _buildContent(),
-      bottomBar: GlassTabBar.bottom(
-        selectedIndex: _currentSection.index,
-        onTabSelected: (index) => _setSection(HomeSection.values[index]),
-        interactionBehavior: GlassInteractionBehavior.full,
-        quality: GlassQuality.premium,
-        maskingQuality: MaskingQuality.high,
-        settings: const LiquidGlassSettings(
-          glassColor: Color.fromRGBO(255, 255, 255, 0.08),
-          thickness: 30,
-          blur: 5,
-          chromaticAberration: 0.01,
-          lightAngle: GlassDefaults.lightAngle,
-          lightIntensity: 0.5,
-          ambientStrength: 0,
-          refractiveIndex: 1.2,
-          saturation: 1.2,
-          specularSharpness: GlassSpecularSharpness.medium,
+            GlassTab(
+              icon: Icon(Icons.folder_shared_outlined),
+              activeIcon: Icon(Icons.folder_shared_rounded),
+              label: 'Network',
+            ),
+            GlassTab(
+              icon: Icon(Icons.download_done_outlined),
+              activeIcon: Icon(Icons.download_done_rounded),
+              label: 'Downloads',
+            ),
+          ],
         ),
-        indicatorSettings: const LiquidGlassSettings(
-          glassColor: Color.fromRGBO(255, 255, 255, 0.18),
-          thickness: 25,
-          blur: 8,
-          chromaticAberration: 0.02,
-          lightAngle: GlassDefaults.lightAngle,
-          lightIntensity: 0.7,
-          ambientStrength: 0.1,
-          refractiveIndex: 1.4,
-          saturation: 1.3,
-          specularSharpness: GlassSpecularSharpness.sharp,
-        ),
-        selectedIconColor: isDark ? Colors.white : const Color(0xFF6366F1),
-        unselectedIconColor: isDark ? Colors.white54 : Colors.black54,
-        tabs: const [
-          GlassTab(
-            icon: Icon(Icons.video_library_outlined),
-            activeIcon: Icon(Icons.video_library_rounded),
-            label: 'Library',
-          ),
-          GlassTab(
-            icon: Icon(Icons.folder_shared_outlined),
-            activeIcon: Icon(Icons.folder_shared_rounded),
-            label: 'Network',
-          ),
-          GlassTab(
-            icon: Icon(Icons.download_done_outlined),
-            activeIcon: Icon(Icons.download_done_rounded),
-            label: 'Downloads',
-          ),
-        ],
       ),
     );
   }

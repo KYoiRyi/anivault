@@ -86,7 +86,7 @@ class _ActiveDownloadTile extends StatelessWidget {
     final textColor = isDark ? Colors.white : Colors.black87;
 
     return _DownloadSurface(
-      child: GlassListTile(
+      child: GlassListTile.standalone(
         isLast: true,
         leading: Icon(
           hasFailed ? Icons.error_outline_rounded : Icons.downloading_rounded,
@@ -148,7 +148,7 @@ class _CompletedDownloadTile extends StatelessWidget {
     final subtextColor = isDark ? Colors.white70 : Colors.black54;
 
     return _DownloadSurface(
-      child: GlassListTile(
+      child: GlassListTile.standalone(
         isLast: true,
         leading: Icon(
           Icons.movie_creation_outlined,
@@ -201,8 +201,6 @@ class _CompletedDownloadTile extends StatelessWidget {
       ),
     );
   }
-}
-
 class _DownloadSurface extends StatelessWidget {
   final Widget child;
 
@@ -210,10 +208,8 @@ class _DownloadSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: EdgeInsets.zero,
-      shape: const LiquidRoundedSuperellipse(borderRadius: 12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: child,
     );
   }
