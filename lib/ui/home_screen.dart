@@ -31,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isSyncing = false;
   bool _isScraping = false;
   int _sectionIndex = 0;
+  bool _filterSearchActive = false;
   String _filter = 'All';
   String _query = '';
 
@@ -229,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _DemoTopGlassTabBar(
               selectedIndex: _sectionIndex,
               onChanged: (index) => setState(() => _sectionIndex = index),
-              tabWidth: 132,
+              tabWidth: 92,
               tabs: const [
                 GlassTab(label: 'Library'),
                 GlassTab(label: 'Settings'),
@@ -243,7 +244,15 @@ class _HomeScreenState extends State<HomeScreen> {
               bottom: MediaQuery.paddingOf(context).bottom + 10,
               child: _FilterBar(
                 selected: _filter,
-                onSelected: (filter) => setState(() => _filter = filter),
+                searchActive: _filterSearchActive,
+                searchController: _searchController,
+                onSearchActiveChanged: (active) =>
+                    setState(() => _filterSearchActive = active),
+                onSearchChanged: (value) => setState(() => _query = value),
+                onSelected: (filter) => setState(() {
+                  _filter = filter;
+                  _filterSearchActive = false;
+                }),
               ),
             ),
         ],
@@ -451,7 +460,7 @@ class _DemoTopGlassTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const horizontalPadding = 20.0;
+    const horizontalPadding = 12.0;
     final barGlassSettings = LiquidGlassSettings(
       glassColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xAA1C1C1E)
@@ -466,14 +475,19 @@ class _DemoTopGlassTabBar extends StatelessWidget {
       saturation: 1.2,
       specularSharpness: GlassSpecularSharpness.medium,
     );
-    final preferredWidth = tabWidth == null
-        ? double.infinity
-        : tabWidth! * tabs.length + horizontalPadding * 2;
 
     return SizedBox(
-      height: 104,
+      height: 66,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final widthScale =
+              1.0 + ((constraints.maxWidth - 420) / 900).clamp(0.0, 0.28);
+          final effectiveTabWidth = tabWidth == null
+              ? null
+              : (tabWidth! * widthScale).clamp(tabWidth!, tabWidth! * 1.28);
+          final preferredWidth = effectiveTabWidth == null
+              ? double.infinity
+              : effectiveTabWidth * tabs.length + horizontalPadding * 2;
           final barWidth = preferredWidth.isFinite
               ? preferredWidth.clamp(0.0, constraints.maxWidth)
               : constraints.maxWidth;
@@ -493,17 +507,17 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                   selectedLabelColor: Colors.white,
                   unselectedLabelColor: Colors.white60,
                   indicatorColor: Colors.white.withValues(alpha: 0.20),
-                  labelFontSize: 10,
                   iconSize: 28,
                   iconLabelSpacing: 0,
                   quality: GlassQuality.premium,
                   interactionBehavior: GlassInteractionBehavior.full,
                   settings: barGlassSettings,
-                  tabWidth: tabWidth,
-                  barHeight: 64,
+                  tabWidth: effectiveTabWidth,
+                  barHeight: 42,
                   horizontalPadding: horizontalPadding,
-                  verticalPadding: 16,
-                  spacing: 8,
+                  verticalPadding: 8,
+                  spacing: 4,
+                  labelFontSize: 18,
                   textStyle: const TextStyle(
                     fontFamily: 'SF Pro Display',
                     fontFamilyFallback: [
@@ -539,23 +553,106 @@ class _FilterBar extends StatelessWidget {
   static const filters = ['All', 'Matched', 'Unknown', 'Multi-file'];
 
   final String selected;
+  final bool searchActive;
+  final TextEditingController searchController;
   final ValueChanged<String> onSelected;
+  final ValueChanged<bool> onSearchActiveChanged;
+  final ValueChanged<String> onSearchChanged;
 
-  const _FilterBar({required this.selected, required this.onSelected});
+  const _FilterBar({
+    required this.selected,
+    required this.searchActive,
+    required this.searchController,
+    required this.onSelected,
+    required this.onSearchActiveChanged,
+    required this.onSearchChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     final index = filters.indexOf(selected).clamp(0, filters.length - 1);
-    return _DemoTopGlassTabBar(
-      selectedIndex: index,
-      onChanged: (index) => onSelected(filters[index]),
-      tabWidth: 96,
-      tabs: const [
-        GlassTab(label: 'All'),
-        GlassTab(label: 'Matched'),
-        GlassTab(label: 'Unknown'),
-        GlassTab(label: 'Multi-file'),
-      ],
+    final barGlassSettings = LiquidGlassSettings(
+      glassColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xAA1C1C1E)
+          : const Color(0xAAF2F2F7),
+      thickness: 30,
+      blur: 2,
+      chromaticAberration: .01,
+      lightAngle: GlassDefaults.lightAngle,
+      lightIntensity: .5,
+      ambientStrength: 0,
+      refractiveIndex: 1.2,
+      saturation: 1.2,
+      specularSharpness: GlassSpecularSharpness.medium,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tabWidth = (constraints.maxWidth / 5.4).clamp(86.0, 120.0);
+        final barWidth = (tabWidth * filters.length + 54 + 8 + 40).clamp(
+          0.0,
+          constraints.maxWidth,
+        );
+        return Align(
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: barWidth,
+            height: 80,
+            // ignore: experimental_member_use
+            child: GlassAdaptiveScope(
+              minQuality: GlassQuality.premium,
+              child: GlassTabBar.searchable(
+                selectedIndex: index,
+                isSearchActive: searchActive,
+                onTabSelected: (index) => onSelected(filters[index]),
+                tabWidth: tabWidth,
+                barHeight: 54,
+                searchBarHeight: 54,
+                horizontalPadding: 20,
+                verticalPadding: 10,
+                spacing: 8,
+                selectedIconColor: Colors.white,
+                unselectedIconColor: Colors.white60,
+                selectedLabelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                indicatorColor: Colors.white.withValues(alpha: 0.20),
+                labelFontSize: 10,
+                iconSize: 22,
+                iconLabelSpacing: 1,
+                quality: GlassQuality.premium,
+                interactionBehavior: GlassInteractionBehavior.full,
+                settings: barGlassSettings,
+                searchConfig: GlassSearchBarConfig(
+                  controller: searchController,
+                  hintText: 'Search library',
+                  showsCancelButton: true,
+                  autoFocusOnExpand: false,
+                  searchIconColor: Colors.white70,
+                  textColor: Colors.white,
+                  hintStyle: const TextStyle(color: Colors.white54),
+                  onChanged: onSearchChanged,
+                  onSearchToggle: onSearchActiveChanged,
+                ),
+                tabs: const [
+                  GlassTab(label: 'All', icon: Icon(Icons.apps_rounded)),
+                  GlassTab(
+                    label: 'Matched',
+                    icon: Icon(Icons.verified_rounded),
+                  ),
+                  GlassTab(
+                    label: 'Unknown',
+                    icon: Icon(Icons.help_outline_rounded),
+                  ),
+                  GlassTab(
+                    label: 'Multi-file',
+                    icon: Icon(Icons.video_library_rounded),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
