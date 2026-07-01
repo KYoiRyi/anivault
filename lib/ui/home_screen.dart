@@ -471,27 +471,45 @@ class _DemoTopGlassTabBar extends StatelessWidget {
               // ignore: experimental_member_use
               child: GlassAdaptiveScope(
                 minQuality: GlassQuality.premium,
-                child: GlassSegmentedControl(
-                  segments: tabs
-                      .map(
-                        (tab) => GlassSegment(icon: tab.icon, label: tab.label),
-                      )
-                      .toList(growable: false),
+                child: GlassTabBar.bottom(
                   selectedIndex: selectedIndex,
-                  onSegmentSelected: onChanged,
-                  height: 58,
-                  borderRadius: 29,
-                  padding: EdgeInsets.zero,
-                  backgroundColor: Colors.transparent,
-                  indicatorColor: Colors.transparent,
+                  onTabSelected: onChanged,
                   quality: GlassQuality.premium,
+                  maskingQuality: MaskingQuality.high,
+                  settings: const LiquidGlassSettings(
+                    thickness: 30,
+                    blur: 3,
+                    chromaticAberration: 0.3,
+                    lightIntensity: 0.6,
+                    refractiveIndex: 1.59,
+                    saturation: 0.7,
+                    ambientStrength: 1,
+                    lightAngle: 2.356194490192345,
+                    glassColor: Color(0x3DFFFFFF),
+                  ),
+                  indicatorColor: Colors.transparent,
+                  selectedIconColor: Colors.white,
+                  unselectedIconColor: Colors.white60,
+                  selectedLabelColor: Colors.white,
+                  unselectedLabelColor: Colors.white60,
+                  interactionGlowColor: const Color(0xAA38BDF8),
+                  interactionGlowRadius: 1.2,
+                  glowBlurRadius: 18,
+                  glowSpreadRadius: 4,
+                  glowOpacity: 0.22,
+                  magnification: 1.08,
+                  tabWidth: tabWidth,
+                  barHeight: 58,
+                  barBorderRadius: 100,
+                  horizontalPadding: horizontalPadding,
+                  verticalPadding: 20,
+                  indicatorBorderRadius: 100,
                   indicatorExpansion: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 6,
                   ),
-                  glowColor: const Color(0xAA38BDF8),
-                  glowRadius: 1.2,
-                  selectedTextStyle: const TextStyle(
+                  pressScale: 1.04,
+                  selectedLabelStyle: const TextStyle(
                     fontFamily: 'SF Pro Display',
                     fontFamilyFallback: [
                       '.AppleSystemUIFont',
@@ -501,9 +519,8 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
                     letterSpacing: 0,
-                    color: Colors.white,
                   ),
-                  unselectedTextStyle: const TextStyle(
+                  unselectedLabelStyle: const TextStyle(
                     fontFamily: 'SF Pro Display',
                     fontFamilyFallback: [
                       '.AppleSystemUIFont',
@@ -513,8 +530,8 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
                     letterSpacing: 0,
-                    color: Colors.white60,
                   ),
+                  tabs: tabs,
                 ),
               ),
             ),
