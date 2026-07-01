@@ -279,21 +279,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: GlassSearchBar(
-              quality: GlassQuality.premium,
-              useOwnLayer: true,
-              controller: _searchController,
-              placeholder: 'Search library',
-              textStyle: const TextStyle(color: Colors.white),
-              searchIconColor: Colors.white70,
-              clearIconColor: Colors.white70,
-              onChanged: (value) => setState(() => _query = value),
-            ),
-          ),
-        ),
         if (_mediaPaths.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,

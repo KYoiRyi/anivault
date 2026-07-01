@@ -1535,9 +1535,10 @@ class _PlayerScreenState extends State<PlayerScreen>
               // 5. Performance HUD (Independent from controls but over video)
               if (_showHUD)
                 Positioned(
-                  top: 100,
-                  left: 24,
-                  child: PerformanceHUD(player: player),
+                  top: 96,
+                  left: 16,
+                  right: 16,
+                  child: PerformanceHUD(player: player, controller: controller),
                 ),
             ],
           ),
