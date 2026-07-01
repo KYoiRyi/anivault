@@ -186,51 +186,35 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          GlassButton(
+                          GlassButton.custom(
+                            shape: const LiquidRoundedSuperellipse(borderRadius: 10),
                             onTap: () => Navigator.pop(context),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               child: Text('Cancel', style: TextStyle(color: subtextColor)),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           GlassButton.custom(
                             shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                            onTap: connecting
-                                ? null
-                                : () async {
-                                    setDialogState(() => connecting = true);
-                                    final host = _smbHostCtrl.text.trim();
-                                    final domain = _smbDomainCtrl.text.trim();
-                                    final user = _smbUserCtrl.text.trim();
-                                    final pass = _smbPassCtrl.text.trim();
-
-                                    final ok = await SMBService().testConnection(
-                                      host: host,
-                                      domain: domain,
-                                      user: user,
-                                      pass: pass,
-                                    );
-
-                                    if (context.mounted) {
-                                      setDialogState(() => connecting = false);
-                                      if (ok) {
-                                        await SMBService().saveCredentials(
-                                          host: host,
-                                          domain: domain,
-                                          user: user,
-                                          pass: pass,
-                                        );
-                                        Navigator.pop(context);
-                                      } else {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Failed to connect to SMB share')),
-                                        );
-                                      }
-                                    }
-                                  },
+                            onTap: () async {
+                              if (connecting) return;
+                              setDialogState(() => connecting = true);
+                              final success = await SMBService().connect(
+                                _smbHostCtrl.text.trim(),
+                                _smbDomainCtrl.text.trim(),
+                                _smbUserCtrl.text.trim(),
+                                _smbPassCtrl.text,
+                              );
+                              if (context.mounted) {
+                                setDialogState(() => connecting = false);
+                                if (success) {
+                                  Navigator.pop(context);
+                                }
+                              }
+                            },
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               child: connecting
                                   ? SizedBox(
                                       width: 16,
