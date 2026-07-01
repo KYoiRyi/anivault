@@ -46,6 +46,20 @@ class AniGlassTheme {
     specularSharpness: GlassSpecularSharpness.sharp,
   );
 
+  static const LiquidGlassSettings tabLens = LiquidGlassSettings(
+    blur: 8,
+    thickness: 18,
+    glassColor: Color(0x08000000),
+    lightAngle: GlassDefaults.lightAngle,
+    lightIntensity: 0.28,
+    ambientStrength: 0.02,
+    saturation: 1.05,
+    refractiveIndex: 1.18,
+    chromaticAberration: 0.006,
+    glowIntensity: 0.0,
+    specularSharpness: GlassSpecularSharpness.sharp,
+  );
+
   static const LiquidGlassSettings playerPanel = LiquidGlassSettings(
     blur: 10,
     thickness: 16,
