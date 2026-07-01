@@ -20,10 +20,12 @@ void main() async {
 
   runApp(LiquidGlassWidgets.wrap(
     child: const AniVaultApp(),
-    adaptiveQuality: true,
+    adaptiveQuality: false,
     // ignore: experimental_member_use
     adaptiveConfig: const GlassAdaptiveScopeConfig(
       initialQuality: GlassQuality.premium,
+      minQuality: GlassQuality.premium,
+      maxQuality: GlassQuality.premium,
     ),
   ));
 }

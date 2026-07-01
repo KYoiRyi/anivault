@@ -136,98 +136,113 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, setDialogState) {
             return Dialog(
               backgroundColor: Colors.transparent,
-              child: AdaptiveLiquidGlassLayer(
-                settings: const LiquidGlassSettings(),
-                child: GlassCard(
-                  padding: const EdgeInsets.all(20),
-                  shape: const LiquidRoundedSuperellipse(borderRadius: 16),
-                  child: SizedBox(
-                    width: 340,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Connect to Network Share',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: textColor,
+              child: GlassCard(
+                padding: const EdgeInsets.all(20),
+                shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                child: SizedBox(
+                  width: 340,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Connect to Network Share',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      GlassTextField(
+                        useOwnLayer: true,
+                        controller: _smbHostCtrl,
+                        placeholder: 'Host IP or name',
+                        textStyle: TextStyle(color: textColor),
+                      ),
+                      const SizedBox(height: 12),
+                      GlassTextField(
+                        useOwnLayer: true,
+                        controller: _smbDomainCtrl,
+                        placeholder: 'Domain',
+                        textStyle: TextStyle(color: textColor),
+                      ),
+                      const SizedBox(height: 12),
+                      GlassTextField(
+                        useOwnLayer: true,
+                        controller: _smbUserCtrl,
+                        placeholder: 'Username',
+                        textStyle: TextStyle(color: textColor),
+                      ),
+                      const SizedBox(height: 12),
+                      GlassTextField(
+                        useOwnLayer: true,
+                        controller: _smbPassCtrl,
+                        placeholder: 'Password',
+                        obscureText: true,
+                        textStyle: TextStyle(color: textColor),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          GlassButton(
+                            onTap: () => Navigator.pop(context),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              child: Text('Cancel', style: TextStyle(color: subtextColor)),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        GlassTextField(
-                          useOwnLayer: true,
-                          controller: _smbHostCtrl,
-                          placeholder: 'Host IP or name',
-                          textStyle: TextStyle(color: textColor),
-                        ),
-                        const SizedBox(height: 12),
-                        GlassTextField(
-                          useOwnLayer: true,
-                          controller: _smbDomainCtrl,
-                          placeholder: 'Domain',
-                          textStyle: TextStyle(color: textColor),
-                        ),
-                        const SizedBox(height: 12),
-                        GlassTextField(
-                          useOwnLayer: true,
-                          controller: _smbUserCtrl,
-                          placeholder: 'Username',
-                          textStyle: TextStyle(color: textColor),
-                        ),
-                        const SizedBox(height: 12),
-                        GlassTextField(
-                          useOwnLayer: true,
-                          controller: _smbPassCtrl,
-                          placeholder: 'Password',
-                          obscureText: true,
-                          textStyle: TextStyle(color: textColor),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            GlassButton.custom(
-                              shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                              onTap: () => Navigator.pop(context),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                child: Text('Cancel', style: TextStyle(color: subtextColor)),
-                              ),
+                          const SizedBox(width: 10),
+                          GlassButton.custom(
+                            shape: const LiquidRoundedSuperellipse(borderRadius: 10),
+                            onTap: connecting
+                                ? null
+                                : () async {
+                                    setDialogState(() => connecting = true);
+                                    final host = _smbHostCtrl.text.trim();
+                                    final domain = _smbDomainCtrl.text.trim();
+                                    final user = _smbUserCtrl.text.trim();
+                                    final pass = _smbPassCtrl.text.trim();
+
+                                    final ok = await SMBService().testConnection(
+                                      host: host,
+                                      domain: domain,
+                                      user: user,
+                                      pass: pass,
+                                    );
+
+                                    if (context.mounted) {
+                                      setDialogState(() => connecting = false);
+                                      if (ok) {
+                                        await SMBService().saveCredentials(
+                                          host: host,
+                                          domain: domain,
+                                          user: user,
+                                          pass: pass,
+                                        );
+                                        Navigator.pop(context);
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Failed to connect to SMB share')),
+                                        );
+                                      }
+                                    }
+                                  },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              child: connecting
+                                  ? SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: textColor),
+                                    )
+                                  : Text('Connect', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
                             ),
-                            const SizedBox(width: 8),
-                            GlassButton.custom(
-                              shape: const LiquidRoundedSuperellipse(borderRadius: 10),
-                              onTap: () async {
-                                if (connecting) return;
-                                setDialogState(() => connecting = true);
-                                final success = await SMBService().connect(
-                                  _smbHostCtrl.text.trim(),
-                                  _smbDomainCtrl.text.trim(),
-                                  _smbUserCtrl.text.trim(),
-                                  _smbPassCtrl.text,
-                                );
-                                setDialogState(() => connecting = false);
-                                if (success && context.mounted) {
-                                  Navigator.pop(context);
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                child: connecting
-                                    ? SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: textColor),
-                                      )
-                                    : Text('Connect', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -494,18 +509,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _buildContent(),
-      // ignore: experimental_member_use
-      bottomBar: GlassAdaptiveScope(
-        minQuality: GlassQuality.premium,
-        child: GlassTabBar.bottom(
-          tabs: const [
-            GlassTab(icon: Icon(Icons.video_library_outlined), label: 'Library'),
-            GlassTab(icon: Icon(Icons.folder_shared_outlined), label: 'Network'),
-            GlassTab(icon: Icon(Icons.download_done_outlined), label: 'Downloads'),
-          ],
-          selectedIndex: _currentSection.index,
-          onTabSelected: (index) => _setSection(HomeSection.values[index]),
-        ),
+      bottomBar: GlassTabBar.bottom(
+        selectedIndex: _currentSection.index,
+        onTabSelected: (index) => _setSection(HomeSection.values[index]),
+        tabs: const [
+          GlassTab(icon: Icon(Icons.video_library_outlined), label: 'Library'),
+          GlassTab(icon: Icon(Icons.folder_shared_outlined), label: 'Network'),
+          GlassTab(icon: Icon(Icons.download_done_outlined), label: 'Downloads'),
+        ],
       ),
     );
   }

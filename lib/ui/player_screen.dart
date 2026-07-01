@@ -327,62 +327,59 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        AdaptiveLiquidGlassLayer(
-                          settings: RecommendedGlassSettings.playerPanel,
-                          clipExpansion: const EdgeInsets.all(16),
-                          child: GlassCard(
-                            padding: EdgeInsets.zero,
-                            shape: const LiquidRoundedSuperellipse(borderRadius: 42),
-                            child: Stack(
-                              clipBehavior: Clip.hardEdge,
-                              children: [
-                                SingleChildScrollView(
-                                  clipBehavior: Clip.hardEdge,
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      24,
-                                      20,
-                                      24,
-                                      24,
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            'Player Settings',
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.94,
+                        GlassCard(
+                          padding: EdgeInsets.zero,
+                          shape: const LiquidRoundedSuperellipse(borderRadius: 42),
+                          child: Stack(
+                            clipBehavior: Clip.hardEdge,
+                            children: [
+                              SingleChildScrollView(
+                                clipBehavior: Clip.hardEdge,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    24,
+                                    20,
+                                    24,
+                                    24,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'Player Settings',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.94,
+                                                ),
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.w400,
                                               ),
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.w400,
                                             ),
                                           ),
-                                        ),
-                                        GlassButton.custom(
-                                          width: 40,
-                                          height: 40,
-                                          glowColor: const Color(0xFF8FEAFF),
-                                          glowOpacity: 0.5,
-                                          glowBlurRadius: 18,
-                                          interactionScale: 1.08,
-                                          stretch: 0.75,
-                                          shape: const LiquidOval(),
-                                          onTap: () =>
-                                              Navigator.of(context).pop(),
-                                          child: const Icon(
-                                            Icons.close_rounded,
-                                            color: Colors.white,
-                                            size: 19,
+                                          GlassButton.custom(
+                                            width: 40,
+                                            height: 40,
+                                            glowColor: const Color(0xFF8FEAFF),
+                                            glowOpacity: 0.5,
+                                            glowBlurRadius: 18,
+                                            interactionScale: 1.08,
+                                            stretch: 0.75,
+                                            shape: const LiquidOval(),
+                                            onTap: () =>
+                                                Navigator.of(context).pop(),
+                                            child: const Icon(
+                                              Icons.close_rounded,
+                                              color: Colors.white,
+                                              size: 19,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
+                                        ],
+                                      ),
                                     const SizedBox(height: 20),
                                     _glassSettingsSection(
                                     icon: Icons.auto_awesome_rounded,
@@ -963,47 +960,32 @@ class _PlayerScreenState extends State<PlayerScreen>
           child: SizedBox(
             width: 2,
             height: 2,
-            child: AdaptiveLiquidGlassLayer(
-              settings: RecommendedGlassSettings.playerSection,
-              quality: GlassQuality.standard,
-              child: GlassCard(
-                useOwnLayer: false,
-                settings: RecommendedGlassSettings.playerSection,
-                padding: EdgeInsets.zero,
-                shape: const LiquidRoundedSuperellipse(borderRadius: 34),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      GlassSlider(
-                        useOwnLayer: false, // Share the parent dialog's glass layer
-                        quality: GlassQuality.premium, // Force premium native BackdropFilter to prevent any blur/low-res capture issues
-                        settings: RecommendedGlassSettings.playerHighlight,
-                        value: 0.5,
-                        min: 0,
-                        max: 1,
-                        onChanged: _noopSlider,
-                      ),
-                      const SizedBox(height: 12),
-                      GlassSwitch(
-                        value: false,
-                        onChanged: _noopSwitch,
-                      ),
-                      const SizedBox(height: 12),
-                      GlassSegmentedControl(
-                        segments: const [
-                          GlassSegment(label: 'A'),
-                          GlassSegment(label: 'B'),
-                        ],
-                        selectedIndex: 0,
-                        onSegmentSelected: _noopSeg,
-                      ),
-                    ],
-                  ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GlassSlider(
+                  quality: GlassQuality.premium,
+                  settings: RecommendedGlassSettings.playerHighlight,
+                  value: 0.5,
+                  min: 0,
+                  max: 1,
+                  onChanged: _noopSlider,
                 ),
-              ),
+                const SizedBox(height: 12),
+                GlassSwitch(
+                  value: false,
+                  onChanged: _noopSwitch,
+                ),
+                const SizedBox(height: 12),
+                GlassSegmentedControl(
+                  segments: const [
+                    GlassSegment(label: 'A'),
+                    GlassSegment(label: 'B'),
+                  ],
+                  selectedIndex: 0,
+                  onSegmentSelected: _noopSeg,
+                ),
+              ],
             ),
           ),
         ),
