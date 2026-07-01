@@ -452,6 +452,20 @@ class _DemoTopGlassTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const horizontalPadding = 20.0;
+    final barGlassSettings = LiquidGlassSettings(
+      glassColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xAA1C1C1E)
+          : const Color(0xAAF2F2F7),
+      thickness: 30,
+      blur: 2,
+      chromaticAberration: .01,
+      lightAngle: GlassDefaults.lightAngle,
+      lightIntensity: .5,
+      ambientStrength: 0,
+      refractiveIndex: 1.2,
+      saturation: 1.2,
+      specularSharpness: GlassSpecularSharpness.medium,
+    );
     final preferredWidth = tabWidth == null
         ? double.infinity
         : tabWidth! * tabs.length + horizontalPadding * 2;
@@ -474,41 +488,32 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                 child: GlassTabBar.bottom(
                   selectedIndex: selectedIndex,
                   onTabSelected: onChanged,
-                  quality: GlassQuality.premium,
-                  maskingQuality: MaskingQuality.high,
-                  settings: const LiquidGlassSettings(
-                    thickness: 30,
-                    blur: 3,
-                    chromaticAberration: 0.3,
-                    lightIntensity: 0.6,
-                    refractiveIndex: 1.59,
-                    saturation: 0.7,
-                    ambientStrength: 1,
-                    lightAngle: 2.356194490192345,
-                    glassColor: Color(0x3DFFFFFF),
-                  ),
-                  indicatorColor: Colors.transparent,
                   selectedIconColor: Colors.white,
                   unselectedIconColor: Colors.white60,
                   selectedLabelColor: Colors.white,
                   unselectedLabelColor: Colors.white60,
-                  interactionGlowColor: const Color(0xAA38BDF8),
-                  interactionGlowRadius: 1.2,
-                  glowBlurRadius: 18,
-                  glowSpreadRadius: 4,
-                  glowOpacity: 0.22,
-                  magnification: 1.08,
+                  indicatorColor: Colors.white.withValues(alpha: 0.20),
+                  labelFontSize: 10,
+                  iconSize: 28,
+                  iconLabelSpacing: 0,
+                  quality: GlassQuality.premium,
+                  interactionBehavior: GlassInteractionBehavior.full,
+                  settings: barGlassSettings,
                   tabWidth: tabWidth,
-                  barHeight: 58,
-                  barBorderRadius: 100,
+                  barHeight: 64,
                   horizontalPadding: horizontalPadding,
-                  verticalPadding: 20,
-                  indicatorBorderRadius: 100,
-                  indicatorExpansion: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
+                  verticalPadding: 16,
+                  spacing: 8,
+                  textStyle: const TextStyle(
+                    fontFamily: 'SF Pro Display',
+                    fontFamilyFallback: [
+                      '.AppleSystemUIFont',
+                      '-apple-system',
+                      'Segoe UI',
+                    ],
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
                   ),
-                  pressScale: 1.04,
                   selectedLabelStyle: const TextStyle(
                     fontFamily: 'SF Pro Display',
                     fontFamilyFallback: [
@@ -517,18 +522,6 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                       'Segoe UI',
                     ],
                     fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    letterSpacing: 0,
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontFamily: 'SF Pro Display',
-                    fontFamilyFallback: [
-                      '.AppleSystemUIFont',
-                      '-apple-system',
-                      'Segoe UI',
-                    ],
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
                     letterSpacing: 0,
                   ),
                   tabs: tabs,
