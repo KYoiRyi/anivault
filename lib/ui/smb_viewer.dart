@@ -152,6 +152,11 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : Colors.black87;
+        final subtextColor = isDark ? Colors.white70 : Colors.black54;
+        final cancelTextColor = isDark ? Colors.white54 : Colors.black54;
+
         return GlassCard(
           padding: const EdgeInsets.all(24),
           shape: const LiquidRoundedSuperellipse(borderRadius: 20),
@@ -165,8 +170,8 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                   file.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                   ),
@@ -174,7 +179,7 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                 const SizedBox(height: 8),
                 Text(
                   '${_formatBytes(file.size)} will be saved for offline playback.',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                  style: TextStyle(color: subtextColor),
                 ),
                 const SizedBox(height: 20),
                 GlassButton.custom(
@@ -183,14 +188,14 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                     Navigator.pop(context);
                     CacheManagerService().cacheFile(file);
                   },
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.download_rounded, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        Icon(Icons.download_rounded, color: textColor),
+                        const SizedBox(width: 8),
+                        Text('Download', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -199,9 +204,9 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                 GlassButton.custom(
                   shape: const LiquidRoundedSuperellipse(borderRadius: 10),
                   onTap: () => Navigator.pop(context),
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text('Cancel', style: TextStyle(color: Colors.white54)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text('Cancel', style: TextStyle(color: cancelTextColor)),
                   ),
                 ),
               ],
@@ -215,6 +220,9 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtextColor = isDark ? Colors.white38 : Colors.black54;
 
     if (SMBService().isConnecting || _isLoading && !SMBService().isConnected) {
       return const Center(child: CircularProgressIndicator());
@@ -232,16 +240,16 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                     ? 'Saved network share is not connected.'
                     : 'Connect to a network share to browse files.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                style: TextStyle(color: textColor.withValues(alpha: 0.5)),
               ),
               if (SMBService().hasSavedConnection) ...[
                 const SizedBox(height: 16),
                 GlassButton.custom(
                   shape: const LiquidRoundedSuperellipse(borderRadius: 10),
                   onTap: SMBService().connectSaved,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    child: Text('Reconnect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Text('Reconnect', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -329,12 +337,15 @@ class _PathBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     return _ListSurface(
       child: GlassListTile(
         isLast: true,
         leading: GlassButton(
           shape: const LiquidRoundedSuperellipse(borderRadius: 8),
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: textColor),
           iconSize: 20,
           width: 32,
           height: 32,
@@ -344,7 +355,7 @@ class _PathBar extends StatelessWidget {
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
         ),
       ),
     );
@@ -358,6 +369,10 @@ class _ServerRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtextColor = isDark ? Colors.white70 : Colors.black54;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
       children: [
@@ -368,9 +383,9 @@ class _ServerRoot extends StatelessWidget {
               Icons.dns_rounded,
               color: Colors.lightBlueAccent,
             ),
-            title: const Text('Server', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            subtitle: Text(SMBService().currentHost, style: const TextStyle(color: Colors.white60)),
-            trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+            title: Text('Server', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+            subtitle: Text(SMBService().currentHost, style: TextStyle(color: subtextColor)),
+            trailing: Icon(Icons.chevron_right_rounded, color: subtextColor),
             onTap: onOpen,
           ),
         ),
@@ -387,11 +402,15 @@ class _FileList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtextColor = isDark ? Colors.white70 : Colors.black54;
+
     if (files.isEmpty) {
       return Center(
         child: Text(
           'No files found.',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+          style: TextStyle(color: textColor.withValues(alpha: 0.45)),
         ),
       );
     }
@@ -416,7 +435,7 @@ class _FileList extends StatelessWidget {
 
             Widget trailing;
             if (isDir) {
-              trailing = const Icon(Icons.chevron_right_rounded, color: Colors.white54);
+              trailing = Icon(Icons.chevron_right_rounded, color: subtextColor);
             } else if (task != null && task.hasFailed) {
               trailing = const Icon(
                 Icons.error_outline_rounded,
@@ -434,7 +453,7 @@ class _FileList extends StatelessWidget {
                 color: Colors.greenAccent,
               );
             } else {
-              trailing = const Icon(Icons.download_outlined, color: Colors.white70);
+              trailing = Icon(Icons.download_outlined, color: subtextColor);
             }
 
             return _ListSurface(
@@ -442,13 +461,13 @@ class _FileList extends StatelessWidget {
                 isLast: true,
                 leading: Icon(
                   isDir ? Icons.folder_outlined : Icons.movie_outlined,
-                  color: isDir ? Colors.amber : Colors.white70,
+                  color: isDir ? Colors.amber : subtextColor,
                 ),
                 title: Text(
                   file.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                  style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
                 ),
                 subtitle: isDir
                     ? null
@@ -457,7 +476,7 @@ class _FileList extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: textColor.withValues(alpha: 0.5),
                         ),
                       ),
                 trailing: trailing,

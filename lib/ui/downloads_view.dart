@@ -9,6 +9,9 @@ class DownloadsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     return ListenableBuilder(
       listenable: CacheManagerService(),
       builder: (context, _) {
@@ -19,7 +22,7 @@ class DownloadsView extends StatelessWidget {
           return Center(
             child: Text(
               'No downloads yet.',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+              style: TextStyle(color: textColor.withValues(alpha: 0.45)),
             ),
           );
         }
@@ -51,12 +54,15 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 10),
       child: Text(
         '$title ($count)',
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.72),
+          color: textColor.withValues(alpha: 0.72),
           fontWeight: FontWeight.w700,
           fontSize: 14,
         ),
@@ -76,6 +82,8 @@ class _ActiveDownloadTile extends StatelessWidget {
         ? '${(task.progress * 100).clamp(0, 100).toStringAsFixed(0)}%'
         : 'Working';
     final hasFailed = task.hasFailed;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
 
     return _DownloadSurface(
       child: GlassListTile(
@@ -88,7 +96,7 @@ class _ActiveDownloadTile extends StatelessWidget {
           task.fileName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8),
@@ -110,7 +118,7 @@ class _ActiveDownloadTile extends StatelessWidget {
                 style: TextStyle(
                   color: hasFailed
                       ? Colors.redAccent.withValues(alpha: 0.85)
-                      : Colors.white.withValues(alpha: 0.45),
+                      : textColor.withValues(alpha: 0.45),
                 ),
               ),
             ],
@@ -120,7 +128,7 @@ class _ActiveDownloadTile extends StatelessWidget {
           hasFailed ? 'Failed' : progressLabel,
           style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: hasFailed ? Colors.redAccent : Colors.white,
+            color: hasFailed ? Colors.redAccent : textColor,
           ),
         ),
       ),
@@ -135,31 +143,35 @@ class _CompletedDownloadTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtextColor = isDark ? Colors.white70 : Colors.black54;
+
     return _DownloadSurface(
       child: GlassListTile(
         isLast: true,
-        leading: const Icon(
+        leading: Icon(
           Icons.movie_creation_outlined,
-          color: Colors.white70,
+          color: subtextColor,
         ),
         title: Text(
           item.fileName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
         ),
         subtitle: Text(
           '${_formatBytes(item.size)}  -  ${item.smbPath}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+          style: TextStyle(color: textColor.withValues(alpha: 0.45)),
         ),
         trailing: Wrap(
           spacing: 4,
           children: [
             IconButton(
               tooltip: 'Play',
-              icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+              icon: Icon(Icons.play_arrow_rounded, color: textColor),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -173,7 +185,7 @@ class _CompletedDownloadTile extends StatelessWidget {
             ),
             IconButton(
               tooltip: 'Delete download',
-              icon: const Icon(Icons.delete_outline, color: Colors.white70),
+              icon: Icon(Icons.delete_outline, color: subtextColor),
               onPressed: () => CacheManagerService().deleteDownload(item),
             ),
           ],

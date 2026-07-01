@@ -127,7 +127,11 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : Colors.black87;
+        final subtextColor = isDark ? Colors.white54 : Colors.black54;
         var connecting = false;
+
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Dialog(
@@ -143,12 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
+                        Text(
                           'Connect to Network Share',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: textColor,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -156,21 +160,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           useOwnLayer: true,
                           controller: _smbHostCtrl,
                           placeholder: 'Host IP or name',
-                          textStyle: const TextStyle(color: Colors.white),
+                          textStyle: TextStyle(color: textColor),
                         ),
                         const SizedBox(height: 12),
                         GlassTextField(
                           useOwnLayer: true,
                           controller: _smbDomainCtrl,
                           placeholder: 'Domain',
-                          textStyle: const TextStyle(color: Colors.white),
+                          textStyle: TextStyle(color: textColor),
                         ),
                         const SizedBox(height: 12),
                         GlassTextField(
                           useOwnLayer: true,
                           controller: _smbUserCtrl,
                           placeholder: 'Username',
-                          textStyle: const TextStyle(color: Colors.white),
+                          textStyle: TextStyle(color: textColor),
                         ),
                         const SizedBox(height: 12),
                         GlassTextField(
@@ -178,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           controller: _smbPassCtrl,
                           placeholder: 'Password',
                           obscureText: true,
-                          textStyle: const TextStyle(color: Colors.white),
+                          textStyle: TextStyle(color: textColor),
                         ),
                         const SizedBox(height: 24),
                         Row(
@@ -187,9 +191,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             GlassButton.custom(
                               shape: const LiquidRoundedSuperellipse(borderRadius: 10),
                               onTap: () => Navigator.pop(context),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                child: Text('Cancel', style: TextStyle(color: Colors.white54)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                child: Text('Cancel', style: TextStyle(color: subtextColor)),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -212,12 +216,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 child: connecting
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         width: 16,
                                         height: 16,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: textColor),
                                       )
-                                    : const Text('Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    : Text('Connect', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
                               ),
                             ),
                           ],
@@ -304,6 +308,11 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : Colors.black87;
+        final subtextColor = isDark ? Colors.white70 : Colors.black54;
+        final dividerColor = isDark ? Colors.white12 : Colors.black12;
+
         return Dialog(
           backgroundColor: Colors.transparent,
           child: GlassCard(
@@ -318,24 +327,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Settings',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: textColor,
                           ),
                         ),
                       ),
                       GlassIconButton(
-                        icon: const Icon(Icons.close_rounded, color: Colors.white),
+                        icon: Icon(Icons.close_rounded, color: textColor),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Divider(color: Colors.white12),
+                  Divider(color: dividerColor),
                   const SizedBox(height: 12),
                   ListenableBuilder(
                     listenable: CacheManagerService(),
@@ -343,11 +352,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       final limit = CacheManagerService().cacheLimitGB;
                       return Row(
                         children: [
-                          const Icon(Icons.storage_rounded, size: 20, color: Colors.white70),
+                          Icon(Icons.storage_rounded, size: 20, color: subtextColor),
                           const SizedBox(width: 8),
                           Text(
                             'Download limit: ${limit.toInt()} GB',
-                            style: const TextStyle(color: Colors.white70),
+                            style: TextStyle(color: subtextColor),
                           ),
                           Expanded(
                             child: GlassSlider(
@@ -356,8 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               min: 5.0,
                               max: 100.0,
                               divisions: 19,
-                              activeColor: Colors.white,
-                              thumbColor: Colors.white,
+                              activeColor: textColor,
+                              thumbColor: textColor,
                               onChanged: CacheManagerService().setCacheLimit,
                             ),
                           ),
@@ -366,18 +375,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  const Divider(color: Colors.white12),
+                  Divider(color: dividerColor),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'AniDB API',
-                    style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+                    style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
                   ),
                   const SizedBox(height: 8),
                   GlassTextField(
                     useOwnLayer: true,
                     controller: _anidbClientCtrl,
                     placeholder: 'Client name',
-                    textStyle: const TextStyle(color: Colors.white),
+                    textStyle: TextStyle(color: textColor),
                   ),
                   const SizedBox(height: 12),
                   GlassTextField(
@@ -385,7 +394,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     controller: _anidbClientVerCtrl,
                     placeholder: 'Client version',
                     keyboardType: TextInputType.number,
-                    textStyle: const TextStyle(color: Colors.white),
+                    textStyle: TextStyle(color: textColor),
                   ),
                   const SizedBox(height: 16),
                   Align(
@@ -405,9 +414,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (context.mounted) Navigator.pop(context);
                         await _refreshAnimeLibrary();
                       },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        child: Text('Save API settings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Text('Save API settings', style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
                       ),
                     ),
                   ),
@@ -422,6 +431,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final iconColor = isDark ? Colors.white : Colors.black87;
+
     return GlassScaffold(
       extendBody: false,
       background: Container(
@@ -430,9 +443,9 @@ class _HomeScreenState extends State<HomeScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0C0720), // Deep blue space
-              Color(0xFF1B0C30), // Deep purple space
-              Color(0xFF000000), // Pure black
+              Color(0xFFE8F0FE), // Soft light blue ambient glow
+              Color(0xFFF3E8FF), // Soft light purple ambient glow
+              Color(0xFFFFFFFF), // Pure white base
             ],
           ),
         ),
@@ -442,22 +455,22 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         title: Text(
           _sectionTitle,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: textColor,
           ),
         ),
         actions: [
           if (_currentSection == HomeSection.network)
             GlassButton(
               shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-              icon: const Icon(Icons.router_rounded, color: Colors.white),
+              icon: Icon(Icons.router_rounded, color: iconColor),
               onTap: _showSMBDialog,
             ),
           GlassButton(
             shape: const LiquidRoundedSuperellipse(borderRadius: 12),
-            icon: const Icon(Icons.settings_rounded, color: Colors.white),
+            icon: Icon(Icons.settings_rounded, color: iconColor),
             onTap: _showSettingsDialog,
           ),
           if (_currentSection == HomeSection.library)
@@ -470,12 +483,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: _isSyncing || _isScraping
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: iconColor),
                       )
-                    : const Icon(Icons.add_rounded, color: Colors.white),
+                    : Icon(Icons.add_rounded, color: iconColor),
               ),
             ),
         ],
@@ -509,13 +522,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildLibrary() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     if (_mediaPaths.isEmpty) {
       return Center(
         child: Text(
           'No media imported.\nUse + to add local videos.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.45),
+            color: textColor.withValues(alpha: 0.45),
             fontSize: 16,
           ),
         ),
@@ -531,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return Center(
         child: Text(
           'Scraping media library...',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
+          style: TextStyle(color: textColor.withValues(alpha: 0.45)),
         ),
       );
     }
@@ -577,6 +593,9 @@ class _AnimeSeriesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     return GlassCard(
       padding: EdgeInsets.zero,
       clipBehavior: Clip.none, // Disable card-level clip to avoid border cut-offs and white outline glitches
@@ -608,10 +627,10 @@ class _AnimeSeriesCard extends StatelessWidget {
                           series.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w800,
                             height: 1.16,
-                            color: Colors.white,
+                            color: textColor,
                           ),
                         ),
                       ),
@@ -643,7 +662,7 @@ class _AnimeSeriesCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.48),
+                      color: textColor.withValues(alpha: 0.48),
                       fontSize: 12,
                     ),
                   ),

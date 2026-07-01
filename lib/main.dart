@@ -38,13 +38,13 @@ class AniVaultApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
         colorSchemeSeed: Colors.grey,
-        scaffoldBackgroundColor: Colors.black, // Pure black
-        textTheme: _thinTextTheme(ThemeData.dark().textTheme),
-        primaryTextTheme: _thinTextTheme(ThemeData.dark().primaryTextTheme),
+        scaffoldBackgroundColor: Colors.white, // Pure white
+        textTheme: _thinTextTheme(ThemeData.light().textTheme),
+        primaryTextTheme: _thinTextTheme(ThemeData.light().primaryTextTheme),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.black,
+          backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
         ),

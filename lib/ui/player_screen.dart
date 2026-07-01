@@ -1023,15 +1023,19 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return GlassPage(
-      background: Transform.scale(
-        scale: _scale,
-        child: Video(
-          controller: controller,
-          controls: NoVideoControls,
-          subtitleViewConfiguration: const SubtitleViewConfiguration(visible: false),
-        ),
+    return Theme(
+      data: ThemeData.dark().copyWith(
+        useMaterial3: true,
       ),
+      child: GlassPage(
+        background: Transform.scale(
+          scale: _scale,
+          child: Video(
+            controller: controller,
+            controls: NoVideoControls,
+            subtitleViewConfiguration: const SubtitleViewConfiguration(visible: false),
+          ),
+        ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Stack(
@@ -1190,7 +1194,8 @@ class _PlayerScreenState extends State<PlayerScreen>
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

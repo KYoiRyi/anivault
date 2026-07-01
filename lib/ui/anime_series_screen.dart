@@ -32,6 +32,9 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
   Widget build(BuildContext context) {
     final series = widget.series;
     final topSpacer = MediaQuery.paddingOf(context).top + 44 + 8;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final iconColor = isDark ? Colors.white : Colors.black87;
 
     return GlassScaffold(
       extendBody: true,
@@ -42,9 +45,9 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0C0720), // Deep blue space
-              Color(0xFF1B0C30), // Deep purple space
-              Color(0xFF000000), // Pure black
+              Color(0xFFE8F0FE), // Soft light blue ambient glow
+              Color(0xFFF3E8FF), // Soft light purple ambient glow
+              Color(0xFFFFFFFF), // Pure white base
             ],
           ),
         ),
@@ -55,8 +58,8 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
         buttonSettings: _SeriesGlassSettings.button,
         title: Text(
           series.title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: textColor,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -68,7 +71,7 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
           glowBlurRadius: 16,
           interactionScale: 1.08,
           stretch: 0.7,
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: iconColor),
           onTap: () => Navigator.pop(context),
         ),
       ),
@@ -127,6 +130,9 @@ class _HeaderDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     return GlassCard(
       useOwnLayer: true,
       quality: GlassQuality.standard,
@@ -145,16 +151,16 @@ class _HeaderDetails extends StatelessWidget {
                   series.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   '${series.episodes.length} episodes  -  ${series.fileCount} files',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                  style: TextStyle(color: textColor.withValues(alpha: 0.6)),
                 ),
               ],
             ),
@@ -214,6 +220,11 @@ class _EpisodeBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final files = episode.files;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtextColor = isDark ? Colors.white70 : Colors.black54;
+    final dividerColor = isDark ? Colors.white12 : Colors.black12;
+
     return GlassCard(
       useOwnLayer: true,
       quality: GlassQuality.standard,
@@ -231,10 +242,10 @@ class _EpisodeBlock extends StatelessWidget {
                 Expanded(
                   child: Text(
                     episode.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                   ),
                 ),
@@ -242,7 +253,7 @@ class _EpisodeBlock extends StatelessWidget {
                   Text(
                     '${files.length} versions',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: subtextColor,
                     ),
                   ),
               ],
@@ -254,7 +265,7 @@ class _EpisodeBlock extends StatelessWidget {
               Divider(
                 height: 1,
                 indent: 60,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: dividerColor,
               ),
           ],
         ],
@@ -275,6 +286,10 @@ class _EpisodeFileButton extends StatelessWidget {
       if (file.resolution != null) file.resolution,
       file.path,
     ].join('  -  ');
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final iconColor = isDark ? Colors.white70 : Colors.black54;
 
     return GlassButton.custom(
       useOwnLayer: false,
@@ -300,7 +315,7 @@ class _EpisodeFileButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            const Icon(Icons.play_arrow_rounded, color: Colors.white70),
+            Icon(Icons.play_arrow_rounded, color: iconColor),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -311,9 +326,9 @@ class _EpisodeFileButton extends StatelessWidget {
                     file.fileName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w400,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -322,7 +337,7 @@ class _EpisodeFileButton extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: textColor.withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                   ),
