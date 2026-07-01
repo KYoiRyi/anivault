@@ -87,7 +87,6 @@ class _ActiveDownloadTile extends StatelessWidget {
 
     return _DownloadSurface(
       child: GlassListTile.standalone(
-        isLast: true,
         leading: Icon(
           hasFailed ? Icons.error_outline_rounded : Icons.downloading_rounded,
           color: hasFailed ? Colors.redAccent : Colors.lightBlueAccent,
@@ -149,7 +148,6 @@ class _CompletedDownloadTile extends StatelessWidget {
 
     return _DownloadSurface(
       child: GlassListTile.standalone(
-        isLast: true,
         leading: Icon(
           Icons.movie_creation_outlined,
           color: subtextColor,
@@ -201,6 +199,8 @@ class _CompletedDownloadTile extends StatelessWidget {
       ),
     );
   }
+}
+
 class _DownloadSurface extends StatelessWidget {
   final Widget child;
 
