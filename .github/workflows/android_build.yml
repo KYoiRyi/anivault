@@ -41,7 +41,11 @@ jobs:
         run: rm -rf .dart_tool .flutter-plugins-dependencies
 
       - name: Fetch dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get || {
+            rm -f .dart_tool/package_graph.json
+            flutter pub get
+          }
 
       - name: Prepare Gradle wrapper
         run: chmod +x android/gradlew
