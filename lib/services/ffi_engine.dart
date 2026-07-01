@@ -7,18 +7,20 @@ import 'package:anivault/services/logger_service.dart';
 typedef ArtCnnInitC = ffi.Int32 Function(ffi.Pointer<Utf8> modelPath);
 typedef ArtCnnInitDart = int Function(ffi.Pointer<Utf8> modelPath);
 
-typedef ArtCnnProcessFrameC = ffi.Int32 Function(
-  ffi.Pointer<ffi.Uint8> buffer,
-  ffi.Int32 bufferSize,
-  ffi.Int32 width,
-  ffi.Int32 height,
-);
-typedef ArtCnnProcessFrameDart = int Function(
-  ffi.Pointer<ffi.Uint8> buffer,
-  int bufferSize,
-  int width,
-  int height,
-);
+typedef ArtCnnProcessFrameC =
+    ffi.Int32 Function(
+      ffi.Pointer<ffi.Uint8> buffer,
+      ffi.Int32 bufferSize,
+      ffi.Int32 width,
+      ffi.Int32 height,
+    );
+typedef ArtCnnProcessFrameDart =
+    int Function(
+      ffi.Pointer<ffi.Uint8> buffer,
+      int bufferSize,
+      int width,
+      int height,
+    );
 
 typedef MediaKitSetArtCnnC = ffi.Void Function(ffi.Bool);
 typedef MediaKitSetArtCnnDart = void Function(bool);
@@ -40,18 +42,26 @@ class FFIEngine {
   void _loadLibrary() {
     try {
       if (Platform.isWindows) {
-        _lib = ffi.DynamicLibrary.open('anivault_core.dll');
+        final exeDir = File(Platform.resolvedExecutable).parent.path;
+        final bundledPath = '$exeDir\\anivault_core.dll';
+        _lib = File(bundledPath).existsSync()
+            ? ffi.DynamicLibrary.open(bundledPath)
+            : ffi.DynamicLibrary.open('anivault_core.dll');
         try {
           final mkLib = ffi.DynamicLibrary.open('media_kit_video_plugin.dll');
           _setMediaKitArtCnnFlag = mkLib
               .lookup<ffi.NativeFunction<MediaKitSetArtCnnC>>(
-                  'media_kit_video_set_artcnn_enabled')
+                'media_kit_video_set_artcnn_enabled',
+              )
               .asFunction();
         } catch (e) {
-          LoggerService().log('[FFI] media_kit C++ hook missing or not compiled yet.');
+          LoggerService().log(
+            '[FFI] media_kit C++ hook missing or not compiled yet.',
+          );
         }
       } else if (Platform.isIOS || Platform.isMacOS) {
-        _lib = ffi.DynamicLibrary.process(); // iOS statically links Rust archives
+        _lib =
+            ffi.DynamicLibrary.process(); // iOS statically links Rust archives
       } else if (Platform.isAndroid || Platform.isLinux) {
         _lib = ffi.DynamicLibrary.open('libanivault_core.so');
       } else {
@@ -62,7 +72,9 @@ class FFIEngine {
           .lookup<ffi.NativeFunction<ArtCnnInitC>>('artcnn_init')
           .asFunction();
       _processFrame = _lib
-          .lookup<ffi.NativeFunction<ArtCnnProcessFrameC>>('artcnn_process_frame')
+          .lookup<ffi.NativeFunction<ArtCnnProcessFrameC>>(
+            'artcnn_process_frame',
+          )
           .asFunction();
 
       _isLoaded = true;
@@ -85,7 +97,7 @@ class FFIEngine {
     final modelPathPtr = modelAbsPath.toNativeUtf8();
     final status = _initModel(modelPathPtr);
     malloc.free(modelPathPtr);
-    
+
     if (status == 0) {
       LoggerService().log('[FFI] ArtCNN Engine Initialized natively.');
       return true;
@@ -95,9 +107,14 @@ class FFIEngine {
     }
   }
 
-  /// Processes raw RGB frame. 
+  /// Processes raw RGB frame.
   /// WARNING: Intended for debugging/fallback if Native video filter hook is bypassed.
-  bool processFrameSync(ffi.Pointer<ffi.Uint8> buffer, int size, int width, int height) {
+  bool processFrameSync(
+    ffi.Pointer<ffi.Uint8> buffer,
+    int size,
+    int width,
+    int height,
+  ) {
     if (!_isLoaded) return false;
     // Blocks thread during DirectML / CoreML inference
     final status = _processFrame(buffer, size, width, height);

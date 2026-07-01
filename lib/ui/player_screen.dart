@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/cinematic_edge_bar.dart';
 import 'package:anivault/ui/performance_hud.dart';
 import 'package:anivault/services/shader_service.dart';
@@ -43,13 +44,13 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _showHUD = false;
 
   // Subtitle custom settings
-  double _subtitleSize = 24.0; // Restoring default size (24.0) suitable for custom layout
-  double _subtitlePosition = 24.0; // Restoring default position (24.0) suitable for custom layout
+  double _subtitleSize =
+      24.0; // Restoring default size (24.0) suitable for custom layout
+  double _subtitlePosition =
+      24.0; // Restoring default position (24.0) suitable for custom layout
   double _subtitleBgOpacity = 0.0;
   String _subtitleFontFamily = 'Default';
   List<String> _activeSubtitles = [];
-
-
 
   Future<void> _loadSubtitleSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -91,7 +92,9 @@ class _PlayerScreenState extends State<PlayerScreen>
   void initState() {
     super.initState();
     _enterFullscreen();
-    controller = VideoController(player); // Default creates HW accelerated controller
+    controller = VideoController(
+      player,
+    ); // Default creates HW accelerated controller
     previewController = VideoController(previewPlayer);
     _isHwAccelerated = true;
     player.stream.log.listen((event) {
@@ -130,7 +133,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       try {
         final nativePlayer = player.platform as NativePlayer;
         final nativePreviewPlayer = previewPlayer.platform as NativePlayer;
-        
+
         // --- Windows Native Hang Prevention ---
         // Disable youtube-dl hook which causes "ytdl_hook: scraping" to block endlessly on some SMB streams.
         await nativePlayer.setProperty('ytdl', 'no');
@@ -144,7 +147,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         );
         await nativePlayer.setProperty(
           'glsl-shaders',
-          _isEnhancementEnabled && _currentEngine == 'Anime4K' ? _getDynamicShaderPath() : '',
+          _isEnhancementEnabled && _currentEngine == 'Anime4K'
+              ? _getDynamicShaderPath()
+              : '',
         );
 
         // Configure player lossless audio properties
@@ -154,13 +159,15 @@ class _PlayerScreenState extends State<PlayerScreen>
         await nativePlayer.setProperty('audio-pitch-correction', 'no');
 
         // Open main player first to split the heavy startup loading workload
-        await player.open(Media(widget.videoPath), play: false).timeout(
-          const Duration(seconds: 12),
-        );
+        await player
+            .open(Media(widget.videoPath), play: false)
+            .timeout(const Duration(seconds: 12));
 
         // Wait for duration stream to emit a valid duration (> 0) indicating player has parsed the media
-        await player.stream.duration.firstWhere((d) => d > Duration.zero).timeout(const Duration(seconds: 5));
-        
+        await player.stream.duration
+            .firstWhere((d) => d > Duration.zero)
+            .timeout(const Duration(seconds: 5));
+
         final prefs = await SharedPreferences.getInstance();
         final savedPos = prefs.getInt('pos_${widget.videoPath}') ?? 0;
         if (savedPos > 0) {
@@ -179,13 +186,18 @@ class _PlayerScreenState extends State<PlayerScreen>
             await nativePreviewPlayer.setProperty('hwdec', 'auto');
             await previewPlayer.setVolume(0);
             await nativePreviewPlayer.setProperty('audio-format', 'float');
-            await nativePreviewPlayer.setProperty('audio-channels', 'auto-safe');
+            await nativePreviewPlayer.setProperty(
+              'audio-channels',
+              'auto-safe',
+            );
             await nativePreviewPlayer.setProperty('resample-filter', 'soxr');
 
-            await previewPlayer.open(Media(widget.videoPath), play: false).timeout(
-              const Duration(seconds: 8),
-            );
-            await previewPlayer.stream.duration.firstWhere((d) => d > Duration.zero).timeout(const Duration(seconds: 5));
+            await previewPlayer
+                .open(Media(widget.videoPath), play: false)
+                .timeout(const Duration(seconds: 8));
+            await previewPlayer.stream.duration
+                .firstWhere((d) => d > Duration.zero)
+                .timeout(const Duration(seconds: 5));
             if (savedPos > 0) {
               await previewPlayer.seek(Duration(milliseconds: savedPos));
             }
@@ -194,21 +206,22 @@ class _PlayerScreenState extends State<PlayerScreen>
             debugPrint('Preview player background init error: $e');
           }
         });
-
       } on TimeoutException {
         LoggerService().log('[Player Error] Timed out waiting for media info.');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to load video: Network timed out.')),
+            const SnackBar(
+              content: Text('Failed to load video: Network timed out.'),
+            ),
           );
           Navigator.of(context).pop();
         }
       } catch (e) {
         debugPrint('Media load error: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Play failed: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Play failed: $e')));
           Navigator.of(context).pop();
         }
       }
@@ -246,13 +259,18 @@ class _PlayerScreenState extends State<PlayerScreen>
       if (_currentEngine == 'Anime4K') {
         // Disable ArtCNN native C++ hook globally
         FFIEngine().setPipelineHookEnabled(false);
-        
+
         // Ensure Hardware Acceleration is enabled for Native GLSL GPU-Next
         if (!_isHwAccelerated) {
-          controller = VideoController(player, configuration: const VideoControllerConfiguration(enableHardwareAcceleration: true));
+          controller = VideoController(
+            player,
+            configuration: const VideoControllerConfiguration(
+              enableHardwareAcceleration: true,
+            ),
+          );
           _isHwAccelerated = true;
         }
-        
+
         await nativePlayer.setProperty(
           'hwdec',
           _isEnhancementEnabled ? 'auto-copy' : 'auto',
@@ -263,13 +281,18 @@ class _PlayerScreenState extends State<PlayerScreen>
         );
       } else if (_currentEngine == 'ArtCNN') {
         await nativePlayer.setProperty('glsl-shaders', '');
-        
+
         if (_isEnhancementEnabled) {
           final artCnnModelPath = ShaderService().artCnnPath;
-          
+
           // Recreate VideoController and FORCE Software rendering to allow Memory interop for the C++ Native Hook!
           if (_isHwAccelerated) {
-            controller = VideoController(player, configuration: const VideoControllerConfiguration(enableHardwareAcceleration: false));
+            controller = VideoController(
+              player,
+              configuration: const VideoControllerConfiguration(
+                enableHardwareAcceleration: false,
+              ),
+            );
             _isHwAccelerated = false;
           }
 
@@ -282,7 +305,12 @@ class _PlayerScreenState extends State<PlayerScreen>
           FFIEngine().setPipelineHookEnabled(false);
           // Restore HW acceleration if enhancement is fully turned off
           if (!_isHwAccelerated) {
-            controller = VideoController(player, configuration: const VideoControllerConfiguration(enableHardwareAcceleration: true));
+            controller = VideoController(
+              player,
+              configuration: const VideoControllerConfiguration(
+                enableHardwareAcceleration: true,
+              ),
+            );
             _isHwAccelerated = true;
           }
           await nativePlayer.setProperty('hwdec', 'auto');
@@ -299,6 +327,324 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   void _showVideoSettings() {
+    GlassModalSheet.show(
+      context: context,
+      initialState: GlassSheetState.half,
+      halfSize: 0.58,
+      fullSize: 0.92,
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.playerPanel,
+      barrierColor: Colors.black45,
+      expandedColor: const Color(0xF20B0F17),
+      fillTransition: GlassFillTransition.gradual,
+      enableInteractionGlow: true,
+      enableSaturationGlow: true,
+      stretch: 0.62,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final scrollData = ScrollControllerProvider.of(context);
+            return ListView(
+              controller: scrollData?.controller,
+              physics: scrollData?.physics,
+              padding: const EdgeInsets.fromLTRB(22, 18, 22, 36),
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Player Settings',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    GlassButton(
+                      quality: GlassQuality.premium,
+                      settings: AniGlassTheme.playerControl,
+                      icon: const Icon(Icons.close_rounded),
+                      onTap: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                _glassSettingsSection(
+                  icon: Icons.auto_awesome_rounded,
+                  title: 'Video Enhancement',
+                  subtitle: 'Anime4K GLSL or ArtCNN native pipeline',
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Anime4K / ArtCNN',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          GlassSwitch(
+                            quality: GlassQuality.premium,
+                            useOwnLayer: true,
+                            value: _isEnhancementEnabled,
+                            onChanged: (val) {
+                              setDialogState(() => _isEnhancementEnabled = val);
+                              setState(() => _isEnhancementEnabled = val);
+                              _applyEnhancementConfig();
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      AnimatedOpacity(
+                        duration: const Duration(milliseconds: 220),
+                        opacity: _isEnhancementEnabled ? 1 : 0.35,
+                        child: IgnorePointer(
+                          ignoring: !_isEnhancementEnabled,
+                          child: Column(
+                            children: [
+                              GlassSegmentedControl(
+                                quality: GlassQuality.premium,
+                                useOwnLayer: true,
+                                height: 44,
+                                borderRadius: 100,
+                                selectedTextStyle: _selectedPillTextStyle,
+                                unselectedTextStyle: _pillTextStyle,
+                                indicatorSettings: AniGlassTheme.playerControl,
+                                interactionBehavior:
+                                    GlassInteractionBehavior.full,
+                                glowColor: const Color(0xFF8FEAFF),
+                                glowRadius: 2,
+                                segments: const [
+                                  GlassSegment(
+                                    label: 'Anime4K',
+                                    icon: Icon(Icons.bolt_rounded, size: 16),
+                                  ),
+                                  GlassSegment(
+                                    label: 'ArtCNN',
+                                    icon: Icon(Icons.memory_rounded, size: 16),
+                                  ),
+                                ],
+                                selectedIndex: _currentEngine == 'Anime4K'
+                                    ? 0
+                                    : 1,
+                                onSegmentSelected: (index) {
+                                  final engine = index == 0
+                                      ? 'Anime4K'
+                                      : 'ArtCNN';
+                                  setDialogState(() => _currentEngine = engine);
+                                  setState(() => _currentEngine = engine);
+                                  _applyEnhancementConfig();
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 260),
+                                child: _currentEngine == 'Anime4K'
+                                    ? GlassSegmentedControl(
+                                        key: const ValueKey('anime4k-models'),
+                                        quality: GlassQuality.premium,
+                                        useOwnLayer: true,
+                                        height: 44,
+                                        borderRadius: 100,
+                                        selectedTextStyle:
+                                            _selectedPillTextStyle,
+                                        unselectedTextStyle: _pillTextStyle,
+                                        indicatorSettings:
+                                            AniGlassTheme.playerControl,
+                                        interactionBehavior:
+                                            GlassInteractionBehavior.full,
+                                        glowColor: const Color(0xFFFF9AF2),
+                                        glowRadius: 2,
+                                        segments: const [
+                                          GlassSegment(label: 'Speed'),
+                                          GlassSegment(label: 'Balanced'),
+                                          GlassSegment(label: 'Quality'),
+                                          GlassSegment(label: 'Max'),
+                                        ],
+                                        selectedIndex:
+                                            switch (_currentModelKey) {
+                                              'Speed' => 0,
+                                              'Balanced' => 1,
+                                              'Quality' => 2,
+                                              'Extreme' => 3,
+                                              _ => 1,
+                                            },
+                                        onSegmentSelected: (index) {
+                                          final modelKey = switch (index) {
+                                            0 => 'Speed',
+                                            1 => 'Balanced',
+                                            2 => 'Quality',
+                                            3 => 'Extreme',
+                                            _ => 'Balanced',
+                                          };
+                                          setDialogState(
+                                            () => _currentModelKey = modelKey,
+                                          );
+                                          setState(
+                                            () => _currentModelKey = modelKey,
+                                          );
+                                          _applyEnhancementConfig();
+                                        },
+                                      )
+                                    : const Text(
+                                        'ArtCNN uses the native FFI pipeline and disables GLSL shaders.',
+                                        key: ValueKey('artcnn-note'),
+                                        style: TextStyle(
+                                          color: Colors.white60,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _glassSettingsSection(
+                  icon: Icons.subtitles_rounded,
+                  title: 'Subtitles',
+                  subtitle: 'Flutter overlay layout and typography',
+                  child: Column(
+                    children: [
+                      _settingsSliderRow(
+                        label: 'Font Size',
+                        value: _subtitleSize,
+                        min: 12,
+                        max: 48,
+                        onChanged: (val) {
+                          setDialogState(() => _subtitleSize = val);
+                          setState(() => _subtitleSize = val);
+                          _saveSubtitleSettings();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _settingsSliderRow(
+                        label: 'Vertical',
+                        value: _subtitlePosition,
+                        min: 8,
+                        max: 160,
+                        onChanged: (val) {
+                          setDialogState(() => _subtitlePosition = val);
+                          setState(() => _subtitlePosition = val);
+                          _saveSubtitleSettings();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      _settingsSliderRow(
+                        label: 'Backdrop',
+                        value: _subtitleBgOpacity,
+                        min: 0,
+                        max: 1,
+                        onChanged: (val) {
+                          setDialogState(() => _subtitleBgOpacity = val);
+                          setState(() => _subtitleBgOpacity = val);
+                          _saveSubtitleSettings();
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      GlassSegmentedControl(
+                        quality: GlassQuality.premium,
+                        useOwnLayer: true,
+                        height: 44,
+                        borderRadius: 100,
+                        selectedTextStyle: _selectedPillTextStyle,
+                        unselectedTextStyle: _pillTextStyle,
+                        indicatorSettings: AniGlassTheme.playerControl,
+                        segments: const [
+                          GlassSegment(label: 'Default'),
+                          GlassSegment(label: 'Courier'),
+                          GlassSegment(label: 'Consolas'),
+                          GlassSegment(label: 'Roboto'),
+                        ],
+                        selectedIndex: switch (_subtitleFontFamily) {
+                          'Courier' => 1,
+                          'Consolas' => 2,
+                          'Roboto' => 3,
+                          _ => 0,
+                        },
+                        onSegmentSelected: (index) {
+                          final font = switch (index) {
+                            1 => 'Courier',
+                            2 => 'Consolas',
+                            3 => 'Roboto',
+                            _ => 'Default',
+                          };
+                          setDialogState(() => _subtitleFontFamily = font);
+                          setState(() => _subtitleFontFamily = font);
+                          _saveSubtitleSettings();
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: GlassButton.custom(
+                          quality: GlassQuality.premium,
+                          settings: AniGlassTheme.playerControl,
+                          shape: const LiquidRoundedSuperellipse(
+                            borderRadius: 100,
+                          ),
+                          onTap: () {
+                            _resetSubtitleSettings();
+                            setDialogState(() {});
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            child: Text(
+                              'Reset Subtitles',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _glassSettingsSection(
+                  icon: Icons.monitor_heart_rounded,
+                  title: 'Performance HUD',
+                  subtitle: 'Playback telemetry overlay',
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Show HUD',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      GlassSwitch(
+                        quality: GlassQuality.premium,
+                        useOwnLayer: true,
+                        value: _showHUD,
+                        onChanged: (val) {
+                          setDialogState(() => _showHUD = val);
+                          setState(() => _showHUD = val);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ignore: unused_element
+  void _showLegacyVideoSettings() {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -329,7 +675,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                       children: [
                         GlassCard(
                           padding: EdgeInsets.zero,
-                          shape: const LiquidRoundedSuperellipse(borderRadius: 42),
+                          shape: const LiquidRoundedSuperellipse(
+                            borderRadius: 42,
+                          ),
                           child: Stack(
                             clipBehavior: Clip.hardEdge,
                             children: [
@@ -380,19 +728,379 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           ),
                                         ],
                                       ),
-                                    const SizedBox(height: 20),
-                                    _glassSettingsSection(
-                                    icon: Icons.auto_awesome_rounded,
-                                    title: 'Video Quality',
-                                    subtitle: 'AI upscaling engine',
-                                    child: Column(
-                                      children: [
-                                        Row(
+                                      const SizedBox(height: 20),
+                                      _glassSettingsSection(
+                                        icon: Icons.auto_awesome_rounded,
+                                        title: 'Video Quality',
+                                        subtitle: 'AI upscaling engine',
+                                        child: Column(
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                const Text(
+                                                  'Upscaling',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w300,
+                                                  ),
+                                                ),
+                                                GlassSwitch(
+                                                  useOwnLayer: true,
+                                                  value: _isEnhancementEnabled,
+                                                  onChanged: (val) {
+                                                    setDialogState(
+                                                      () =>
+                                                          _isEnhancementEnabled =
+                                                              val,
+                                                    );
+                                                    setState(
+                                                      () =>
+                                                          _isEnhancementEnabled =
+                                                              val,
+                                                    );
+                                                    _applyEnhancementConfig();
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 16),
+                                            AnimatedOpacity(
+                                              duration: const Duration(
+                                                milliseconds: 200,
+                                              ),
+                                              opacity: _isEnhancementEnabled
+                                                  ? 1.0
+                                                  : 0.3,
+                                              child: IgnorePointer(
+                                                ignoring:
+                                                    !_isEnhancementEnabled,
+                                                child: Column(
+                                                  children: [
+                                                    GlassSegmentedControl(
+                                                      useOwnLayer: true,
+                                                      height: 42,
+                                                      borderRadius: 100,
+                                                      selectedTextStyle:
+                                                          _selectedPillTextStyle,
+                                                      unselectedTextStyle:
+                                                          _pillTextStyle,
+                                                      indicatorSettings:
+                                                          RecommendedGlassSettings
+                                                              .playerHighlight,
+                                                      interactionBehavior:
+                                                          GlassInteractionBehavior
+                                                              .full,
+                                                      glowColor: const Color(
+                                                        0xFF8FEAFF,
+                                                      ),
+                                                      glowRadius: 2.0,
+                                                      segments: const [
+                                                        GlassSegment(
+                                                          label: 'Anime4K',
+                                                          icon: Icon(
+                                                            Icons.bolt_rounded,
+                                                            size: 16,
+                                                          ),
+                                                        ),
+                                                        GlassSegment(
+                                                          label: 'ArtCNN',
+                                                          icon: Icon(
+                                                            Icons
+                                                                .memory_rounded,
+                                                            size: 16,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                      selectedIndex:
+                                                          _currentEngine ==
+                                                              'Anime4K'
+                                                          ? 0
+                                                          : 1,
+                                                      onSegmentSelected: (index) {
+                                                        final engine =
+                                                            index == 0
+                                                            ? 'Anime4K'
+                                                            : 'ArtCNN';
+                                                        setDialogState(
+                                                          () => _currentEngine =
+                                                              engine,
+                                                        );
+                                                        setState(
+                                                          () => _currentEngine =
+                                                              engine,
+                                                        );
+                                                        _applyEnhancementConfig();
+                                                      },
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                    if (_currentEngine ==
+                                                        'Anime4K')
+                                                      GlassSegmentedControl(
+                                                        useOwnLayer: true,
+                                                        height: 42,
+                                                        borderRadius: 100,
+                                                        selectedTextStyle:
+                                                            _selectedPillTextStyle,
+                                                        unselectedTextStyle:
+                                                            _pillTextStyle,
+                                                        indicatorSettings:
+                                                            RecommendedGlassSettings
+                                                                .playerHighlight,
+                                                        interactionBehavior:
+                                                            GlassInteractionBehavior
+                                                                .full,
+                                                        glowColor: const Color(
+                                                          0xFFFF9AF2,
+                                                        ),
+                                                        glowRadius: 2.0,
+                                                        segments: const [
+                                                          GlassSegment(
+                                                            label: 'Speed',
+                                                          ),
+                                                          GlassSegment(
+                                                            label: 'Balanced',
+                                                          ),
+                                                          GlassSegment(
+                                                            label: 'Quality',
+                                                          ),
+                                                          GlassSegment(
+                                                            label: 'Max',
+                                                          ),
+                                                        ],
+                                                        selectedIndex:
+                                                            switch (_currentModelKey) {
+                                                              'Speed' => 0,
+                                                              'Balanced' => 1,
+                                                              'Quality' => 2,
+                                                              'Extreme' => 3,
+                                                              _ => 1,
+                                                            },
+                                                        onSegmentSelected: (index) {
+                                                          final modelKey =
+                                                              switch (index) {
+                                                                0 => 'Speed',
+                                                                1 => 'Balanced',
+                                                                2 => 'Quality',
+                                                                3 => 'Extreme',
+                                                                _ => 'Balanced',
+                                                              };
+                                                          setDialogState(
+                                                            () =>
+                                                                _currentModelKey =
+                                                                    modelKey,
+                                                          );
+                                                          setState(
+                                                            () =>
+                                                                _currentModelKey =
+                                                                    modelKey,
+                                                          );
+                                                          _applyEnhancementConfig();
+                                                        },
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _glassSettingsSection(
+                                        icon: Icons.subtitles_rounded,
+                                        title: 'Subtitles',
+                                        subtitle:
+                                            'Thin default type and placement',
+                                        child: Column(
+                                          children: [
+                                            _settingsSliderRow(
+                                              label: 'Font Size',
+                                              value: _subtitleSize,
+                                              min: 12,
+                                              max: 48,
+                                              onChanged: (val) {
+                                                setDialogState(
+                                                  () => _subtitleSize = val,
+                                                );
+                                                setState(
+                                                  () => _subtitleSize = val,
+                                                );
+                                                _saveSubtitleSettings();
+                                              },
+                                            ),
+                                            const SizedBox(height: 12),
+                                            _settingsSliderRow(
+                                              label: 'Vertical',
+                                              value: _subtitlePosition,
+                                              min: 8,
+                                              max: 160,
+                                              onChanged: (val) {
+                                                setDialogState(
+                                                  () => _subtitlePosition = val,
+                                                );
+                                                setState(
+                                                  () => _subtitlePosition = val,
+                                                );
+                                                _saveSubtitleSettings();
+                                              },
+                                            ),
+                                            const SizedBox(height: 12),
+                                            _settingsSliderRow(
+                                              label: 'Backdrop',
+                                              value: _subtitleBgOpacity,
+                                              min: 0,
+                                              max: 1,
+                                              onChanged: (val) {
+                                                setDialogState(
+                                                  () =>
+                                                      _subtitleBgOpacity = val,
+                                                );
+                                                setState(
+                                                  () =>
+                                                      _subtitleBgOpacity = val,
+                                                );
+                                                _saveSubtitleSettings();
+                                              },
+                                            ),
+                                            const SizedBox(height: 16),
+                                            LayoutBuilder(
+                                              builder: (context, constraints) {
+                                                return Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    const Text(
+                                                      'Font',
+                                                      style: TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w300,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    SizedBox(
+                                                      width:
+                                                          constraints.maxWidth,
+                                                      height: 42,
+                                                      child: GlassSegmentedControl(
+                                                        useOwnLayer: true,
+                                                        borderRadius: 100,
+                                                        indicatorSettings:
+                                                            RecommendedGlassSettings
+                                                                .playerHighlight,
+                                                        interactionBehavior:
+                                                            GlassInteractionBehavior
+                                                                .full,
+                                                        glowColor: const Color(
+                                                          0xFF8FEAFF,
+                                                        ),
+                                                        glowRadius: 2.0,
+                                                        selectedTextStyle:
+                                                            _selectedPillTextStyle,
+                                                        unselectedTextStyle:
+                                                            _pillTextStyle,
+                                                        segments: const [
+                                                          GlassSegment(
+                                                            label: 'Default',
+                                                          ),
+                                                          GlassSegment(
+                                                            label: 'Courier',
+                                                          ),
+                                                          GlassSegment(
+                                                            label: 'Consolas',
+                                                          ),
+                                                          GlassSegment(
+                                                            label: 'Roboto',
+                                                          ),
+                                                        ],
+                                                        selectedIndex:
+                                                            switch (_subtitleFontFamily) {
+                                                              'Default' => 0,
+                                                              'Courier' => 1,
+                                                              'Consolas' => 2,
+                                                              'Roboto' => 3,
+                                                              _ => 0,
+                                                            },
+                                                        onSegmentSelected: (index) {
+                                                          final font =
+                                                              switch (index) {
+                                                                0 => 'Default',
+                                                                1 => 'Courier',
+                                                                2 => 'Consolas',
+                                                                3 => 'Roboto',
+                                                                _ => 'Default',
+                                                              };
+                                                          setDialogState(
+                                                            () =>
+                                                                _subtitleFontFamily =
+                                                                    font,
+                                                          );
+                                                          setState(
+                                                            () =>
+                                                                _subtitleFontFamily =
+                                                                    font,
+                                                          );
+                                                          _saveSubtitleSettings();
+                                                        },
+                                                      ),
+                                                    ),
+                                                  ],
+                                                );
+                                              },
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Align(
+                                              alignment: Alignment.centerRight,
+                                              child: GlassButton.custom(
+                                                height: 42,
+                                                glowColor: Colors.white,
+                                                glowOpacity: 0.45,
+                                                glowBlurRadius: 16,
+                                                interactionScale: 1.06,
+                                                stretch: 0.7,
+                                                shape:
+                                                    const LiquidRoundedSuperellipse(
+                                                      borderRadius: 100,
+                                                    ),
+                                                onTap: () {
+                                                  setDialogState(() {
+                                                    _resetSubtitleSettings();
+                                                  });
+                                                },
+                                                child: const Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 18,
+                                                  ),
+                                                  child: Text(
+                                                    'Reset Subtitles',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w300,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _glassSettingsSection(
+                                        icon: Icons.monitor_heart_rounded,
+                                        title: 'Performance HUD',
+                                        subtitle: 'Playback telemetry overlay',
+                                        child: Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           children: [
                                             const Text(
-                                              'Upscaling',
+                                              'Show HUD',
                                               style: TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 14,
@@ -401,367 +1109,28 @@ class _PlayerScreenState extends State<PlayerScreen>
                                             ),
                                             GlassSwitch(
                                               useOwnLayer: true,
-                                              value: _isEnhancementEnabled,
+                                              value: _showHUD,
                                               onChanged: (val) {
                                                 setDialogState(
-                                                  () => _isEnhancementEnabled =
-                                                      val,
+                                                  () => _showHUD = val,
                                                 );
-                                                setState(
-                                                  () => _isEnhancementEnabled =
-                                                      val,
-                                                );
-                                                _applyEnhancementConfig();
+                                                setState(() => _showHUD = val);
                                               },
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 16),
-                                        AnimatedOpacity(
-                                          duration:
-                                              const Duration(milliseconds: 200),
-                                          opacity:
-                                              _isEnhancementEnabled ? 1.0 : 0.3,
-                                          child: IgnorePointer(
-                                            ignoring: !_isEnhancementEnabled,
-                                            child: Column(
-                                              children: [
-                                                GlassSegmentedControl(
-                                                  useOwnLayer: true,
-                                                  height: 42,
-                                                  borderRadius: 100,
-                                                  selectedTextStyle:
-                                                      _selectedPillTextStyle,
-                                                  unselectedTextStyle:
-                                                      _pillTextStyle,
-                                                  indicatorSettings:
-                                                      RecommendedGlassSettings
-                                                          .playerHighlight,
-                                                  interactionBehavior:
-                                                      GlassInteractionBehavior
-                                                          .full,
-                                                  glowColor: const Color(
-                                                    0xFF8FEAFF,
-                                                  ),
-                                                  glowRadius: 2.0,
-                                                  segments: const [
-                                                    GlassSegment(
-                                                      label: 'Anime4K',
-                                                      icon: Icon(
-                                                        Icons.bolt_rounded,
-                                                        size: 16,
-                                                      ),
-                                                    ),
-                                                    GlassSegment(
-                                                      label: 'ArtCNN',
-                                                      icon: Icon(
-                                                        Icons.memory_rounded,
-                                                        size: 16,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                  selectedIndex:
-                                                      _currentEngine ==
-                                                          'Anime4K'
-                                                      ? 0
-                                                      : 1,
-                                                  onSegmentSelected: (index) {
-                                                    final engine = index == 0
-                                                        ? 'Anime4K'
-                                                        : 'ArtCNN';
-                                                    setDialogState(
-                                                      () => _currentEngine =
-                                                          engine,
-                                                    );
-                                                    setState(
-                                                      () => _currentEngine =
-                                                          engine,
-                                                    );
-                                                    _applyEnhancementConfig();
-                                                  },
-                                                ),
-                                                const SizedBox(height: 12),
-                                                if (_currentEngine == 'Anime4K')
-                                                  GlassSegmentedControl(
-                                                    useOwnLayer: true,
-                                                    height: 42,
-                                                    borderRadius: 100,
-                                                    selectedTextStyle:
-                                                        _selectedPillTextStyle,
-                                                    unselectedTextStyle:
-                                                        _pillTextStyle,
-                                                    indicatorSettings:
-                                                        RecommendedGlassSettings
-                                                            .playerHighlight,
-                                                    interactionBehavior:
-                                                        GlassInteractionBehavior
-                                                            .full,
-                                                    glowColor: const Color(
-                                                      0xFFFF9AF2,
-                                                    ),
-                                                    glowRadius: 2.0,
-                                                    segments: const [
-                                                      GlassSegment(
-                                                        label: 'Speed',
-                                                      ),
-                                                      GlassSegment(
-                                                        label: 'Balanced',
-                                                      ),
-                                                      GlassSegment(
-                                                        label: 'Quality',
-                                                      ),
-                                                      GlassSegment(label: 'Max'),
-                                                    ],
-                                                    selectedIndex:
-                                                        switch (_currentModelKey) {
-                                                          'Speed' => 0,
-                                                          'Balanced' => 1,
-                                                          'Quality' => 2,
-                                                          'Extreme' => 3,
-                                                          _ => 1,
-                                                        },
-                                                    onSegmentSelected: (index) {
-                                                      final modelKey =
-                                                          switch (index) {
-                                                            0 => 'Speed',
-                                                            1 => 'Balanced',
-                                                            2 => 'Quality',
-                                                            3 => 'Extreme',
-                                                            _ => 'Balanced',
-                                                          };
-                                                      setDialogState(
-                                                        () => _currentModelKey =
-                                                            modelKey,
-                                                      );
-                                                      setState(
-                                                        () => _currentModelKey =
-                                                            modelKey,
-                                                      );
-                                                      _applyEnhancementConfig();
-                                                    },
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 16),
-                                  _glassSettingsSection(
-                                    icon: Icons.subtitles_rounded,
-                                    title: 'Subtitles',
-                                    subtitle: 'Thin default type and placement',
-                                    child: Column(
-                                      children: [
-                                        _settingsSliderRow(
-                                          label: 'Font Size',
-                                          value: _subtitleSize,
-                                          min: 12,
-                                          max: 48,
-                                          onChanged: (val) {
-                                            setDialogState(
-                                              () => _subtitleSize = val,
-                                            );
-                                            setState(() => _subtitleSize = val);
-                                            _saveSubtitleSettings();
-                                          },
-                                        ),
-                                        const SizedBox(height: 12),
-                                        _settingsSliderRow(
-                                          label: 'Vertical',
-                                          value: _subtitlePosition,
-                                          min: 8,
-                                          max: 160,
-                                          onChanged: (val) {
-                                            setDialogState(
-                                              () => _subtitlePosition = val,
-                                            );
-                                            setState(
-                                              () => _subtitlePosition = val,
-                                            );
-                                            _saveSubtitleSettings();
-                                          },
-                                        ),
-                                        const SizedBox(height: 12),
-                                        _settingsSliderRow(
-                                          label: 'Backdrop',
-                                          value: _subtitleBgOpacity,
-                                          min: 0,
-                                          max: 1,
-                                          onChanged: (val) {
-                                            setDialogState(
-                                              () => _subtitleBgOpacity = val,
-                                            );
-                                            setState(
-                                              () => _subtitleBgOpacity = val,
-                                            );
-                                            _saveSubtitleSettings();
-                                          },
-                                        ),
-                                        const SizedBox(height: 16),
-                                        LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            return Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                const Text(
-                                                  'Font',
-                                                  style: TextStyle(
-                                                    color: Colors.white70,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w300,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                SizedBox(
-                                                  width: constraints.maxWidth,
-                                                  height: 42,
-                                                  child: GlassSegmentedControl(
-                                                    useOwnLayer: true,
-                                                    borderRadius: 100,
-                                                    indicatorSettings:
-                                                        RecommendedGlassSettings
-                                                            .playerHighlight,
-                                                    interactionBehavior:
-                                                        GlassInteractionBehavior
-                                                            .full,
-                                                    glowColor: const Color(
-                                                      0xFF8FEAFF,
-                                                    ),
-                                                    glowRadius: 2.0,
-                                                    selectedTextStyle:
-                                                        _selectedPillTextStyle,
-                                                    unselectedTextStyle:
-                                                        _pillTextStyle,
-                                                    segments: const [
-                                                      GlassSegment(
-                                                        label: 'Default',
-                                                      ),
-                                                      GlassSegment(
-                                                        label: 'Courier',
-                                                      ),
-                                                      GlassSegment(
-                                                        label: 'Consolas',
-                                                      ),
-                                                      GlassSegment(
-                                                        label: 'Roboto',
-                                                      ),
-                                                    ],
-                                                    selectedIndex:
-                                                        switch (_subtitleFontFamily) {
-                                                          'Default' => 0,
-                                                          'Courier' => 1,
-                                                          'Consolas' => 2,
-                                                          'Roboto' => 3,
-                                                          _ => 0,
-                                                        },
-                                                    onSegmentSelected: (index) {
-                                                      final font =
-                                                          switch (index) {
-                                                            0 => 'Default',
-                                                            1 => 'Courier',
-                                                            2 => 'Consolas',
-                                                            3 => 'Roboto',
-                                                            _ => 'Default',
-                                                          };
-                                                      setDialogState(
-                                                        () =>
-                                                            _subtitleFontFamily =
-                                                                font,
-                                                      );
-                                                      setState(
-                                                        () =>
-                                                            _subtitleFontFamily =
-                                                                font,
-                                                      );
-                                                      _saveSubtitleSettings();
-                                                    },
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Align(
-                                          alignment: Alignment.centerRight,
-                                          child: GlassButton.custom(
-                                            height: 42,
-                                            glowColor: Colors.white,
-                                            glowOpacity: 0.45,
-                                            glowBlurRadius: 16,
-                                            interactionScale: 1.06,
-                                            stretch: 0.7,
-                                            shape:
-                                                const LiquidRoundedSuperellipse(
-                                                  borderRadius: 100,
-                                                ),
-                                            onTap: () {
-                                              setDialogState(() {
-                                                _resetSubtitleSettings();
-                                              });
-                                            },
-                                            child: const Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 18,
-                                              ),
-                                              child: Text(
-                                                'Reset Subtitles',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w300,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _glassSettingsSection(
-                                    icon: Icons.monitor_heart_rounded,
-                                    title: 'Performance HUD',
-                                    subtitle: 'Playback telemetry overlay',
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text(
-                                          'Show HUD',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w300,
-                                          ),
-                                        ),
-                                        GlassSwitch(
-                                          useOwnLayer: true,
-                                          value: _showHUD,
-                                          onChanged: (val) {
-                                            setDialogState(
-                                              () => _showHUD = val,
-                                            );
-                                            setState(() => _showHUD = val);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
+                  ),
+                );
               },
             ),
           ),
@@ -773,12 +1142,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           position: Tween<Offset>(
             begin: const Offset(0, 0.22),
             end: Offset.zero,
-          ).animate(
-            CurvedAnimation(
-              parent: anim1,
-              curve: Curves.easeOutQuart,
-            ),
-          ),
+          ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutQuart)),
           child: child,
         );
       },
@@ -792,7 +1156,8 @@ class _PlayerScreenState extends State<PlayerScreen>
     required Widget child,
   }) {
     return GlassCard(
-      useOwnLayer: false, // Inherit root playerPanel layer to avoid nested BackdropFilter repaint lags
+      useOwnLayer:
+          false, // Inherit root playerPanel layer to avoid nested BackdropFilter repaint lags
       settings: RecommendedGlassSettings.playerSection,
       padding: const EdgeInsets.all(16),
       shape: const LiquidRoundedSuperellipse(borderRadius: 34),
@@ -866,7 +1231,8 @@ class _PlayerScreenState extends State<PlayerScreen>
         Expanded(
           child: GlassSlider(
             useOwnLayer: false, // Share the parent dialog's glass layer
-            quality: GlassQuality.premium, // Force premium native BackdropFilter to prevent any blur/low-res capture issues
+            quality: GlassQuality
+                .premium, // Force premium native BackdropFilter to prevent any blur/low-res capture issues
             settings: RecommendedGlassSettings.playerHighlight,
             glowColor: const Color(0xFF8FEAFF),
             glowRadius: 2.0,
@@ -929,7 +1295,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: _subtitleSize,
-                  fontFamily: _subtitleFontFamily == 'Default' ? null : _subtitleFontFamily,
+                  fontFamily: _subtitleFontFamily == 'Default'
+                      ? null
+                      : _subtitleFontFamily,
                   fontWeight: _subtitleFontFamily == 'Default'
                       ? FontWeight.w300
                       : FontWeight.w500,
@@ -971,10 +1339,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                   onChanged: _noopSlider,
                 ),
                 const SizedBox(height: 12),
-                GlassSwitch(
-                  value: false,
-                  onChanged: _noopSwitch,
-                ),
+                GlassSwitch(value: false, onChanged: _noopSwitch),
                 const SizedBox(height: 12),
                 GlassSegmentedControl(
                   segments: const [
@@ -1012,169 +1377,173 @@ class _PlayerScreenState extends State<PlayerScreen>
           child: Video(
             controller: controller,
             controls: NoVideoControls,
-            subtitleViewConfiguration: const SubtitleViewConfiguration(visible: false),
+            subtitleViewConfiguration: const SubtitleViewConfiguration(
+              visible: false,
+            ),
           ),
         ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 2. Gesture Detector Layer
-            GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: _toggleControls,
-              onDoubleTap: () {
-                final pos = player.state.position;
-                player.seek(pos + const Duration(seconds: 10));
-              },
-              onScaleUpdate: (details) {
-                setState(() {
-                  _scale = details.scale.clamp(1.0, 3.0);
-                });
-              },
-              child: const SizedBox.expand(),
-            ),
-
-            // Custom Subtitle Overlay Layer (always visible over video)
-            _buildSubtitleOverlay(),
-
-            _buildGlassWarmupLayer(),
-
-            // 3. Floating Floating Controls Island
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic,
-              opacity: _showControls ? 1.0 : 0.0,
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: Stack(
-                  children: [
-                  // Top left back button & Title (Round liquid glass button)
-                  Positioned(
-                    top: 40,
-                    left: 24,
-                    child: Row(
-                      children: [
-                        GlassButton.custom(
-                          useOwnLayer: false,
-                          width: 48,
-                          height: 48,
-                          settings: RecommendedGlassSettings.playerHighlight,
-                          interactionScale: 1.08,
-                          stretch: 0.75,
-                          glowColor: const Color(0xFF8FEAFF),
-                          glowOpacity: 0.45,
-                          glowBlurRadius: 18,
-                          shape: const LiquidOval(),
-                          onTap: () => Navigator.of(context).pop(),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          widget.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Center Right Floating Settings Button (Round liquid glass button)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: GlassButton.custom(
-                        useOwnLayer: false,
-                        width: 56,
-                        height: 56,
-                        settings: RecommendedGlassSettings.playerHighlight,
-                        interactionScale: 1.08,
-                        stretch: 0.75,
-                        glowColor: const Color(0xFFFF9AF2),
-                        glowOpacity: 0.45,
-                        glowBlurRadius: 18,
-                        shape: const LiquidOval(),
-                        onTap: _showVideoSettings,
-                        child: const Icon(
-                          Icons.layers_rounded,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Center Play/Pause Floating Island (Round liquid glass button)
-                  Align(
-                    alignment: Alignment.center,
-                    child: StreamBuilder<bool>(
-                      stream: player.stream.playing,
-                      builder: (context, playing) {
-                        final isPlaying = playing.data ?? false;
-                        return GlassButton.custom(
-                          useOwnLayer: false,
-                          width: 96,
-                          height: 96,
-                          settings: RecommendedGlassSettings.playerHighlight,
-                          interactionScale: 1.05,
-                          stretch: 0.6,
-                          glowColor: Colors.white,
-                          glowOpacity: 0.42,
-                          glowBlurRadius: 24,
-                          shape: const LiquidOval(),
-                          onTap: () => player.playOrPause(),
-                          child: Icon(
-                            isPlaying
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            size: 48,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // 4. Cinematic Edge Bar (Edge-to-Edge)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: SafeArea(
-                      top: false,
-                      child: CinematicEdgeBar(
-                        player: player,
-                        previewPlayer: previewPlayer,
-                        previewController: previewController,
-                      ),
-                    ),
-                  ),
-                ],
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 2. Gesture Detector Layer
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _toggleControls,
+                onDoubleTap: () {
+                  final pos = player.state.position;
+                  player.seek(pos + const Duration(seconds: 10));
+                },
+                onScaleUpdate: (details) {
+                  setState(() {
+                    _scale = details.scale.clamp(1.0, 3.0);
+                  });
+                },
+                child: const SizedBox.expand(),
               ),
-            ),
-          ),
 
-          // 5. Performance HUD (Independent from controls but over video)
-          if (_showHUD)
-            Positioned(
-              top: 100,
-              left: 24,
-              child: PerformanceHUD(player: player),
-            ),
-          ],
+              // Custom Subtitle Overlay Layer (always visible over video)
+              _buildSubtitleOverlay(),
+
+              _buildGlassWarmupLayer(),
+
+              // 3. Floating Floating Controls Island
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                opacity: _showControls ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !_showControls,
+                  child: Stack(
+                    children: [
+                      // Top left back button & Title (Round liquid glass button)
+                      Positioned(
+                        top: 40,
+                        left: 24,
+                        child: Row(
+                          children: [
+                            GlassButton.custom(
+                              useOwnLayer: false,
+                              width: 48,
+                              height: 48,
+                              settings:
+                                  RecommendedGlassSettings.playerHighlight,
+                              interactionScale: 1.08,
+                              stretch: 0.75,
+                              glowColor: const Color(0xFF8FEAFF),
+                              glowOpacity: 0.45,
+                              glowBlurRadius: 18,
+                              shape: const LiquidOval(),
+                              onTap: () => Navigator.of(context).pop(),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              widget.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Center Right Floating Settings Button (Round liquid glass button)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: GlassButton.custom(
+                            useOwnLayer: false,
+                            width: 56,
+                            height: 56,
+                            settings: RecommendedGlassSettings.playerHighlight,
+                            interactionScale: 1.08,
+                            stretch: 0.75,
+                            glowColor: const Color(0xFFFF9AF2),
+                            glowOpacity: 0.45,
+                            glowBlurRadius: 18,
+                            shape: const LiquidOval(),
+                            onTap: _showVideoSettings,
+                            child: const Icon(
+                              Icons.layers_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Center Play/Pause Floating Island (Round liquid glass button)
+                      Align(
+                        alignment: Alignment.center,
+                        child: StreamBuilder<bool>(
+                          stream: player.stream.playing,
+                          builder: (context, playing) {
+                            final isPlaying = playing.data ?? false;
+                            return GlassButton.custom(
+                              useOwnLayer: false,
+                              width: 96,
+                              height: 96,
+                              settings:
+                                  RecommendedGlassSettings.playerHighlight,
+                              interactionScale: 1.05,
+                              stretch: 0.6,
+                              glowColor: Colors.white,
+                              glowOpacity: 0.42,
+                              glowBlurRadius: 24,
+                              shape: const LiquidOval(),
+                              onTap: () => player.playOrPause(),
+                              child: Icon(
+                                isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                size: 48,
+                                color: Colors.white,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // 4. Cinematic Edge Bar (Edge-to-Edge)
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: SafeArea(
+                          top: false,
+                          child: CinematicEdgeBar(
+                            player: player,
+                            previewPlayer: previewPlayer,
+                            previewController: previewController,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 5. Performance HUD (Independent from controls but over video)
+              if (_showHUD)
+                Positioned(
+                  top: 100,
+                  left: 24,
+                  child: PerformanceHUD(player: player),
+                ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 }
 
@@ -1182,10 +1551,13 @@ class RecommendedGlassSettings {
   static const playerPanel = LiquidGlassSettings(
     blur: 10, // Lighter frosted Gaussian blur
     thickness: 12, // Subtle and elegant boundary highlight rim
-    glassColor: Color(0x0DFFFFFF), // Transparent frosted white tint (5% opacity)
+    glassColor: Color(
+      0x0DFFFFFF,
+    ), // Transparent frosted white tint (5% opacity)
     lightAngle: 0.75 * math.pi,
     lightIntensity: 0.8,
-    ambientStrength: 0.1, // Minimal ambient wash to keep it almost fully transparent
+    ambientStrength:
+        0.1, // Minimal ambient wash to keep it almost fully transparent
     saturation: 1.1,
     refractiveIndex: 1.1,
     chromaticAberration: 0.0, // Sharp text readability
@@ -1248,7 +1620,12 @@ class RecommendedGlassSettings {
   static const surface = LiquidGlassSettings(
     blur: 20, // Deep heavy frost
     thickness: 15, // Volumetric edge rim
-    glassColor: Color.fromRGBO(255, 255, 255, 0.25), // Strong misty translucent white
+    glassColor: Color.fromRGBO(
+      255,
+      255,
+      255,
+      0.25,
+    ), // Strong misty translucent white
     lightAngle: 0.75 * math.pi,
     lightIntensity: 1.5, // Brighter highlight glow
     ambientStrength: 0.4,

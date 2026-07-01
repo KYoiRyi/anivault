@@ -4,6 +4,7 @@ import 'package:anivault/ui/home_screen.dart';
 import 'package:anivault/services/shader_service.dart';
 import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/smb_service.dart';
+import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() async {
@@ -18,16 +19,13 @@ void main() async {
   // Initialize liquid glass shaders
   await LiquidGlassWidgets.initialize();
 
-  runApp(LiquidGlassWidgets.wrap(
-    child: const AniVaultApp(),
-    adaptiveQuality: false,
-    // ignore: experimental_member_use
-    adaptiveConfig: const GlassAdaptiveScopeConfig(
-      initialQuality: GlassQuality.premium,
-      minQuality: GlassQuality.premium,
-      maxQuality: GlassQuality.premium,
+  runApp(
+    LiquidGlassWidgets.wrap(
+      child: const AniVaultApp(),
+      adaptiveQuality: false,
+      theme: AniGlassTheme.theme,
     ),
-  ));
+  );
 }
 
 class AniVaultApp extends StatelessWidget {
@@ -41,8 +39,8 @@ class AniVaultApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
-        colorSchemeSeed: Colors.grey,
-        scaffoldBackgroundColor: Colors.white, // Pure white
+        colorSchemeSeed: const Color(0xFF38BDF8),
+        scaffoldBackgroundColor: Colors.white,
         textTheme: _thinTextTheme(ThemeData.light().textTheme),
         primaryTextTheme: _thinTextTheme(ThemeData.light().primaryTextTheme),
         appBarTheme: const AppBarTheme(
@@ -76,8 +74,6 @@ class AniVaultApp extends StatelessWidget {
   }
 
   TextStyle? _thinTextStyle(TextStyle? style) {
-    return style?.copyWith(
-      fontWeight: FontWeight.w300,
-    );
+    return style?.copyWith(fontWeight: FontWeight.w300);
   }
 }

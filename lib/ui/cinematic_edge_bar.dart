@@ -47,7 +47,7 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
-    
+
     if (hours > 0) {
       return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     } else {
@@ -74,27 +74,39 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
             actualProgress = actualProgress.clamp(0.0, 1.0);
           }
 
-          final effectiveProgress = _isDragging ? _dragProgress : actualProgress;
-          final targetMillis = (effectiveProgress * total.inMilliseconds).toInt();
+          final effectiveProgress = _isDragging
+              ? _dragProgress
+              : actualProgress;
+          final targetMillis = (effectiveProgress * total.inMilliseconds)
+              .toInt();
 
           return LayoutBuilder(
             builder: (context, constraints) {
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     // Volumetric Glass Scrub Tooltip
                     if (_isDragging)
                       Positioned(
-                        left: (_dragX - 168.0 / 2).clamp(8.0, constraints.maxWidth - 168.0 - 8.0),
+                        left: (_dragX - 168.0 / 2).clamp(
+                          8.0,
+                          constraints.maxWidth - 168.0 - 8.0,
+                        ),
                         bottom: height + 16,
                         child: SizedBox(
                           width: 168.0,
                           child: GlassCard(
                             useOwnLayer: true,
+                            quality: GlassQuality.premium,
                             padding: const EdgeInsets.all(4),
-                            shape: const LiquidRoundedSuperellipse(borderRadius: 16),
+                            shape: const LiquidRoundedSuperellipse(
+                              borderRadius: 16,
+                            ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -112,7 +124,9 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                                   ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  _formatDuration(Duration(milliseconds: targetMillis)),
+                                  _formatDuration(
+                                    Duration(milliseconds: targetMillis),
+                                  ),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
@@ -131,17 +145,27 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                       behavior: HitTestBehavior.opaque,
                       onHorizontalDragStart: (details) {
                         setState(() => _isDragging = true);
-                        _updateProgress(details.localPosition, constraints.maxWidth);
+                        _updateProgress(
+                          details.localPosition,
+                          constraints.maxWidth,
+                        );
                         if (widget.previewPlayer != null) {
-                          widget.previewPlayer!.seek(Duration(milliseconds: targetMillis));
+                          widget.previewPlayer!.seek(
+                            Duration(milliseconds: targetMillis),
+                          );
                         } else {
                           _throttledSeek(Duration(milliseconds: targetMillis));
                         }
                       },
                       onHorizontalDragUpdate: (details) {
-                        _updateProgress(details.localPosition, constraints.maxWidth);
+                        _updateProgress(
+                          details.localPosition,
+                          constraints.maxWidth,
+                        );
                         if (widget.previewPlayer != null) {
-                          widget.previewPlayer!.seek(Duration(milliseconds: targetMillis));
+                          widget.previewPlayer!.seek(
+                            Duration(milliseconds: targetMillis),
+                          );
                         } else {
                           _throttledSeek(Duration(milliseconds: targetMillis));
                         }
@@ -154,8 +178,13 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                         }
                       },
                       onTapDown: (details) {
-                        _updateProgress(details.localPosition, constraints.maxWidth);
-                        widget.player.seek(Duration(milliseconds: targetMillis));
+                        _updateProgress(
+                          details.localPosition,
+                          constraints.maxWidth,
+                        );
+                        widget.player.seek(
+                          Duration(milliseconds: targetMillis),
+                        );
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
@@ -164,8 +193,11 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                         width: double.infinity,
                         child: GlassCard(
                           useOwnLayer: true,
+                          quality: GlassQuality.premium,
                           padding: EdgeInsets.zero,
-                          shape: const LiquidRoundedSuperellipse(borderRadius: 8),
+                          shape: const LiquidRoundedSuperellipse(
+                            borderRadius: 8,
+                          ),
                           child: Stack(
                             clipBehavior: Clip.none,
                             alignment: Alignment.bottomLeft,
@@ -189,20 +221,21 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                                   gradient: const LinearGradient(
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.white,
-                                      Color(0xFFE2F0FF),
-                                    ],
+                                    colors: [Colors.white, Color(0xFFE2F0FF)],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.white.withValues(alpha: 0.45),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.45,
+                                      ),
                                       blurRadius: 16,
                                       offset: const Offset(0, -6),
                                       spreadRadius: 1,
                                     ),
                                     BoxShadow(
-                                      color: const Color(0xFF4A90E2).withValues(alpha: 0.4),
+                                      color: const Color(
+                                        0xFF4A90E2,
+                                      ).withValues(alpha: 0.4),
                                       blurRadius: 32,
                                       offset: const Offset(0, -12),
                                       spreadRadius: 3,
