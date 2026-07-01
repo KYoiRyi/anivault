@@ -521,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ambientStrength: 0.1,
           refractiveIndex: 1.4,
           saturation: 1.3,
-          specularSharpness: GlassSpecularSharpness.high,
+          specularSharpness: GlassSpecularSharpness.sharp,
         ),
         selectedIconColor: isDark ? Colors.white : const Color(0xFF6366F1),
         unselectedIconColor: isDark ? Colors.white54 : Colors.black54,
