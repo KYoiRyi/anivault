@@ -38,11 +38,18 @@ class AniVaultApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.light,
+        brightness: Brightness.dark,
         colorSchemeSeed: const Color(0xFF38BDF8),
-        scaffoldBackgroundColor: Colors.white,
-        textTheme: _thinTextTheme(ThemeData.light().textTheme),
-        primaryTextTheme: _thinTextTheme(ThemeData.light().primaryTextTheme),
+        scaffoldBackgroundColor: const Color(0xFF05070D),
+        fontFamily: 'SF Pro Display',
+        fontFamilyFallback: const [
+          '.AppleSystemUIFont',
+          '-apple-system',
+          'Segoe UI',
+          'Arial',
+        ],
+        textTheme: _thinTextTheme(ThemeData.dark().textTheme),
+        primaryTextTheme: _thinTextTheme(ThemeData.dark().primaryTextTheme),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,

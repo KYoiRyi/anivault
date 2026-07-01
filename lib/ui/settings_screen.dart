@@ -14,14 +14,11 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
-      background: AniGlassTheme.background(),
-      statusBarStyle: GlassStatusBarStyle.dark,
+      background: AniGlassTheme.background(light: false),
+      statusBarStyle: GlassStatusBarStyle.light,
       settings: AniGlassTheme.chrome,
       appBar: GlassAppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(color: Color(0xFF0F172A)),
-        ),
+        title: const Text('Settings', style: TextStyle(color: Colors.white)),
         leading: GlassButton(
           quality: GlassQuality.premium,
           settings: AniGlassTheme.chrome,
@@ -108,7 +105,7 @@ class _SettingsContentState extends State<SettingsContent> {
                 useOwnLayer: true,
                 controller: _clientCtrl,
                 placeholder: 'Client name',
-                textStyle: const TextStyle(color: Color(0xFF0F172A)),
+                textStyle: const TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 12),
               GlassTextField(
@@ -117,7 +114,7 @@ class _SettingsContentState extends State<SettingsContent> {
                 controller: _versionCtrl,
                 placeholder: 'Client version',
                 keyboardType: TextInputType.number,
-                textStyle: const TextStyle(color: Color(0xFF0F172A)),
+                textStyle: const TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 14),
               Align(
@@ -129,10 +126,7 @@ class _SettingsContentState extends State<SettingsContent> {
                   onTap: _saveAniDb,
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    child: Text(
-                      'Save',
-                      style: TextStyle(color: Color(0xFF0F172A)),
-                    ),
+                    child: Text('Save', style: TextStyle(color: Colors.white)),
                   ),
                 ),
               ),
@@ -183,13 +177,13 @@ class _StatusRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 82,
-          child: Text(label, style: const TextStyle(color: Color(0x990F172A))),
+          child: Text(label, style: const TextStyle(color: Colors.white70)),
         ),
         Expanded(
           child: Text(
             value,
             style: const TextStyle(
-              color: Color(0xFF0F172A),
+              color: Colors.white,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -280,9 +274,9 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                 controller: _searchCtrl,
                 placeholder: 'Filter logs',
                 onChanged: (_) => setState(() {}),
-                textStyle: const TextStyle(color: Color(0xFF0F172A)),
-                searchIconColor: const Color(0x990F172A),
-                clearIconColor: const Color(0x990F172A),
+                textStyle: const TextStyle(color: Colors.white),
+                searchIconColor: Colors.white70,
+                clearIconColor: Colors.white70,
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -294,7 +288,7 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                     label: tag,
                     selected: _tag == tag,
                     labelStyle: const TextStyle(
-                      color: Color(0xFF0F172A),
+                      color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
                     onTap: () => setState(() => _tag = tag),
@@ -306,10 +300,7 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                 children: [
                   Text(
                     '${visible.length} visible / ${LoggerService().logs.length} total',
-                    style: const TextStyle(
-                      color: Color(0x990F172A),
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                   const Spacer(),
                   GlassButton(
@@ -332,7 +323,7 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                     ? const Center(
                         child: Text(
                           'No matching logs',
-                          style: TextStyle(color: Color(0x990F172A)),
+                          style: TextStyle(color: Colors.white70),
                         ),
                       )
                     : ListView.separated(
@@ -438,7 +429,7 @@ class _SettingsPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: const Color(0xFF0F172A), size: 22),
+              Icon(icon, color: Colors.white, size: 22),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -447,7 +438,7 @@ class _SettingsPanel extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        color: Color(0xFF0F172A),
+                        color: Colors.white,
                         fontWeight: FontWeight.w800,
                         fontSize: 17,
                       ),
@@ -456,7 +447,7 @@ class _SettingsPanel extends StatelessWidget {
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        color: Color(0x990F172A),
+                        color: Colors.white70,
                         fontSize: 12,
                       ),
                     ),

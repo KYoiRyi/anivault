@@ -198,8 +198,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return GlassScaffold(
       background: AniGlassTheme.background(
         coverUrl: _animeSeries.isNotEmpty ? _animeSeries.first.coverUrl : null,
+        light: false,
       ),
-      statusBarStyle: GlassStatusBarStyle.dark,
+      statusBarStyle: GlassStatusBarStyle.light,
       settings: AniGlassTheme.chrome,
       topEdgeFade: true,
       bottomEdgeFade: true,
@@ -277,9 +278,9 @@ class _HomeScreenState extends State<HomeScreen> {
               useOwnLayer: true,
               controller: _searchController,
               placeholder: 'Search library',
-              textStyle: const TextStyle(color: Color(0xFF0F172A)),
-              searchIconColor: const Color(0x990F172A),
-              clearIconColor: const Color(0x990F172A),
+              textStyle: const TextStyle(color: Colors.white),
+              searchIconColor: Colors.white70,
+              clearIconColor: Colors.white70,
               onChanged: (value) => setState(() => _query = value),
             ),
           ),
@@ -308,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Center(
                 child: Text(
                   'No matching series',
-                  style: TextStyle(color: Color(0x990F172A)),
+                  style: TextStyle(color: Colors.white70),
                 ),
               ),
             ),
@@ -377,7 +378,7 @@ class _HomeHero extends StatelessWidget {
                 Text(
                   'Your anime vault',
                   style: TextStyle(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.62),
+                    color: Colors.white.withValues(alpha: 0.62),
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -386,7 +387,7 @@ class _HomeHero extends StatelessWidget {
                 const Text(
                   'Library',
                   style: TextStyle(
-                    color: Color(0xFF0F172A),
+                    color: Colors.white,
                     fontSize: 38,
                     fontWeight: FontWeight.w800,
                     height: 0.95,
@@ -395,7 +396,7 @@ class _HomeHero extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   '$totalSeries series  -  $totalFiles files',
-                  style: const TextStyle(color: Color(0xAA0F172A)),
+                  style: const TextStyle(color: Colors.white70),
                 ),
               ],
             ),
@@ -424,7 +425,7 @@ class _HomeHero extends StatelessWidget {
                   : const Icon(
                       key: ValueKey('import'),
                       Icons.add_rounded,
-                      color: Color(0xFF0F172A),
+                      color: Colors.white,
                       size: 30,
                     ),
             ),
@@ -474,36 +475,50 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                 maskingQuality: MaskingQuality.high,
                 settings: AniGlassTheme.chrome,
                 indicatorSettings: AniGlassTheme.hero,
-                selectedIconColor: const Color(0xFF0F172A),
-                unselectedIconColor: const Color(0x990F172A),
-                selectedLabelColor: const Color(0xFF0F172A),
-                unselectedLabelColor: const Color(0x990F172A),
-                indicatorColor: const Color(0x6638BDF8),
-                interactionGlowColor: const Color(0xFF38BDF8),
-                interactionGlowRadius: 2.2,
-                glowBlurRadius: 34,
-                glowSpreadRadius: 9,
-                glowOpacity: 0.48,
-                magnification: 1.16,
+                selectedIconColor: Colors.white,
+                unselectedIconColor: Colors.white60,
+                selectedLabelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                indicatorColor: const Color(0x3338BDF8),
+                interactionGlowColor: const Color(0xAA38BDF8),
+                interactionGlowRadius: 1.2,
+                glowBlurRadius: 18,
+                glowSpreadRadius: 4,
+                glowOpacity: 0.22,
+                magnification: 1.08,
                 innerBlur: 0.8,
                 tabWidth: tabWidth,
-                barHeight: 64,
+                barHeight: 58,
                 barBorderRadius: 100,
                 horizontalPadding: horizontalPadding,
                 verticalPadding: 20,
                 indicatorBorderRadius: 100,
                 indicatorExpansion: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: 8,
+                  vertical: 6,
                 ),
                 pressScale: 1.04,
                 selectedLabelStyle: const TextStyle(
+                  fontFamily: 'SF Pro Display',
+                  fontFamilyFallback: [
+                    '.AppleSystemUIFont',
+                    '-apple-system',
+                    'Segoe UI',
+                  ],
                   fontWeight: FontWeight.w800,
-                  fontSize: 11,
+                  fontSize: 15,
+                  letterSpacing: 0,
                 ),
                 unselectedLabelStyle: const TextStyle(
+                  fontFamily: 'SF Pro Display',
+                  fontFamilyFallback: [
+                    '.AppleSystemUIFont',
+                    '-apple-system',
+                    'Segoe UI',
+                  ],
                   fontWeight: FontWeight.w700,
-                  fontSize: 11,
+                  fontSize: 15,
+                  letterSpacing: 0,
                 ),
                 tabs: tabs,
               ),
@@ -553,14 +568,14 @@ class _EmptyLibrary extends StatelessWidget {
         children: [
           const Icon(
             Icons.video_library_outlined,
-            color: Color(0x880F172A),
+            color: Colors.white54,
             size: 58,
           ),
           const SizedBox(height: 16),
           const Text(
             'No media imported',
             style: TextStyle(
-              color: Color(0xFF0F172A),
+              color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.w700,
             ),
@@ -568,7 +583,7 @@ class _EmptyLibrary extends StatelessWidget {
           const SizedBox(height: 6),
           const Text(
             'Add local videos to build the library.',
-            style: TextStyle(color: Color(0x990F172A)),
+            style: TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 18),
           GlassButton.custom(
@@ -581,12 +596,9 @@ class _EmptyLibrary extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add_rounded, color: Color(0xFF0F172A)),
+                  Icon(Icons.add_rounded, color: Colors.white),
                   SizedBox(width: 8),
-                  Text(
-                    'Import videos',
-                    style: TextStyle(color: Color(0xFF0F172A)),
-                  ),
+                  Text('Import videos', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
