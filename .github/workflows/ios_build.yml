@@ -31,6 +31,9 @@ jobs:
           key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
+
+      - name: Clean Flutter tool state
+        run: rm -rf .dart_tool .flutter-plugins-dependencies
           
       - name: Fetch dependencies
         run: flutter pub get
