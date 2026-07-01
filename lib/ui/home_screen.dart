@@ -435,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final iconColor = isDark ? Colors.white : Colors.black87;
 
     return GlassScaffold(
-      extendBody: false,
+      extendBody: true,
       background: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -496,10 +496,51 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomBar: GlassTabBar.bottom(
         selectedIndex: _currentSection.index,
         onTabSelected: (index) => _setSection(HomeSection.values[index]),
+        interactionBehavior: GlassInteractionBehavior.full,
+        quality: GlassQuality.premium,
+        maskingQuality: MaskingQuality.high,
+        settings: const LiquidGlassSettings(
+          glassColor: Color.fromRGBO(255, 255, 255, 0.08),
+          thickness: 30,
+          blur: 5,
+          chromaticAberration: 0.01,
+          lightAngle: GlassDefaults.lightAngle,
+          lightIntensity: 0.5,
+          ambientStrength: 0,
+          refractiveIndex: 1.2,
+          saturation: 1.2,
+          specularSharpness: GlassSpecularSharpness.medium,
+        ),
+        indicatorSettings: const LiquidGlassSettings(
+          glassColor: Color.fromRGBO(255, 255, 255, 0.18),
+          thickness: 25,
+          blur: 8,
+          chromaticAberration: 0.02,
+          lightAngle: GlassDefaults.lightAngle,
+          lightIntensity: 0.7,
+          ambientStrength: 0.1,
+          refractiveIndex: 1.4,
+          saturation: 1.3,
+          specularSharpness: GlassSpecularSharpness.high,
+        ),
+        selectedIconColor: isDark ? Colors.white : const Color(0xFF6366F1),
+        unselectedIconColor: isDark ? Colors.white54 : Colors.black54,
         tabs: const [
-          GlassTab(icon: Icon(Icons.video_library_outlined), label: 'Library'),
-          GlassTab(icon: Icon(Icons.folder_shared_outlined), label: 'Network'),
-          GlassTab(icon: Icon(Icons.download_done_outlined), label: 'Downloads'),
+          GlassTab(
+            icon: Icon(Icons.video_library_outlined),
+            activeIcon: Icon(Icons.video_library_rounded),
+            label: 'Library',
+          ),
+          GlassTab(
+            icon: Icon(Icons.folder_shared_outlined),
+            activeIcon: Icon(Icons.folder_shared_rounded),
+            label: 'Network',
+          ),
+          GlassTab(
+            icon: Icon(Icons.download_done_outlined),
+            activeIcon: Icon(Icons.download_done_rounded),
+            label: 'Downloads',
+          ),
         ],
       ),
     );
