@@ -451,13 +451,13 @@ class _DemoTopGlassTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const horizontalPadding = 16.0;
+    const horizontalPadding = 20.0;
     final preferredWidth = tabWidth == null
         ? double.infinity
         : tabWidth! * tabs.length + horizontalPadding * 2;
 
     return SizedBox(
-      height: 68,
+      height: 104,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final barWidth = preferredWidth.isFinite
@@ -474,27 +474,30 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                 quality: GlassQuality.premium,
                 maskingQuality: MaskingQuality.high,
                 settings: AniGlassTheme.chrome,
-                indicatorSettings: AniGlassTheme.tabLens,
-                selectedIconColor: const Color(0xFF38BDF8),
+                indicatorSettings: AniGlassTheme.hero,
+                selectedIconColor: Colors.white,
                 unselectedIconColor: Colors.white60,
-                selectedLabelColor: const Color(0xFF38BDF8),
-                unselectedLabelColor: Colors.white70,
-                indicatorColor: const Color(0x08000000),
-                interactionGlowColor: Colors.transparent,
-                interactionGlowRadius: 0,
-                glowBlurRadius: 0,
-                glowSpreadRadius: 0,
-                glowOpacity: 0,
-                magnification: 1.04,
-                innerBlur: 0.0,
+                selectedLabelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                indicatorColor: const Color(0x3338BDF8),
+                interactionGlowColor: const Color(0xAA38BDF8),
+                interactionGlowRadius: 1.2,
+                glowBlurRadius: 18,
+                glowSpreadRadius: 4,
+                glowOpacity: 0.22,
+                magnification: 1.08,
+                innerBlur: 0.8,
                 tabWidth: tabWidth,
-                barHeight: 48,
+                barHeight: 58,
                 barBorderRadius: 100,
                 horizontalPadding: horizontalPadding,
-                verticalPadding: 10,
+                verticalPadding: 20,
                 indicatorBorderRadius: 100,
-                indicatorExpansion: EdgeInsets.zero,
-                pressScale: 1.025,
+                indicatorExpansion: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 6,
+                ),
+                pressScale: 1.04,
                 selectedLabelStyle: const TextStyle(
                   fontFamily: 'SF Pro Display',
                   fontFamilyFallback: [
@@ -503,7 +506,7 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                     'Segoe UI',
                   ],
                   fontWeight: FontWeight.w800,
-                  fontSize: 17,
+                  fontSize: 15,
                   letterSpacing: 0,
                 ),
                 unselectedLabelStyle: const TextStyle(
@@ -514,7 +517,7 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                     'Segoe UI',
                   ],
                   fontWeight: FontWeight.w700,
-                  fontSize: 17,
+                  fontSize: 15,
                   letterSpacing: 0,
                 ),
                 tabs: tabs,
@@ -541,7 +544,7 @@ class _FilterBar extends StatelessWidget {
     return _DemoTopGlassTabBar(
       selectedIndex: index,
       onChanged: (index) => onSelected(filters[index]),
-      tabWidth: 78,
+      tabWidth: 96,
       tabs: const [
         GlassTab(label: 'All'),
         GlassTab(label: 'Matched'),
