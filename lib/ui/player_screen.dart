@@ -1024,9 +1024,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: ThemeData.dark().copyWith(
-        useMaterial3: true,
-      ),
+      data: ThemeData.dark(),
       child: GlassPage(
         background: Transform.scale(
           scale: _scale,

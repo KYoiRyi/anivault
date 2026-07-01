@@ -240,7 +240,7 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                     ? 'Saved network share is not connected.'
                     : 'Connect to a network share to browse files.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                style: TextStyle(color: subtextColor),
               ),
               if (SMBService().hasSavedConnection) ...[
                 const SizedBox(height: 16),
