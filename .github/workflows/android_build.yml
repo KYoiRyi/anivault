@@ -57,7 +57,9 @@ jobs:
 
       - name: Compile anivault_anitomy for Linux (for Unit Tests)
         run: |
-          cmake -S native/anivault_anitomy -B native/anivault_anitomy/build_linux -DCMAKE_BUILD_TYPE=Release
+          cmake -S native/anivault_anitomy -B native/anivault_anitomy/build_linux \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Release
           cmake --build native/anivault_anitomy/build_linux --config Release
 
       - name: Test
