@@ -73,11 +73,7 @@ inline std::optional<Element> parse_episode_title(std::span<Token> tokens) noexc
     token.element_kind = ElementKind::EpisodeTitle;
   }
 
-  return Element{
-      .kind = ElementKind::EpisodeTitle,
-      .value = std::move(value),
-      .position = span.front().position,
-  };
+  return Element(ElementKind::EpisodeTitle, std::move(value), span.front().position);
 }
 
 }  // namespace anitomy::detail

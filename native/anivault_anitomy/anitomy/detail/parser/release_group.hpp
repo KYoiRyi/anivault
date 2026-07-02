@@ -64,11 +64,7 @@ inline std::optional<Element> parse_release_group(std::span<Token> tokens) noexc
     token.element_kind = ElementKind::ReleaseGroup;
   }
 
-  return Element{
-      .kind = ElementKind::ReleaseGroup,
-      .value = std::move(value),
-      .position = span.front().position,
-  };
+  return Element(ElementKind::ReleaseGroup, std::move(value), span.front().position);
 }
 
 }  // namespace anitomy::detail

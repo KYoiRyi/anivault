@@ -74,11 +74,7 @@ inline std::optional<Element> parse_title(std::span<Token> tokens) noexcept {
     token.element_kind = ElementKind::Title;
   }
 
-  return Element{
-      .kind = ElementKind::Title,
-      .value = std::move(value),
-      .position = span.front().position,
-  };
+  return Element(ElementKind::Title, std::move(value), span.front().position);
 }
 
 }  // namespace anitomy::detail

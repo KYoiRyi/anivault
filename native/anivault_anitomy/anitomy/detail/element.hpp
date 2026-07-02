@@ -17,11 +17,10 @@ enum class KeepDelimiters { No, Yes };
 
 inline Element element_from_token(ElementKind kind, const Token& token, std::string_view value = {},
                                   size_t position = std::string::npos) {
-  return Element{
-      .kind = kind,
-      .value = value.empty() ? token.value : std::string{value},
-      .position = position != std::string::npos ? position : token.position,
-  };
+  return Element(
+      kind,
+      value.empty() ? token.value : std::string{value},
+      position != std::string::npos ? position : token.position);
 };
 
 inline std::string build_element_value(std::span<Token> tokens,
