@@ -51,6 +51,7 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 
 # Application build; see runner/CMakeLists.txt.
 add_subdirectory("runner")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../native/anivault_anitomy" "native/anivault_anitomy")
 
 
 # Generated plugin build rules, which manage building the plugins and adding
@@ -83,6 +84,9 @@ install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
 
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/anivault_core.dll"
   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
+install(TARGETS anivault_anitomy RUNTIME DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
 if(PLUGIN_BUNDLED_LIBRARIES)

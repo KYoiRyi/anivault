@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'package:anivault/services/anitomy_native.dart';
 import 'package:anivault/services/ai_agent_service.dart';
 import 'package:anivault/services/logger_service.dart';
 
@@ -216,7 +217,7 @@ class AnimeLibraryService extends ChangeNotifier {
   static const _unresolvedCacheFile = 'anilist-unresolved-cache.json';
   static const _userAgent = 'AniVault/1.0';
 
-  final _filenameParser = AnimeFilenameParser();
+  final _filenameParser = AnitomyFilenameParser();
   final Map<int, AniListSearchResult> _detailsCache = {};
   final Map<String, int> _selectionCache = {};
   final Map<String, String> _unresolvedCache = {};
@@ -841,228 +842,33 @@ query ($id: Int!) {
   }
 }
 
-class AnimeFilenameParser {
-  static final _videoExtPattern = RegExp(
-    r'\.(mkv|mp4|avi|mov|webm|m4v)$',
-    caseSensitive: false,
-  );
-  static final _resolutionPattern = RegExp(
-    r'(?:\b|_)(480p|576p|720p|1080p|1440p|2160p|4k|8k|\d{3,4}[x\u00d7]\d{3,4})(?:\b|_)',
-    caseSensitive: false,
-  );
-  static final _episodePatterns = [
-    RegExp(
-      r'(?:^|[\s._-])(?:s\d{1,2}e)(\d{1,4})(?:v\d+)?\b',
-      caseSensitive: false,
-    ),
-    RegExp(
-      r'(?:^|[\s._-])(?:ep|episode)[\s._-]*(\d{1,4})(?:v\d+)?\b',
-      caseSensitive: false,
-    ),
-    RegExp(
-      r'(?:^|[\s._-])(?:\u7b2c)?(\d{1,4})(?:v\d+)?(?:\u8bdd|\u8a71|\u96c6)(?:[\s._-]|$)',
-      caseSensitive: false,
-    ),
-    RegExp(r'(?:^|[\s._-])(\d{1,4})(?:v\d+)?(?:[\s._-]|$)'),
-  ];
-  static final _bracketPattern = RegExp(
-    r'[\[\(\{\u3010\u300c\u300e]([^\]\)\}\u3011\u300d\u300f]+)[\]\)\}\u3011\u300d\u300f]',
-  );
-  static final _leadingBracketPattern = RegExp(
-    r'^[\[\(\{\u3010\u300c\u300e]([^\]\)\}\u3011\u300d\u300f]+)[\]\)\}\u3011\u300d\u300f]',
-  );
-  static final _multiGroupPrefixPattern = RegExp(
-    r'^\s*[\[\(\{\u3010\u300c\u300e][^\]\)\}\u3011\u300d\u300f]+[\]\)\}\u3011\u300d\u300f]\s*&\s*[\[\(\{\u3010\u300c\u300e]',
-  );
-
+class AnitomyFilenameParser {
   ParsedAnimeFile parse(String path) {
     final fileName = p.basename(path);
-    final nameWithoutExtension = fileName.replaceFirst(_videoExtPattern, '');
-    final bracketTokens = _bracketTokens(nameWithoutExtension);
-
-    final releaseGroup = _releaseGroup(nameWithoutExtension, bracketTokens);
-    final resolution = _findResolution(nameWithoutExtension, bracketTokens);
-    final episode = _findEpisode(nameWithoutExtension, bracketTokens);
-    final title = _findTitle(nameWithoutExtension, bracketTokens, episode);
-
+    final decoded = AnitomyNative().parse(fileName);
+    final title = _stringValue(decoded['title']);
+    final episode = _episodeNumber(_stringValue(decoded['episode']));
+    final parsedTitle = title ?? fileName;
     return ParsedAnimeFile(
       path: path,
       fileName: fileName,
-      title: title.isEmpty ? fileName : title,
-      normalizedTitle: _normalizeTitle(title.isEmpty ? fileName : title),
+      title: parsedTitle,
+      normalizedTitle: _normalizeTitle(parsedTitle),
       episodeNumber: episode,
       episodeKey: episode == null ? 'unknown:$fileName' : 'ep:$episode',
-      releaseGroup: releaseGroup,
-      resolution: resolution,
+      releaseGroup: _stringValue(decoded['release_group']),
+      resolution: _stringValue(decoded['video_resolution']),
     );
   }
 
-  List<String> _bracketTokens(String name) {
-    return _bracketPattern
-        .allMatches(name)
-        .map((match) => match.group(1)!.trim())
-        .where((token) => token.isNotEmpty)
-        .toList();
-  }
-
-  String? _releaseGroup(String name, List<String> bracketTokens) {
-    final firstBracket = _leadingBracketPattern.firstMatch(name);
-    if (firstBracket != null) return firstBracket.group(1)?.trim();
-    return bracketTokens.isNotEmpty ? bracketTokens.first : null;
-  }
-
-  String? _findResolution(String name, List<String> bracketTokens) {
-    for (final token in [name, ...bracketTokens]) {
-      final match = _resolutionPattern.firstMatch(token);
-      if (match != null) return match.group(1);
-    }
+  String? _stringValue(Object? value) {
+    if (value is String && value.trim().isNotEmpty) return value.trim();
     return null;
   }
 
-  int? _findEpisode(String name, List<String> bracketTokens) {
-    for (final token in bracketTokens.reversed) {
-      final cleaned = token.trim();
-      final exact = RegExp(
-        r'^(\d{1,4})(?:v\d+)?$',
-        caseSensitive: false,
-      ).firstMatch(cleaned);
-      if (exact != null && !_looksLikeYearOrResolution(cleaned)) {
-        return int.tryParse(exact.group(1)!);
-      }
-    }
-
-    for (final pattern in _episodePatterns) {
-      final matches = pattern.allMatches(name).toList().reversed;
-      for (final match in matches) {
-        final raw = match.group(1);
-        if (raw == null || _looksLikeYearOrResolution(raw)) continue;
-        return int.tryParse(raw);
-      }
-    }
-    return null;
-  }
-
-  String _findTitle(String name, List<String> bracketTokens, int? episode) {
-    final usefulBracketTokens = bracketTokens.where((token) {
-      if (_resolutionPattern.hasMatch(token)) return false;
-      if (_looksLikeTechToken(token)) return false;
-      if (episode != null &&
-          RegExp(
-            '^0*$episode(?:v\\d+)?\$',
-            caseSensitive: false,
-          ).hasMatch(token)) {
-        return false;
-      }
-      return true;
-    }).toList();
-
-    var title = name.replaceAll(_leadingBracketPattern, '').trim();
-    final plainPrefix = RegExp(
-      r'^([^\[\(\{\u3010\u300c\u300e]+)',
-    ).firstMatch(title);
-    if (plainPrefix != null) {
-      var plainValue = plainPrefix.group(1)!;
-      if (episode != null) {
-        plainValue = plainValue.replaceAll(
-          RegExp(
-            r'[-_\s]+(?:s\d{1,2}e|ep|episode|\u7b2c)?\s*0*'
-            '$episode'
-            r'(?:v\d+)?(?:\u8bdd|\u8a71|\u96c6)?\s*$',
-            caseSensitive: false,
-          ),
-          '',
-        );
-      }
-      final plainTitle = _cleanTitle(plainValue);
-      if (plainTitle.isNotEmpty &&
-          _looksLikeTitleText(plainTitle) &&
-          !_looksLikeTechToken(plainTitle)) {
-        return plainTitle;
-      }
-    }
-
-    if (usefulBracketTokens.length >= 3 &&
-        _multiGroupPrefixPattern.hasMatch(name)) {
-      return _cleanTitle(usefulBracketTokens[2]);
-    }
-
-    if (usefulBracketTokens.length >= 2) {
-      return _cleanTitle(usefulBracketTokens[1]);
-    }
-
-    title = title.replaceAll(_bracketPattern, ' ');
-    if (episode != null) {
-      title = title.replaceAll(
-        RegExp(
-          r'[-_\s]*(?:s\d{1,2}e|ep|episode|\u7b2c)?\s*0*'
-          '$episode'
-          r'(?:v\d+)?(?:\u8bdd|\u8a71|\u96c6)?\b.*$',
-          caseSensitive: false,
-        ),
-        '',
-      );
-    }
-    return _cleanTitle(title);
-  }
-
-  String _cleanTitle(String value) {
-    return value
-        .replaceAll(RegExp(r'[._]+'), ' ')
-        .replaceAll(
-          RegExp(
-            r'\s+-\s+(?:ray\s+)?(?:movie|mv|pv|cm|ncop|nced)(?:\s+v\d+)?\s*$',
-            caseSensitive: false,
-          ),
-          '',
-        )
-        .replaceAll(RegExp(r'\s+-\s+$'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-  }
-
-  bool _looksLikeTechToken(String value) {
-    final lower = value.toLowerCase();
-    const techWords = [
-      'x264',
-      'x265',
-      'h264',
-      'h265',
-      'hevc',
-      'avc',
-      'aac',
-      'flac',
-      'web-dl',
-      'webrip',
-      'bdrip',
-      'bluray',
-      'jpsc',
-      'ma10p',
-      'gb',
-      'big5',
-      'chs',
-      'cht',
-    ];
-    return techWords.any(lower.contains) ||
-        RegExp(r'^[a-f0-9]{8}$', caseSensitive: false).hasMatch(value);
-  }
-
-  bool _looksLikeTitleText(String value) {
-    return RegExp(
-      r'[a-z0-9\u3040-\u30ff\u3400-\u9fff]',
-      caseSensitive: false,
-    ).hasMatch(value);
-  }
-
-  bool _looksLikeYearOrResolution(String value) {
-    final number = int.tryParse(value.replaceAll(RegExp(r'\D'), ''));
-    if (number == null) return false;
-    if (number >= 1900 && number <= 2100) return true;
-    return number == 480 ||
-        number == 576 ||
-        number == 720 ||
-        number == 1080 ||
-        number == 1440 ||
-        number == 2160;
+  int? _episodeNumber(String? value) {
+    if (value == null) return null;
+    return int.tryParse(value.replaceFirst(RegExp(r'^0+'), ''));
   }
 }
 

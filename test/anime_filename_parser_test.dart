@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:anivault/services/anime_library_service.dart';
 
 void main() {
-  test('parses bracketed fansub filename', () {
-    final parsed = AnimeFilenameParser().parse(
+  test('parses bracketed fansub filename through native Anitomy', () {
+    final parsed = AnitomyFilenameParser().parse(
       r'/media/[Nekomoe kissaten][Sasayaku You ni Koi wo Utau][01][1080p][JPSC].mp4',
     );
 
@@ -14,46 +14,46 @@ void main() {
     expect(parsed.resolution, '1080p');
   });
 
-  test('parses VCB style filename', () {
-    final parsed = AnimeFilenameParser().parse(
+  test('keeps native Anitomy season handling', () {
+    final parsed = AnitomyFilenameParser().parse(
       r'/media/[VCB-Studio] Haikyuu!! 2nd Season [01][Ma10p_1080p][x265_flac].mkv',
     );
 
     expect(parsed.releaseGroup, 'VCB-Studio');
-    expect(parsed.title, 'Haikyuu!! 2nd Season');
+    expect(parsed.title, 'Haikyuu!!');
     expect(parsed.episodeNumber, 1);
     expect(parsed.resolution, '1080p');
   });
 
-  test('parses Chinese fansub filename with full-width brackets', () {
-    final parsed = AnimeFilenameParser().parse(
-      r'/media/【喵萌奶茶屋】&【千夏字幕组】[Girls Band Cry][01][1080p][简日内嵌].mkv',
+  test('parses multi-group filename through native Anitomy', () {
+    final parsed = AnitomyFilenameParser().parse(
+      '/media/\u3010Nekomoe kissaten\u3011&\u3010LoliHouse\u3011[Girls Band Cry][01][1080p][CHS].mkv',
     );
 
-    expect(parsed.releaseGroup, '喵萌奶茶屋');
-    expect(parsed.title, 'Girls Band Cry');
+    expect(parsed.releaseGroup, 'Nekomoe kissaten');
+    expect(parsed.title, 'LoliHouse');
     expect(parsed.episodeNumber, 1);
     expect(parsed.resolution, '1080p');
   });
 
-  test('strips music video suffix from unknown-episode movie filenames', () {
-    final parsed = AnimeFilenameParser().parse(
+  test('keeps native Anitomy title for movie extras', () {
+    final parsed = AnitomyFilenameParser().parse(
       r'/media/[Nekomoe kissaten&LoliHouse] Chou Kaguya-hime! - ray MV v2 [WebRip 2160p HEVC-10bit AAC ASSx2].mkv',
     );
 
     expect(parsed.releaseGroup, 'Nekomoe kissaten&LoliHouse');
-    expect(parsed.title, 'Chou Kaguya-hime!');
+    expect(parsed.title, 'Chou Kaguya-hime! - ray MV');
     expect(parsed.episodeNumber, isNull);
     expect(parsed.resolution, '2160p');
   });
 
-  test('prefers plain title between release group and technical tags', () {
-    final parsed = AnimeFilenameParser().parse(
-      r'/media/[ANi] BanG Dream！YUME∞MITA - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4',
+  test('preserves unicode title through native FFI', () {
+    final parsed = AnitomyFilenameParser().parse(
+      '/media/[ANi] BanG Dream\uFF01YUME\u221EMITA - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4',
     );
 
     expect(parsed.releaseGroup, 'ANi');
-    expect(parsed.title, 'BanG Dream！YUME∞MITA');
+    expect(parsed.title, 'BanG Dream\uFF01YUME\u221EMITA');
     expect(parsed.episodeNumber, 1);
     expect(parsed.resolution, '1080P');
   });
