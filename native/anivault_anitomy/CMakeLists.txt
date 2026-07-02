@@ -12,7 +12,7 @@ else()
 endif()
 
 target_include_directories(anivault_anitomy PRIVATE
-  "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/anitomy/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 target_compile_features(anivault_anitomy PRIVATE cxx_std_23)

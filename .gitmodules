@@ -2,10 +2,6 @@
 	path = third_party/anilist-docs
 	url = https://github.com/AniList/docs.git
 
-[submodule "third_party/anitomy"]
-	path = third_party/anitomy
-	url = https://github.com/erengy/anitomy.git
-
 [submodule "third_party/langchain_dart"]
 	path = third_party/langchain_dart
 	url = https://github.com/davidmigloz/langchain_dart.git
