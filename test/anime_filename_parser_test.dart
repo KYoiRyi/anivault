@@ -46,4 +46,15 @@ void main() {
     expect(parsed.episodeNumber, isNull);
     expect(parsed.resolution, '2160p');
   });
+
+  test('prefers plain title between release group and technical tags', () {
+    final parsed = AnimeFilenameParser().parse(
+      r'/media/[ANi] BanG Dream！YUME∞MITA - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4',
+    );
+
+    expect(parsed.releaseGroup, 'ANi');
+    expect(parsed.title, 'BanG Dream！YUME∞MITA');
+    expect(parsed.episodeNumber, 1);
+    expect(parsed.resolution, '1080P');
+  });
 }

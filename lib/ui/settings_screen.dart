@@ -541,15 +541,20 @@ class _AgentStripShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassButton.custom(
-      quality: GlassQuality.premium,
-      settings: AniGlassTheme.chromeFor(context),
+    final content = SizedBox(
       height: 64,
-      onTap: () {},
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14),
         child: child,
       ),
+    );
+    return GlassCard(
+      quality: GlassQuality.premium,
+      useOwnLayer: true,
+      settings: AniGlassTheme.chromeFor(context),
+      padding: EdgeInsets.zero,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 18),
+      child: content,
     );
   }
 }
@@ -766,27 +771,38 @@ class _AgentActionStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = AniGlassTheme.textColor(context);
-    return GlassButton.custom(
+    return GlassCard(
       quality: GlassQuality.premium,
+      useOwnLayer: true,
       settings: AniGlassTheme.chromeFor(context),
-      height: 56,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: textColor, size: 18),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: textColor, fontWeight: FontWeight.w800),
-              ),
+      padding: EdgeInsets.zero,
+      shape: const LiquidRoundedSuperellipse(borderRadius: 18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: SizedBox(
+          height: 56,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: textColor, size: 18),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

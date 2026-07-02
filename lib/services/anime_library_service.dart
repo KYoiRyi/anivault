@@ -213,15 +213,18 @@ class AnimeLibraryService extends ChangeNotifier {
   static const _graphqlUrl = 'https://graphql.anilist.co';
   static const _detailsCacheFile = 'anilist-details-cache.json';
   static const _selectionCacheFile = 'anilist-selection-cache.json';
+  static const _unresolvedCacheFile = 'anilist-unresolved-cache.json';
   static const _userAgent = 'AniVault/1.0';
 
   final _filenameParser = AnimeFilenameParser();
   final Map<int, AniListSearchResult> _detailsCache = {};
   final Map<String, int> _selectionCache = {};
+  final Map<String, String> _unresolvedCache = {};
   DateTime? _lastGraphQlRequest;
 
   bool _isReady = false;
   bool _isScanning = false;
+  bool _isResolvingUnresolved = false;
   String? _lastError;
   List<AnimeSeries> _series = [];
 
@@ -234,6 +237,7 @@ class AnimeLibraryService extends ChangeNotifier {
     if (_isReady) return;
     await _loadDetailsCache();
     await _loadSelectionCache();
+    await _loadUnresolvedCache();
     _isReady = true;
     notifyListeners();
   }
@@ -264,15 +268,17 @@ class AnimeLibraryService extends ChangeNotifier {
         final match = await _resolveTitle(
           parsedTitle,
           entry.key,
-          titleFiles,
           resolveAmbiguousMatch,
         );
         if (match == null) {
+          _unresolvedCache[entry.key] = titleFiles.first.path;
           unmatchedBuckets.putIfAbsent(entry.key, () => []).addAll(titleFiles);
           continue;
         }
+        _unresolvedCache.remove(entry.key);
         knownBuckets.putIfAbsent(match.id, () => []).addAll(titleFiles);
       }
+      await _saveUnresolvedCache();
 
       final nextSeries = <AnimeSeries>[];
 
@@ -337,13 +343,15 @@ class AnimeLibraryService extends ChangeNotifier {
     } finally {
       _isScanning = false;
       notifyListeners();
+      if (!_isResolvingUnresolved) {
+        unawaited(_resolveUnresolvedInBackground(paths, languageCode));
+      }
     }
   }
 
   Future<AniListSearchResult?> _resolveTitle(
     String parsedTitle,
     String normalizedTitle,
-    List<ParsedAnimeFile> titleFiles,
     AniListMatchResolver? resolver,
   ) async {
     final cachedId = _selectionCache[normalizedTitle];
@@ -353,14 +361,7 @@ class AnimeLibraryService extends ChangeNotifier {
     }
 
     final candidates = await _searchAnime(parsedTitle, normalizedTitle);
-    if (candidates.isEmpty) {
-      return _resolveWithAgent(
-        parsedTitle,
-        normalizedTitle,
-        titleFiles,
-        resolver,
-      );
-    }
+    if (candidates.isEmpty) return null;
 
     return _selectAndCacheCandidate(
       parsedTitle,
@@ -370,53 +371,65 @@ class AnimeLibraryService extends ChangeNotifier {
     );
   }
 
-  Future<AniListSearchResult?> _resolveWithAgent(
-    String parsedTitle,
-    String normalizedTitle,
-    List<ParsedAnimeFile> titleFiles,
-    AniListMatchResolver? resolver,
+  Future<void> _resolveUnresolvedInBackground(
+    List<String> paths,
+    String languageCode,
   ) async {
-    final inferredTitle = await AiAgentService().inferAnimeTitle(
-      titleFiles.first,
-    );
-    if (inferredTitle == null ||
-        _normalizeTitle(inferredTitle) == normalizedTitle) {
-      return null;
-    }
+    await initialize();
+    if (_isResolvingUnresolved || _unresolvedCache.isEmpty) return;
+    if (!AiAgentService().config.isReady) return;
 
-    final inferredNormalizedTitle = _normalizeTitle(inferredTitle);
-    final cachedId = _selectionCache[inferredNormalizedTitle];
-    if (cachedId != null) {
-      final cached = await _fetchAnimeById(cachedId);
-      if (cached != null) {
-        _selectionCache[normalizedTitle] = cached.id;
-        await _saveSelectionCache();
-        return cached;
+    _isResolvingUnresolved = true;
+    var changed = false;
+    try {
+      final availablePaths = paths.toSet();
+      final entries = Map<String, String>.from(_unresolvedCache).entries;
+      for (final entry in entries) {
+        final normalizedTitle = entry.key;
+        final path = entry.value;
+        if (!availablePaths.contains(path) || !File(path).existsSync()) {
+          _unresolvedCache.remove(normalizedTitle);
+          changed = true;
+          continue;
+        }
+
+        final parsed = _filenameParser.parse(path);
+        final inferredTitle = await AiAgentService().inferAnimeTitle(parsed);
+        if (inferredTitle == null) continue;
+        final inferredNormalizedTitle = _normalizeTitle(inferredTitle);
+        final candidates = await _searchAnime(
+          inferredTitle,
+          inferredNormalizedTitle,
+        );
+        if (candidates.isEmpty) continue;
+
+        final confident =
+            candidates.first.score >= 0.82 ||
+            (candidates.length == 1 && candidates.first.score >= 0.55);
+        if (!confident) continue;
+
+        final selected = candidates.first;
+        _detailsCache[selected.id] = selected;
+        _selectionCache[normalizedTitle] = selected.id;
+        _selectionCache[inferredNormalizedTitle] = selected.id;
+        _unresolvedCache.remove(normalizedTitle);
+        changed = true;
+        LoggerService().log(
+          '[AI Agent] "${parsed.title}" resolved as "${selected.displayTitle}"',
+        );
       }
+
+      if (changed) {
+        await _saveDetailsCache();
+        await _saveSelectionCache();
+        await _saveUnresolvedCache();
+        await refreshLibrary(paths, languageCode: languageCode);
+      }
+    } catch (e) {
+      LoggerService().log('[AI Agent] Background unresolved retry failed: $e');
+    } finally {
+      _isResolvingUnresolved = false;
     }
-
-    final candidates = await _searchAnime(
-      inferredTitle,
-      inferredNormalizedTitle,
-    );
-    if (candidates.isEmpty) return null;
-
-    final selected = await _selectCandidate(
-      inferredTitle,
-      candidates,
-      resolver,
-    );
-    if (selected == null) return null;
-
-    _detailsCache[selected.id] = selected;
-    _selectionCache[normalizedTitle] = selected.id;
-    _selectionCache[inferredNormalizedTitle] = selected.id;
-    await _saveDetailsCache();
-    await _saveSelectionCache();
-    LoggerService().log(
-      '[AI Agent] "$parsedTitle" matched as "${selected.displayTitle}"',
-    );
-    return selected;
   }
 
   Future<AniListSearchResult?> _selectAndCacheCandidate(
@@ -801,6 +814,31 @@ query ($id: Int!) {
     final file = File(p.join(dir.path, _selectionCacheFile));
     await file.writeAsString(jsonEncode(_selectionCache), flush: true);
   }
+
+  Future<void> _loadUnresolvedCache() async {
+    try {
+      final dir = await _metadataDirectory();
+      final file = File(p.join(dir.path, _unresolvedCacheFile));
+      if (!await file.exists()) return;
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is! Map) return;
+      _unresolvedCache
+        ..clear()
+        ..addEntries(
+          decoded.entries.map(
+            (entry) => MapEntry('${entry.key}', '${entry.value}'),
+          ),
+        );
+    } catch (e) {
+      LoggerService().log('[AniList] Failed to load unresolved cache: $e');
+    }
+  }
+
+  Future<void> _saveUnresolvedCache() async {
+    final dir = await _metadataDirectory();
+    final file = File(p.join(dir.path, _unresolvedCacheFile));
+    await file.writeAsString(jsonEncode(_unresolvedCache), flush: true);
+  }
 }
 
 class AnimeFilenameParser {
@@ -918,6 +956,31 @@ class AnimeFilenameParser {
       return true;
     }).toList();
 
+    var title = name.replaceAll(_leadingBracketPattern, '').trim();
+    final plainPrefix = RegExp(
+      r'^([^\[\(\{\u3010\u300c\u300e]+)',
+    ).firstMatch(title);
+    if (plainPrefix != null) {
+      var plainValue = plainPrefix.group(1)!;
+      if (episode != null) {
+        plainValue = plainValue.replaceAll(
+          RegExp(
+            r'[-_\s]+(?:s\d{1,2}e|ep|episode|\u7b2c)?\s*0*'
+            '$episode'
+            r'(?:v\d+)?(?:\u8bdd|\u8a71|\u96c6)?\s*$',
+            caseSensitive: false,
+          ),
+          '',
+        );
+      }
+      final plainTitle = _cleanTitle(plainValue);
+      if (plainTitle.isNotEmpty &&
+          _looksLikeTitleText(plainTitle) &&
+          !_looksLikeTechToken(plainTitle)) {
+        return plainTitle;
+      }
+    }
+
     if (usefulBracketTokens.length >= 3 &&
         _multiGroupPrefixPattern.hasMatch(name)) {
       return _cleanTitle(usefulBracketTokens[2]);
@@ -927,7 +990,6 @@ class AnimeFilenameParser {
       return _cleanTitle(usefulBracketTokens[1]);
     }
 
-    var title = name.replaceAll(_leadingBracketPattern, '');
     title = title.replaceAll(_bracketPattern, ' ');
     if (episode != null) {
       title = title.replaceAll(
@@ -982,6 +1044,13 @@ class AnimeFilenameParser {
     ];
     return techWords.any(lower.contains) ||
         RegExp(r'^[a-f0-9]{8}$', caseSensitive: false).hasMatch(value);
+  }
+
+  bool _looksLikeTitleText(String value) {
+    return RegExp(
+      r'[a-z0-9\u3040-\u30ff\u3400-\u9fff]',
+      caseSensitive: false,
+    ).hasMatch(value);
   }
 
   bool _looksLikeYearOrResolution(String value) {
