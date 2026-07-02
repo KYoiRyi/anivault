@@ -4,6 +4,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:anivault/services/logger_service.dart';
+import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -13,9 +14,15 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final light = Theme.of(context).brightness == Brightness.light;
     return GlassScaffold(
-      background: AniGlassTheme.background(light: false),
-      statusBarStyle: GlassStatusBarStyle.light,
+      background: AniGlassTheme.background(
+        light: light,
+        style: ThemeService().backgroundStyle,
+      ),
+      statusBarStyle: light
+          ? GlassStatusBarStyle.dark
+          : GlassStatusBarStyle.light,
       settings: AniGlassTheme.chrome,
       appBar: GlassAppBar(
         title: const Text('Settings', style: TextStyle(color: Colors.white)),
@@ -141,8 +148,122 @@ class _SettingsContentState extends State<SettingsContent> {
           child: _PremiumStatus(),
         ),
         const SizedBox(height: 16),
-        const LogViewerPanel(),
+        const _AppearancePanel(),
       ],
+    );
+  }
+}
+
+class _AppearancePanel extends StatelessWidget {
+  const _AppearancePanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsPanel(
+      icon: Icons.palette_rounded,
+      title: 'Appearance',
+      subtitle: 'Theme and background style',
+      child: ListenableBuilder(
+        listenable: ThemeService(),
+        builder: (context, _) {
+          final service = ThemeService();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SettingLabel('Theme'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ThemeChip(
+                    label: 'System',
+                    selected: service.themeMode == ThemeMode.system,
+                    onTap: () => service.setThemeMode(ThemeMode.system),
+                  ),
+                  _ThemeChip(
+                    label: 'White',
+                    selected: service.themeMode == ThemeMode.light,
+                    onTap: () => service.setThemeMode(ThemeMode.light),
+                  ),
+                  _ThemeChip(
+                    label: 'Black',
+                    selected: service.themeMode == ThemeMode.dark,
+                    onTap: () => service.setThemeMode(ThemeMode.dark),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const _SettingLabel('Background'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ThemeChip(
+                    label: 'Dynamic',
+                    selected:
+                        service.backgroundStyle == AniBackgroundStyle.dynamic,
+                    onTap: () =>
+                        service.setBackgroundStyle(AniBackgroundStyle.dynamic),
+                  ),
+                  _ThemeChip(
+                    label: 'Solid',
+                    selected:
+                        service.backgroundStyle == AniBackgroundStyle.solid,
+                    onTap: () =>
+                        service.setBackgroundStyle(AniBackgroundStyle.solid),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SettingLabel extends StatelessWidget {
+  final String label;
+
+  const _SettingLabel(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        color: Colors.white70,
+        fontSize: 12,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _ThemeChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ThemeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassChip(
+      quality: GlassQuality.premium,
+      label: label,
+      selected: selected,
+      labelStyle: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w700,
+      ),
+      onTap: onTap,
     );
   }
 }

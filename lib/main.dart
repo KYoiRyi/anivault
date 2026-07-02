@@ -4,6 +4,7 @@ import 'package:anivault/ui/home_screen.dart';
 import 'package:anivault/services/shader_service.dart';
 import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/smb_service.dart';
+import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -15,6 +16,7 @@ void main() async {
   await ShaderService().initializeShaders();
   await CacheManagerService().initialize();
   await SMBService().init();
+  await ThemeService().load();
 
   // Initialize liquid glass shaders
   await LiquidGlassWidgets.initialize();
@@ -33,30 +35,45 @@ class AniVaultApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AniVault',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorSchemeSeed: const Color(0xFF38BDF8),
-        scaffoldBackgroundColor: const Color(0xFF05070D),
-        fontFamily: 'SF Pro Display',
-        fontFamilyFallback: const [
-          '.AppleSystemUIFont',
-          '-apple-system',
-          'Segoe UI',
-          'Arial',
-        ],
-        textTheme: _thinTextTheme(ThemeData.dark().textTheme),
-        primaryTextTheme: _thinTextTheme(ThemeData.dark().primaryTextTheme),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-        ),
+    return ListenableBuilder(
+      listenable: ThemeService(),
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'AniVault',
+          debugShowCheckedModeBanner: false,
+          themeMode: ThemeService().themeMode,
+          theme: _buildTheme(Brightness.light),
+          darkTheme: _buildTheme(Brightness.dark),
+          home: const HomeScreen(),
+        );
+      },
+    );
+  }
+
+  ThemeData _buildTheme(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
+    final base = dark ? ThemeData.dark() : ThemeData.light();
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorSchemeSeed: const Color(0xFF38BDF8),
+      scaffoldBackgroundColor: dark
+          ? const Color(0xFF05070D)
+          : const Color(0xFFF8FBFF),
+      fontFamily: 'SF Pro Display',
+      fontFamilyFallback: const [
+        '.AppleSystemUIFont',
+        '-apple-system',
+        'Segoe UI',
+        'Arial',
+      ],
+      textTheme: _thinTextTheme(base.textTheme),
+      primaryTextTheme: _thinTextTheme(base.primaryTextTheme),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
-      home: const HomeScreen(),
     );
   }
 

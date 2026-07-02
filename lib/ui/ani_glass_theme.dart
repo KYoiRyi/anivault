@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+import 'package:anivault/services/theme_service.dart';
+
 class AniGlassTheme {
   const AniGlassTheme._();
 
@@ -74,7 +76,34 @@ class AniGlassTheme {
     specularSharpness: GlassSpecularSharpness.sharp,
   );
 
-  static Widget background({String? coverUrl, bool light = true}) {
+  static Widget background({
+    String? coverUrl,
+    bool light = true,
+    AniBackgroundStyle style = AniBackgroundStyle.dynamic,
+  }) {
+    if (style == AniBackgroundStyle.solid) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: light ? Colors.white : Colors.black,
+            ),
+          ),
+          if (coverUrl != null)
+            Opacity(
+              opacity: light ? 0.05 : 0.14,
+              child: Image.network(
+                coverUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+              ),
+            ),
+        ],
+      );
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [

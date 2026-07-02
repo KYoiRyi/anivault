@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
+import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/anime_series_screen.dart';
 import 'package:anivault/ui/settings_screen.dart';
@@ -195,13 +196,18 @@ class _HomeScreenState extends State<HomeScreen> {
     final busy = _isSyncing || _isScraping;
     final visible = _visibleSeries;
     final topPadding = MediaQuery.paddingOf(context).top + 14;
+    final light = Theme.of(context).brightness == Brightness.light;
+    final backgroundStyle = ThemeService().backgroundStyle;
 
     return GlassScaffold(
       background: AniGlassTheme.background(
         coverUrl: _animeSeries.isNotEmpty ? _animeSeries.first.coverUrl : null,
-        light: false,
+        light: light,
+        style: backgroundStyle,
       ),
-      statusBarStyle: GlassStatusBarStyle.light,
+      statusBarStyle: light
+          ? GlassStatusBarStyle.dark
+          : GlassStatusBarStyle.light,
       settings: AniGlassTheme.chrome,
       topEdgeFade: true,
       bottomEdgeFade: true,
@@ -763,13 +769,37 @@ class _AnimeSeriesCard extends StatelessWidget {
                 Positioned(
                   top: 10,
                   right: 10,
-                  child: GlassChip(
-                    quality: GlassQuality.premium,
-                    label: 'Unknown',
-                    selected: true,
-                  ),
+                  child: _UnknownBadge(label: 'Unknown'),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UnknownBadge extends StatelessWidget {
+  final String label;
+
+  const _UnknownBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

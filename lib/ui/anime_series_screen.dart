@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/anime_library_service.dart';
+import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/player_screen.dart';
 
@@ -32,12 +33,16 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
   @override
   Widget build(BuildContext context) {
     final series = widget.series;
+    final light = Theme.of(context).brightness == Brightness.light;
     return GlassScaffold(
       background: AniGlassTheme.background(
         coverUrl: series.coverUrl,
-        light: false,
+        light: light,
+        style: ThemeService().backgroundStyle,
       ),
-      statusBarStyle: GlassStatusBarStyle.light,
+      statusBarStyle: light
+          ? GlassStatusBarStyle.dark
+          : GlassStatusBarStyle.light,
       settings: AniGlassTheme.chrome,
       headerScrollController: _scrollController,
       headerFadeDistance: 54,
@@ -111,11 +116,7 @@ class _SeriesHero extends StatelessWidget {
                 if (series.isUnknown)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 8),
-                    child: GlassChip(
-                      quality: GlassQuality.premium,
-                      label: 'Unknown match',
-                      selected: true,
-                    ),
+                    child: _UnknownBadge(label: 'Unknown match'),
                   ),
                 Text(
                   series.title,
@@ -137,6 +138,37 @@ class _SeriesHero extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _UnknownBadge extends StatelessWidget {
+  final String label;
+
+  const _UnknownBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.34),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
       ),
     );
   }
