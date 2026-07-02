@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -347,6 +348,7 @@ class _PerformanceHUDState extends State<PerformanceHUD> {
 
     return GlassCard(
       useOwnLayer: true,
+      settings: AniGlassTheme.heroFor(context),
       width: panelWidth,
       padding: const EdgeInsets.all(16),
       shape: const LiquidRoundedSuperellipse(borderRadius: 12),

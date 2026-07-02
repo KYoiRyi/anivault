@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/cache_manager_service.dart';
+import 'package:anivault/ui/page_transition.dart';
 import 'package:anivault/ui/player_screen.dart';
 
 class DownloadsView extends StatelessWidget {
@@ -148,10 +149,7 @@ class _CompletedDownloadTile extends StatelessWidget {
 
     return _DownloadSurface(
       child: GlassListTile.standalone(
-        leading: Icon(
-          Icons.movie_creation_outlined,
-          color: subtextColor,
-        ),
+        leading: Icon(Icons.movie_creation_outlined, color: subtextColor),
         title: Text(
           item.fileName,
           maxLines: 1,
@@ -172,8 +170,8 @@ class _CompletedDownloadTile extends StatelessWidget {
               icon: Icon(Icons.play_arrow_rounded, color: textColor),
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PlayerScreen(
+                  AniScalePageRoute(
+                    page: PlayerScreen(
                       videoPath: item.localPath,
                       title: item.fileName,
                     ),
@@ -190,9 +188,11 @@ class _CompletedDownloadTile extends StatelessWidget {
         ),
         onTap: () {
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) =>
-                  PlayerScreen(videoPath: item.localPath, title: item.fileName),
+            AniScalePageRoute(
+              page: PlayerScreen(
+                videoPath: item.localPath,
+                title: item.fileName,
+              ),
             ),
           );
         },
@@ -208,10 +208,7 @@ class _DownloadSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: child,
-    );
+    return Padding(padding: const EdgeInsets.only(bottom: 10), child: child);
   }
 }
 

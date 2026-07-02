@@ -3,6 +3,8 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+import 'package:anivault/ui/ani_glass_theme.dart';
+
 class CinematicEdgeBar extends StatefulWidget {
   final Player player;
   final Player? previewPlayer;
@@ -103,6 +105,7 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                           child: GlassCard(
                             useOwnLayer: true,
                             quality: GlassQuality.premium,
+                            settings: AniGlassTheme.playerPanelFor(context),
                             padding: const EdgeInsets.all(4),
                             shape: const LiquidRoundedSuperellipse(
                               borderRadius: 16,
@@ -194,6 +197,7 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                         child: GlassCard(
                           useOwnLayer: true,
                           quality: GlassQuality.premium,
+                          settings: AniGlassTheme.playerPanelFor(context),
                           padding: EdgeInsets.zero,
                           shape: const LiquidRoundedSuperellipse(
                             borderRadius: 8,

@@ -4,6 +4,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
+import 'package:anivault/ui/page_transition.dart';
 import 'package:anivault/ui/player_screen.dart';
 
 class AnimeSeriesScreen extends StatefulWidget {
@@ -43,14 +44,14 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
       statusBarStyle: light
           ? GlassStatusBarStyle.dark
           : GlassStatusBarStyle.light,
-      settings: AniGlassTheme.chrome,
+      settings: AniGlassTheme.chromeFor(context),
       headerScrollController: _scrollController,
       headerFadeDistance: 54,
       appBar: GlassAppBar(
         title: Text(series.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         leading: GlassButton(
           quality: GlassQuality.premium,
-          settings: AniGlassTheme.chrome,
+          settings: AniGlassTheme.chromeFor(context),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onTap: () => Navigator.pop(context),
         ),
@@ -92,10 +93,12 @@ class _SeriesHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
       quality: GlassQuality.premium,
       useOwnLayer: true,
-      settings: AniGlassTheme.hero,
+      settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(18),
       shape: const LiquidRoundedSuperellipse(borderRadius: 32),
       child: Row(
@@ -122,8 +125,8 @@ class _SeriesHero extends StatelessWidget {
                   series.title,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                     height: 1.02,
@@ -132,7 +135,7 @@ class _SeriesHero extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   '${series.episodes.length} episodes  -  ${series.fileCount} files',
-                  style: const TextStyle(color: Colors.white70),
+                  style: TextStyle(color: secondaryTextColor),
                 ),
               ],
             ),
@@ -150,20 +153,25 @@ class _UnknownBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final borderColor = AniGlassTheme.subtleBorderColor(context);
+    final backgroundColor = AniGlassTheme.isLight(context)
+        ? Colors.white.withValues(alpha: 0.54)
+        : Colors.black.withValues(alpha: 0.34);
     return Align(
       alignment: Alignment.centerLeft,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.34),
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+          border: Border.all(color: borderColor),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           child: Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: textColor,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -182,12 +190,14 @@ class _EpisodeBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final files = episode.files;
+    final textColor = AniGlassTheme.textColor(context);
+    final tertiaryTextColor = AniGlassTheme.tertiaryTextColor(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
+        border: Border.all(color: AniGlassTheme.subtleBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -199,8 +209,8 @@ class _EpisodeBlock extends StatelessWidget {
                 Expanded(
                   child: Text(
                     episode.title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: textColor,
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
                     ),
@@ -209,7 +219,7 @@ class _EpisodeBlock extends StatelessWidget {
                 if (files.length > 1)
                   Text(
                     '${files.length} versions',
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: TextStyle(color: tertiaryTextColor, fontSize: 12),
                   ),
               ],
             ),
@@ -232,6 +242,8 @@ class _EpisodeFileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final tertiaryTextColor = AniGlassTheme.tertiaryTextColor(context);
     final subtitle = [
       if (file.releaseGroup != null) file.releaseGroup,
       if (file.resolution != null) file.resolution,
@@ -241,9 +253,8 @@ class _EpisodeFileRow extends StatelessWidget {
     return InkWell(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) =>
-                PlayerScreen(videoPath: file.path, title: file.fileName),
+          AniScalePageRoute(
+            page: PlayerScreen(videoPath: file.path, title: file.fileName),
           ),
         );
       },
@@ -253,14 +264,14 @@ class _EpisodeFileRow extends StatelessWidget {
           children: [
             GlassButton(
               quality: GlassQuality.premium,
-              settings: AniGlassTheme.chrome,
+              settings: AniGlassTheme.chromeFor(context),
               width: 36,
               height: 36,
               icon: const Icon(Icons.play_arrow_rounded, size: 22),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PlayerScreen(
+                  AniScalePageRoute(
+                    page: PlayerScreen(
                       videoPath: file.path,
                       title: file.fileName,
                     ),
@@ -277,8 +288,8 @@ class _EpisodeFileRow extends StatelessWidget {
                     file.fileName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: textColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -287,7 +298,7 @@ class _EpisodeFileRow extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    style: TextStyle(color: tertiaryTextColor, fontSize: 12),
                   ),
                 ],
               ),

@@ -8,6 +8,24 @@ import 'package:anivault/services/theme_service.dart';
 class AniGlassTheme {
   const AniGlassTheme._();
 
+  static bool isLight(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.light;
+
+  static Color textColor(BuildContext context) =>
+      isLight(context) ? Colors.black : Colors.white;
+
+  static Color secondaryTextColor(BuildContext context) =>
+      isLight(context) ? Colors.black54 : Colors.white70;
+
+  static Color tertiaryTextColor(BuildContext context) =>
+      isLight(context) ? Colors.black45 : Colors.white54;
+
+  static Color subtleBorderColor(BuildContext context) =>
+      isLight(context) ? const Color(0x1F000000) : const Color(0x1AFFFFFF);
+
+  static Color subtleSurfaceColor(BuildContext context) =>
+      isLight(context) ? const Color(0x12FFFFFF) : const Color(0x12FFFFFF);
+
   static GlassThemeData get theme => GlassThemeData.simple(
     blur: 10,
     thickness: 28,
@@ -24,6 +42,7 @@ class AniGlassTheme {
   static const LiquidGlassSettings chrome = LiquidGlassSettings(
     blur: 8,
     thickness: 24,
+    shadowElevation: 2.0,
     glassColor: Color(0x0EFFFFFF),
     lightAngle: GlassDefaults.lightAngle,
     lightIntensity: 0.42,
@@ -37,6 +56,7 @@ class AniGlassTheme {
   static const LiquidGlassSettings hero = LiquidGlassSettings(
     blur: 12,
     thickness: 30,
+    shadowElevation: 2.0,
     glassColor: Color(0x10FFFFFF),
     lightAngle: GlassDefaults.lightAngle,
     lightIntensity: 0.5,
@@ -51,6 +71,7 @@ class AniGlassTheme {
   static const LiquidGlassSettings playerPanel = LiquidGlassSettings(
     blur: 10,
     thickness: 16,
+    shadowElevation: 2.0,
     glassColor: Color(0x12FFFFFF),
     lightAngle: 0.72 * math.pi,
     lightIntensity: 0.9,
@@ -65,6 +86,7 @@ class AniGlassTheme {
   static const LiquidGlassSettings playerControl = LiquidGlassSettings(
     blur: 0,
     thickness: 10,
+    shadowElevation: 2.0,
     glassColor: Colors.transparent,
     lightAngle: 0.7 * math.pi,
     lightIntensity: 1.55,
@@ -75,6 +97,52 @@ class AniGlassTheme {
     glowIntensity: 0.65,
     specularSharpness: GlassSpecularSharpness.sharp,
   );
+
+  static LiquidGlassSettings chromeFor(BuildContext context) {
+    if (!isLight(context)) return chrome;
+    return chrome.copyWith(
+      glassColor: const Color(0xDDEFF1F5),
+      backerColor: const Color(0xFFEFF1F5),
+      platformViewFallbackColor: const Color(0xFFEFF1F5),
+      shadowElevation: 2.0,
+      whitenStrength: 0.36,
+      ambientStrength: 0.08,
+    );
+  }
+
+  static LiquidGlassSettings heroFor(BuildContext context) {
+    if (!isLight(context)) return hero;
+    return hero.copyWith(
+      glassColor: const Color(0xEEF7F8FB),
+      backerColor: const Color(0xFFF7F8FB),
+      platformViewFallbackColor: const Color(0xFFF7F8FB),
+      shadowElevation: 2.0,
+      whitenStrength: 0.42,
+      ambientStrength: 0.1,
+    );
+  }
+
+  static LiquidGlassSettings playerPanelFor(BuildContext context) {
+    if (!isLight(context)) return playerPanel;
+    return playerPanel.copyWith(
+      glassColor: const Color(0xDDEFF1F5),
+      backerColor: const Color(0xFFEFF1F5),
+      platformViewFallbackColor: const Color(0xFFEFF1F5),
+      shadowElevation: 2.0,
+      whitenStrength: 0.36,
+    );
+  }
+
+  static LiquidGlassSettings playerControlFor(BuildContext context) {
+    if (!isLight(context)) return playerControl;
+    return playerControl.copyWith(
+      glassColor: const Color(0xCCE8EAEE),
+      backerColor: const Color(0xFFE8EAEE),
+      platformViewFallbackColor: const Color(0xFFE8EAEE),
+      shadowElevation: 2.0,
+      whitenStrength: 0.32,
+    );
+  }
 
   static Widget background({
     String? coverUrl,

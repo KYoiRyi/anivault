@@ -5,6 +5,8 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/smb_service.dart';
+import 'package:anivault/ui/ani_glass_theme.dart';
+import 'package:anivault/ui/page_transition.dart';
 import 'package:anivault/ui/player_screen.dart';
 
 class SMBFileSystemViewer extends StatefulWidget {
@@ -134,8 +136,8 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
     if (cachedPath != null) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => PlayerScreen(videoPath: cachedPath, title: file.name),
+        AniScalePageRoute(
+          page: PlayerScreen(videoPath: cachedPath, title: file.name),
         ),
       );
       return;
@@ -158,6 +160,7 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
         final cancelTextColor = isDark ? Colors.white54 : Colors.black54;
 
         return GlassCard(
+          settings: AniGlassTheme.heroFor(context),
           padding: const EdgeInsets.all(24),
           shape: const LiquidRoundedSuperellipse(borderRadius: 20),
           useOwnLayer: true,
@@ -183,6 +186,7 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                 ),
                 const SizedBox(height: 20),
                 GlassButton.custom(
+                  settings: AniGlassTheme.chromeFor(context),
                   shape: const LiquidRoundedSuperellipse(borderRadius: 10),
                   onTap: () {
                     Navigator.pop(context);
@@ -195,18 +199,28 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
                       children: [
                         Icon(Icons.download_rounded, color: textColor),
                         const SizedBox(width: 8),
-                        Text('Download', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Download',
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 GlassButton.custom(
+                  settings: AniGlassTheme.chromeFor(context),
                   shape: const LiquidRoundedSuperellipse(borderRadius: 10),
                   onTap: () => Navigator.pop(context),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
-                    child: Text('Cancel', style: TextStyle(color: cancelTextColor)),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: cancelTextColor),
+                    ),
                   ),
                 ),
               ],
@@ -245,11 +259,21 @@ class _SMBFileSystemViewerState extends State<SMBFileSystemViewer>
               if (SMBService().hasSavedConnection) ...[
                 const SizedBox(height: 16),
                 GlassButton.custom(
+                  settings: AniGlassTheme.chromeFor(context),
                   shape: const LiquidRoundedSuperellipse(borderRadius: 10),
                   onTap: SMBService().connectSaved,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    child: Text('Reconnect', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Text(
+                      'Reconnect',
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -344,6 +368,7 @@ class _PathBar extends StatelessWidget {
       child: GlassListTile(
         isLast: true,
         leading: GlassButton(
+          settings: AniGlassTheme.chromeFor(context),
           shape: const LiquidRoundedSuperellipse(borderRadius: 8),
           icon: Icon(Icons.arrow_back_rounded, color: textColor),
           iconSize: 20,
@@ -383,8 +408,14 @@ class _ServerRoot extends StatelessWidget {
               Icons.dns_rounded,
               color: Colors.lightBlueAccent,
             ),
-            title: Text('Server', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-            subtitle: Text(SMBService().currentHost, style: TextStyle(color: subtextColor)),
+            title: Text(
+              'Server',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              SMBService().currentHost,
+              style: TextStyle(color: subtextColor),
+            ),
             trailing: Icon(Icons.chevron_right_rounded, color: subtextColor),
             onTap: onOpen,
           ),
@@ -467,7 +498,10 @@ class _FileList extends StatelessWidget {
                   file.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
                 ),
                 subtitle: isDir
                     ? null
@@ -507,6 +541,8 @@ class _ListSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCard(
+      settings: AniGlassTheme.chromeFor(context),
+      useOwnLayer: true,
       margin: const EdgeInsets.only(bottom: 10),
       padding: EdgeInsets.zero,
       shape: const LiquidRoundedSuperellipse(borderRadius: 12),

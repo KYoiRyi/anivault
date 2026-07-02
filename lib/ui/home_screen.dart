@@ -12,6 +12,7 @@ import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/anime_series_screen.dart';
+import 'package:anivault/ui/page_transition.dart';
 import 'package:anivault/ui/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -208,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen> {
       statusBarStyle: light
           ? GlassStatusBarStyle.dark
           : GlassStatusBarStyle.light,
-      settings: AniGlassTheme.chrome,
+      settings: AniGlassTheme.chromeFor(context),
       topEdgeFade: true,
       bottomEdgeFade: true,
       headerScrollController: _scrollController,
@@ -305,14 +306,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           )
         else if (visible.isEmpty)
-          const SliverFillRemaining(
+          SliverFillRemaining(
             hasScrollBody: false,
             child: Padding(
-              padding: EdgeInsets.only(bottom: 110),
+              padding: const EdgeInsets.only(bottom: 110),
               child: Center(
                 child: Text(
                   'No matching series',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(
+                    color: AniGlassTheme.secondaryTextColor(context),
+                  ),
                 ),
               ),
             ),
@@ -336,8 +339,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     series: series,
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => AnimeSeriesScreen(series: series),
+                        AniScalePageRoute(
+                          page: AnimeSeriesScreen(series: series),
                         ),
                       );
                     },
@@ -366,10 +369,12 @@ class _HomeHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
       quality: GlassQuality.premium,
       useOwnLayer: true,
-      settings: AniGlassTheme.hero,
+      settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(22),
       shape: const LiquidRoundedSuperellipse(borderRadius: 30),
       child: Row(
@@ -381,16 +386,16 @@ class _HomeHero extends StatelessWidget {
                 Text(
                   'Your anime vault',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.62),
+                    color: secondaryTextColor,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Library',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: textColor,
                     fontSize: 38,
                     fontWeight: FontWeight.w800,
                     height: 0.95,
@@ -399,14 +404,14 @@ class _HomeHero extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   '$totalSeries series  -  $totalFiles files',
-                  style: const TextStyle(color: Colors.white70),
+                  style: TextStyle(color: secondaryTextColor),
                 ),
               ],
             ),
           ),
           GlassButton.custom(
             quality: GlassQuality.premium,
-            settings: AniGlassTheme.chrome,
+            settings: AniGlassTheme.chromeFor(context),
             shape: const LiquidOval(),
             width: 54,
             height: 54,
@@ -425,10 +430,10 @@ class _HomeHero extends StatelessWidget {
                       height: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.4),
                     )
-                  : const Icon(
-                      key: ValueKey('import'),
+                  : Icon(
+                      key: const ValueKey('import'),
                       Icons.add_rounded,
-                      color: Colors.white,
+                      color: textColor,
                       size: 30,
                     ),
             ),
@@ -454,13 +459,22 @@ class _DemoTopGlassTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final tertiaryTextColor = AniGlassTheme.tertiaryTextColor(context);
     const horizontalPadding = 12.0;
     final barGlassSettings = LiquidGlassSettings(
       glassColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xAA1C1C1E)
-          : const Color(0xAAF2F2F7),
+          : const Color(0xDDEFF1F5),
+      backerColor: Theme.of(context).brightness == Brightness.dark
+          ? null
+          : const Color(0xFFEFF1F5),
+      platformViewFallbackColor: Theme.of(context).brightness == Brightness.dark
+          ? null
+          : const Color(0xFFEFF1F5),
       thickness: 30,
       blur: 2,
+      shadowElevation: 2.0,
       chromaticAberration: .01,
       lightAngle: GlassDefaults.lightAngle,
       lightIntensity: .5,
@@ -496,11 +510,11 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                 child: GlassTabBar.bottom(
                   selectedIndex: selectedIndex,
                   onTabSelected: onChanged,
-                  selectedIconColor: Colors.white,
-                  unselectedIconColor: Colors.white60,
-                  selectedLabelColor: Colors.white,
-                  unselectedLabelColor: Colors.white60,
-                  indicatorColor: Colors.white.withValues(alpha: 0.20),
+                  selectedIconColor: textColor,
+                  unselectedIconColor: tertiaryTextColor,
+                  selectedLabelColor: textColor,
+                  unselectedLabelColor: tertiaryTextColor,
+                  indicatorColor: textColor.withValues(alpha: 0.14),
                   iconSize: 28,
                   iconLabelSpacing: 0,
                   quality: GlassQuality.premium,
@@ -565,12 +579,22 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = filters.indexOf(selected).clamp(0, filters.length - 1);
+    final textColor = AniGlassTheme.textColor(context);
+    final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
+    final tertiaryTextColor = AniGlassTheme.tertiaryTextColor(context);
     final barGlassSettings = LiquidGlassSettings(
       glassColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xAA1C1C1E)
-          : const Color(0xAAF2F2F7),
+          : const Color(0xDDEFF1F5),
+      backerColor: Theme.of(context).brightness == Brightness.dark
+          ? null
+          : const Color(0xFFEFF1F5),
+      platformViewFallbackColor: Theme.of(context).brightness == Brightness.dark
+          ? null
+          : const Color(0xFFEFF1F5),
       thickness: 30,
       blur: 2,
+      shadowElevation: 2.0,
       chromaticAberration: .01,
       lightAngle: GlassDefaults.lightAngle,
       lightIntensity: .5,
@@ -605,11 +629,11 @@ class _FilterBar extends StatelessWidget {
                 horizontalPadding: 20,
                 verticalPadding: 10,
                 spacing: 8,
-                selectedIconColor: Colors.white,
-                unselectedIconColor: Colors.white60,
-                selectedLabelColor: Colors.white,
-                unselectedLabelColor: Colors.white60,
-                indicatorColor: Colors.white.withValues(alpha: 0.20),
+                selectedIconColor: textColor,
+                unselectedIconColor: tertiaryTextColor,
+                selectedLabelColor: textColor,
+                unselectedLabelColor: tertiaryTextColor,
+                indicatorColor: textColor.withValues(alpha: 0.14),
                 labelFontSize: 10,
                 iconSize: 22,
                 iconLabelSpacing: 1,
@@ -621,9 +645,9 @@ class _FilterBar extends StatelessWidget {
                   hintText: 'Search library',
                   showsCancelButton: true,
                   autoFocusOnExpand: false,
-                  searchIconColor: Colors.white70,
-                  textColor: Colors.white,
-                  hintStyle: const TextStyle(color: Colors.white54),
+                  searchIconColor: secondaryTextColor,
+                  textColor: textColor,
+                  hintStyle: TextStyle(color: tertiaryTextColor),
                   onChanged: onSearchChanged,
                   onSearchToggle: onSearchActiveChanged,
                 ),
@@ -662,44 +686,15 @@ class _PageSwitchTransition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(selectedIndex),
+      tween: Tween(begin: 0.97, end: 1),
       duration: const Duration(milliseconds: 240),
-      reverseDuration: const Duration(milliseconds: 90),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeOutCubic,
-      layoutBuilder: (currentChild, previousChildren) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [...previousChildren, ?currentChild],
-        );
-      },
-      transitionBuilder: (child, animation) {
-        final isIncoming =
-            child.key ==
-            ValueKey(selectedIndex == 0 ? 'library-page' : 'settings-page');
-        if (!isIncoming) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: const Interval(0, 0.24, curve: Curves.easeOutCubic),
-            ),
-            child: child,
-          );
-        }
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: const Interval(0.18, 0.62, curve: Curves.easeOutCubic),
-          ),
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.97, end: 1).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-            ),
-            child: child,
-          ),
-        );
-      },
+      curve: Curves.easeOutCubic,
       child: child,
+      builder: (context, scale, child) {
+        return Transform.scale(scale: scale, child: child);
+      },
     );
   }
 }
@@ -711,43 +706,46 @@ class _EmptyLibrary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
+    final tertiaryTextColor = AniGlassTheme.tertiaryTextColor(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.video_library_outlined,
-            color: Colors.white54,
+            color: tertiaryTextColor,
             size: 58,
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'No media imported',
             style: TextStyle(
-              color: Colors.white,
+              color: textColor,
               fontSize: 22,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Add local videos to build the library.',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: secondaryTextColor),
           ),
           const SizedBox(height: 18),
           GlassButton.custom(
             quality: GlassQuality.premium,
-            settings: AniGlassTheme.chrome,
+            settings: AniGlassTheme.chromeFor(context),
             shape: const LiquidRoundedSuperellipse(borderRadius: 16),
             onTap: onImport,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add_rounded, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('Import videos', style: TextStyle(color: Colors.white)),
+                  Icon(Icons.add_rounded, color: textColor),
+                  const SizedBox(width: 8),
+                  Text('Import videos', style: TextStyle(color: textColor)),
                 ],
               ),
             ),

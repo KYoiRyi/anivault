@@ -15,6 +15,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final light = Theme.of(context).brightness == Brightness.light;
+    final textColor = AniGlassTheme.textColor(context);
     return GlassScaffold(
       background: AniGlassTheme.background(
         light: light,
@@ -23,12 +24,12 @@ class SettingsScreen extends StatelessWidget {
       statusBarStyle: light
           ? GlassStatusBarStyle.dark
           : GlassStatusBarStyle.light,
-      settings: AniGlassTheme.chrome,
+      settings: AniGlassTheme.chromeFor(context),
       appBar: GlassAppBar(
-        title: const Text('Settings', style: TextStyle(color: Colors.white)),
+        title: Text('Settings', style: TextStyle(color: textColor)),
         leading: GlassButton(
           quality: GlassQuality.premium,
-          settings: AniGlassTheme.chrome,
+          settings: AniGlassTheme.chromeFor(context),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onTap: () => Navigator.pop(context),
         ),
@@ -98,6 +99,7 @@ class _SettingsContentState extends State<SettingsContent> {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
     return ListView(
       padding: EdgeInsets.fromLTRB(20, widget.topPadding, 20, 36),
       children: [
@@ -110,30 +112,41 @@ class _SettingsContentState extends State<SettingsContent> {
               GlassTextField(
                 quality: GlassQuality.premium,
                 useOwnLayer: true,
+                settings: AniGlassTheme.chromeFor(context),
                 controller: _clientCtrl,
                 placeholder: 'Client name',
-                textStyle: const TextStyle(color: Colors.white),
+                textStyle: TextStyle(color: textColor),
+                placeholderStyle: TextStyle(
+                  color: AniGlassTheme.tertiaryTextColor(context),
+                ),
               ),
               const SizedBox(height: 12),
               GlassTextField(
                 quality: GlassQuality.premium,
                 useOwnLayer: true,
+                settings: AniGlassTheme.chromeFor(context),
                 controller: _versionCtrl,
                 placeholder: 'Client version',
                 keyboardType: TextInputType.number,
-                textStyle: const TextStyle(color: Colors.white),
+                textStyle: TextStyle(color: textColor),
+                placeholderStyle: TextStyle(
+                  color: AniGlassTheme.tertiaryTextColor(context),
+                ),
               ),
               const SizedBox(height: 14),
               Align(
                 alignment: Alignment.centerRight,
                 child: GlassButton.custom(
                   quality: GlassQuality.premium,
-                  settings: AniGlassTheme.chrome,
+                  settings: AniGlassTheme.chromeFor(context),
                   shape: const LiquidRoundedSuperellipse(borderRadius: 14),
                   onTap: _saveAniDb,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    child: Text('Save', style: TextStyle(color: Colors.white)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Text('Save', style: TextStyle(color: textColor)),
                   ),
                 ),
               ),
@@ -233,8 +246,8 @@ class _SettingLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
-        color: Colors.white70,
+      style: TextStyle(
+        color: AniGlassTheme.secondaryTextColor(context),
         fontSize: 12,
         fontWeight: FontWeight.w700,
       ),
@@ -255,14 +268,13 @@ class _ThemeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
     return GlassChip(
       quality: GlassQuality.premium,
+      settings: AniGlassTheme.chromeFor(context),
       label: label,
       selected: selected,
-      labelStyle: const TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.w700,
-      ),
+      labelStyle: TextStyle(color: textColor, fontWeight: FontWeight.w700),
       onTap: onTap,
     );
   }
@@ -294,19 +306,18 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return Row(
       children: [
         SizedBox(
           width: 82,
-          child: Text(label, style: const TextStyle(color: Colors.white70)),
+          child: Text(label, style: TextStyle(color: secondaryTextColor)),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -386,18 +397,21 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
         listenable: LoggerService(),
         builder: (context, _) {
           final visible = _filter(LoggerService().logs);
+          final textColor = AniGlassTheme.textColor(context);
+          final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               GlassSearchBar(
                 quality: GlassQuality.premium,
                 useOwnLayer: true,
+                settings: AniGlassTheme.chromeFor(context),
                 controller: _searchCtrl,
                 placeholder: 'Filter logs',
                 onChanged: (_) => setState(() {}),
-                textStyle: const TextStyle(color: Colors.white),
-                searchIconColor: Colors.white70,
-                clearIconColor: Colors.white70,
+                textStyle: TextStyle(color: textColor),
+                searchIconColor: secondaryTextColor,
+                clearIconColor: secondaryTextColor,
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -406,10 +420,11 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                 children: ['All', 'MPV', 'FFI', 'Shader', 'Error'].map((tag) {
                   return GlassChip(
                     quality: GlassQuality.premium,
+                    settings: AniGlassTheme.chromeFor(context),
                     label: tag,
                     selected: _tag == tag,
-                    labelStyle: const TextStyle(
-                      color: Colors.white,
+                    labelStyle: TextStyle(
+                      color: textColor,
                       fontWeight: FontWeight.w600,
                     ),
                     onTap: () => setState(() => _tag = tag),
@@ -421,17 +436,19 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                 children: [
                   Text(
                     '${visible.length} visible / ${LoggerService().logs.length} total',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: TextStyle(color: secondaryTextColor, fontSize: 12),
                   ),
                   const Spacer(),
                   GlassButton(
                     quality: GlassQuality.premium,
+                    settings: AniGlassTheme.chromeFor(context),
                     icon: const Icon(Icons.copy_rounded, size: 18),
                     onTap: () => _copyVisible(visible),
                   ),
                   const SizedBox(width: 8),
                   GlassButton(
                     quality: GlassQuality.premium,
+                    settings: AniGlassTheme.chromeFor(context),
                     icon: const Icon(Icons.delete_outline_rounded, size: 18),
                     onTap: _confirmClear,
                   ),
@@ -441,10 +458,10 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
               SizedBox(
                 height: 360,
                 child: visible.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'No matching logs',
-                          style: TextStyle(color: Colors.white70),
+                          style: TextStyle(color: secondaryTextColor),
                         ),
                       )
                     : ListView.separated(
@@ -539,10 +556,12 @@ class _SettingsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
       quality: GlassQuality.premium,
       useOwnLayer: true,
-      settings: AniGlassTheme.hero,
+      settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(18),
       shape: const LiquidRoundedSuperellipse(borderRadius: 26),
       child: Column(
@@ -550,7 +569,7 @@ class _SettingsPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.white, size: 22),
+              Icon(icon, color: textColor, size: 22),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -558,8 +577,8 @@ class _SettingsPanel extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: textColor,
                         fontWeight: FontWeight.w800,
                         fontSize: 17,
                       ),
@@ -567,10 +586,7 @@ class _SettingsPanel extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: secondaryTextColor, fontSize: 12),
                     ),
                   ],
                 ),

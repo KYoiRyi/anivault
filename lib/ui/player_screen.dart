@@ -333,7 +333,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       halfSize: 0.58,
       fullSize: 0.92,
       quality: GlassQuality.premium,
-      settings: AniGlassTheme.playerPanel,
+      settings: AniGlassTheme.playerPanelFor(context),
       barrierColor: Colors.black45,
       expandedColor: const Color(0xF20B0F17),
       fillTransition: GlassFillTransition.gradual,
@@ -363,7 +363,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                     ),
                     GlassButton(
                       quality: GlassQuality.premium,
-                      settings: AniGlassTheme.playerControl,
+                      settings: AniGlassTheme.playerControlFor(context),
                       icon: const Icon(Icons.close_rounded),
                       onTap: () => Navigator.pop(context),
                     ),
@@ -414,7 +414,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 borderRadius: 100,
                                 selectedTextStyle: _selectedPillTextStyle,
                                 unselectedTextStyle: _pillTextStyle,
-                                indicatorSettings: AniGlassTheme.playerControl,
+                                indicatorSettings:
+                                    AniGlassTheme.playerControlFor(context),
                                 interactionBehavior:
                                     GlassInteractionBehavior.full,
                                 glowColor: const Color(0xFF8FEAFF),
@@ -455,7 +456,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                                             _selectedPillTextStyle,
                                         unselectedTextStyle: _pillTextStyle,
                                         indicatorSettings:
-                                            AniGlassTheme.playerControl,
+                                            AniGlassTheme.playerControlFor(
+                                              context,
+                                            ),
                                         interactionBehavior:
                                             GlassInteractionBehavior.full,
                                         glowColor: const Color(0xFFFF9AF2),
@@ -557,7 +560,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                         borderRadius: 100,
                         selectedTextStyle: _selectedPillTextStyle,
                         unselectedTextStyle: _pillTextStyle,
-                        indicatorSettings: AniGlassTheme.playerControl,
+                        indicatorSettings: AniGlassTheme.playerControlFor(
+                          context,
+                        ),
                         segments: const [
                           GlassSegment(label: 'Default'),
                           GlassSegment(label: 'Courier'),
@@ -587,7 +592,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                         alignment: Alignment.centerRight,
                         child: GlassButton.custom(
                           quality: GlassQuality.premium,
-                          settings: AniGlassTheme.playerControl,
+                          settings: AniGlassTheme.playerControlFor(context),
                           shape: const LiquidRoundedSuperellipse(
                             borderRadius: 100,
                           ),
@@ -674,6 +679,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       clipBehavior: Clip.none,
                       children: [
                         GlassCard(
+                          settings: RecommendedGlassSettings.playerPanel,
                           padding: EdgeInsets.zero,
                           shape: const LiquidRoundedSuperellipse(
                             borderRadius: 42,
@@ -710,6 +716,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                             ),
                                           ),
                                           GlassButton.custom(
+                                            settings: RecommendedGlassSettings
+                                                .playerHighlight,
                                             width: 40,
                                             height: 40,
                                             glowColor: const Color(0xFF8FEAFF),
@@ -1056,6 +1064,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                                             Align(
                                               alignment: Alignment.centerRight,
                                               child: GlassButton.custom(
+                                                settings:
+                                                    RecommendedGlassSettings
+                                                        .playerHighlight,
                                                 height: 42,
                                                 glowColor: Colors.white,
                                                 glowOpacity: 0.45,
@@ -1167,6 +1178,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           Row(
             children: [
               GlassButton.custom(
+                settings: RecommendedGlassSettings.playerHighlight,
                 width: 42,
                 height: 42,
                 shape: const LiquidOval(),
@@ -1552,6 +1564,7 @@ class RecommendedGlassSettings {
   static const playerPanel = LiquidGlassSettings(
     blur: 10, // Lighter frosted Gaussian blur
     thickness: 12, // Subtle and elegant boundary highlight rim
+    shadowElevation: 2.0,
     glassColor: Color(
       0x0DFFFFFF,
     ), // Transparent frosted white tint (5% opacity)
@@ -1568,6 +1581,7 @@ class RecommendedGlassSettings {
   static const playerSection = LiquidGlassSettings(
     blur: 0, // Inherits root layer's blur
     thickness: 14, // Delicate section highlight rim
+    shadowElevation: 2.0,
     glassColor: Colors.transparent,
     lightAngle: 0.7 * math.pi,
     lightIntensity: 1.5,
@@ -1582,6 +1596,7 @@ class RecommendedGlassSettings {
   static const playerHighlight = LiquidGlassSettings(
     blur: 0,
     thickness: 8, // Refined thin highlight rim for small slider thumbs
+    shadowElevation: 2.0,
     glassColor: Colors.transparent,
     lightAngle: 0.7 * math.pi,
     lightIntensity: 1.5,
@@ -1596,6 +1611,7 @@ class RecommendedGlassSettings {
   static const standard = LiquidGlassSettings(
     blur: 4,
     thickness: 10,
+    shadowElevation: 2.0,
     glassColor: Color.fromRGBO(255, 255, 255, 0.08),
     lightAngle: 0.75 * math.pi,
     lightIntensity: 0.7,
@@ -1609,6 +1625,7 @@ class RecommendedGlassSettings {
   static const interactive = LiquidGlassSettings(
     blur: 10,
     thickness: 10,
+    shadowElevation: 2.0,
     glassColor: Color.fromRGBO(255, 255, 255, 0.2),
     lightAngle: 0.75 * math.pi,
     lightIntensity: 0.7,
@@ -1621,6 +1638,7 @@ class RecommendedGlassSettings {
   static const surface = LiquidGlassSettings(
     blur: 20, // Deep heavy frost
     thickness: 15, // Volumetric edge rim
+    shadowElevation: 2.0,
     glassColor: Color.fromRGBO(
       255,
       255,
