@@ -61,6 +61,16 @@ jobs:
           cargo build --target aarch64-apple-ios --release
           cd ../..
 
+      - name: Build anivault_anitomy for iOS (Compile from source)
+        run: |
+          cmake -S native/anivault_anitomy -B native/anivault_anitomy/build_ios \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build native/anivault_anitomy/build_ios --config Release
+
+
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
@@ -85,12 +95,13 @@ jobs:
           restore-mtime-targets: |
             ios/**/*
             native/anivault_core/**/*
+            native/anivault_anitomy/**/*
           
       - name: Build iOS Application (No Sign)
         run: |
           flutter build ios --release --no-codesign > flutter_build.log 2>&1 || true
           cd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" OTHER_LDFLAGS="-force_load $(pwd)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -framework CoreML" > ../xcodebuild.log 2>&1 || true
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" OTHER_LDFLAGS="-force_load $(pwd)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -force_load $(pwd)/../native/anivault_anitomy/build_ios/libanivault_anitomy.a -framework CoreML" > ../xcodebuild.log 2>&1 || true
           cd ..
           if [ ! -d "build/ios/iphoneos/Runner.app" ]; then
             echo "Build failed!"

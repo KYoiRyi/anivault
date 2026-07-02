@@ -1,9 +1,15 @@
 cmake_minimum_required(VERSION 3.14)
 project(anivault_anitomy LANGUAGES CXX)
 
-add_library(anivault_anitomy SHARED
-  anivault_anitomy.cpp
-)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  add_library(anivault_anitomy STATIC
+    anivault_anitomy.cpp
+  )
+else()
+  add_library(anivault_anitomy SHARED
+    anivault_anitomy.cpp
+  )
+endif()
 
 target_include_directories(anivault_anitomy PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/anitomy/include"
