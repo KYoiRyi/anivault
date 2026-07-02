@@ -161,7 +161,7 @@ inline std::vector<Element> parse_episode(std::span<Token> tokens) noexcept {
           if (is_free_token(fraction) && fraction.value == "5") {
             add_element_from_token(
                 ElementKind::Episode, number,
-                std::format("{}{}{}", number.value, delimiter.value, fraction.value));
+                number.value + delimiter.value + fraction.value);
             delimiter.element_kind = ElementKind::Episode;
             fraction.element_kind = ElementKind::Episode;
             return elements;
