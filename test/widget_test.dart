@@ -13,7 +13,7 @@ void main() {
 
     // Switch to Library tab
     await tester.tap(find.text('Library').first);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('No media imported'), findsOneWidget);
   });
