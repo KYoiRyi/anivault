@@ -79,6 +79,7 @@ class AnimeSeries {
   final int? duration;
   final List<String> genres;
   final bool isUnknown;
+  final bool isResolving;
   final List<AnimeEpisodeGroup> episodes;
 
   const AnimeSeries({
@@ -98,11 +99,35 @@ class AnimeSeries {
     this.duration,
     this.genres = const [],
     required this.isUnknown,
+    this.isResolving = false,
     required this.episodes,
   });
 
   int get fileCount =>
       episodes.fold(0, (sum, episode) => sum + episode.files.length);
+
+  AnimeSeries copyWith({bool? isResolving}) {
+    return AnimeSeries(
+      id: id,
+      anidbId: anidbId,
+      anilistId: anilistId,
+      title: title,
+      sortTitle: sortTitle,
+      coverUrl: coverUrl,
+      description: description,
+      averageScore: averageScore,
+      meanScore: meanScore,
+      format: format,
+      status: status,
+      season: season,
+      startYear: startYear,
+      duration: duration,
+      genres: genres,
+      isUnknown: isUnknown,
+      isResolving: isResolving ?? this.isResolving,
+      episodes: episodes,
+    );
+  }
 }
 
 class AniListSearchResult {
@@ -221,6 +246,7 @@ class AnimeLibraryService extends ChangeNotifier {
   final Map<int, AniListSearchResult> _detailsCache = {};
   final Map<String, int> _selectionCache = {};
   final Map<String, String> _unresolvedCache = {};
+  final Set<String> _resolvingKeys = {};
   DateTime? _lastGraphQlRequest;
 
   bool _isReady = false;
@@ -259,6 +285,8 @@ class AnimeLibraryService extends ChangeNotifier {
       for (final parsed in parsedFiles) {
         titleBuckets.putIfAbsent(parsed.normalizedTitle, () => []).add(parsed);
       }
+      _series = _buildUnknownSeries(titleBuckets);
+      notifyListeners();
 
       final knownBuckets = <int, List<ParsedAnimeFile>>{};
       final unmatchedBuckets = <String, List<ParsedAnimeFile>>{};
@@ -305,6 +333,7 @@ class AnimeLibraryService extends ChangeNotifier {
             duration: details?.duration,
             genres: details?.genres ?? const [],
             isUnknown: false,
+            isResolving: false,
             episodes: _groupEpisodes(files),
           ),
         );
@@ -331,6 +360,7 @@ class AnimeLibraryService extends ChangeNotifier {
             duration: null,
             genres: const [],
             isUnknown: true,
+            isResolving: _resolvingKeys.contains(entry.key),
             episodes: _groupEpisodes(files),
           ),
         );
@@ -388,32 +418,44 @@ class AnimeLibraryService extends ChangeNotifier {
       for (final entry in entries) {
         final normalizedTitle = entry.key;
         final path = entry.value;
+        _setResolving(normalizedTitle, true);
         if (!availablePaths.contains(path) || !File(path).existsSync()) {
           _unresolvedCache.remove(normalizedTitle);
+          _setResolving(normalizedTitle, false);
           changed = true;
           continue;
         }
 
         final parsed = _filenameParser.parse(path);
         final inferredTitle = await AiAgentService().inferAnimeTitle(parsed);
-        if (inferredTitle == null) continue;
+        if (inferredTitle == null) {
+          _setResolving(normalizedTitle, false);
+          continue;
+        }
         final inferredNormalizedTitle = _normalizeTitle(inferredTitle);
         final candidates = await _searchAnime(
           inferredTitle,
           inferredNormalizedTitle,
         );
-        if (candidates.isEmpty) continue;
+        if (candidates.isEmpty) {
+          _setResolving(normalizedTitle, false);
+          continue;
+        }
 
         final confident =
             candidates.first.score >= 0.82 ||
             (candidates.length == 1 && candidates.first.score >= 0.55);
-        if (!confident) continue;
+        if (!confident) {
+          _setResolving(normalizedTitle, false);
+          continue;
+        }
 
         final selected = candidates.first;
         _detailsCache[selected.id] = selected;
         _selectionCache[normalizedTitle] = selected.id;
         _selectionCache[inferredNormalizedTitle] = selected.id;
         _unresolvedCache.remove(normalizedTitle);
+        _setResolving(normalizedTitle, false);
         changed = true;
         LoggerService().log(
           '[AI Agent] "${parsed.title}" resolved as "${selected.displayTitle}"',
@@ -429,7 +471,13 @@ class AnimeLibraryService extends ChangeNotifier {
     } catch (e) {
       LoggerService().log('[AI Agent] Background unresolved retry failed: $e');
     } finally {
+      _resolvingKeys.clear();
+      _series = [
+        for (final series in _series)
+          series.isResolving ? series.copyWith(isResolving: false) : series,
+      ];
       _isResolvingUnresolved = false;
+      notifyListeners();
     }
   }
 
@@ -460,6 +508,54 @@ class AnimeLibraryService extends ChangeNotifier {
     return confident
         ? candidates.first
         : await resolver?.call(parsedTitle, candidates.take(6).toList());
+  }
+
+  List<AnimeSeries> _buildUnknownSeries(
+    Map<String, List<ParsedAnimeFile>> titleBuckets,
+  ) {
+    final nextSeries = <AnimeSeries>[];
+    for (final entry in titleBuckets.entries) {
+      final files = entry.value;
+      final title = files.first.title;
+      nextSeries.add(
+        AnimeSeries(
+          id: 'scraped:${entry.key}',
+          anidbId: null,
+          anilistId: null,
+          title: title,
+          sortTitle: 'zzzz_${_normalizeTitle(title)}',
+          coverUrl: null,
+          description: null,
+          averageScore: null,
+          meanScore: null,
+          format: null,
+          status: null,
+          season: null,
+          startYear: null,
+          duration: null,
+          genres: const [],
+          isUnknown: true,
+          isResolving: _resolvingKeys.contains(entry.key),
+          episodes: _groupEpisodes(files),
+        ),
+      );
+    }
+    nextSeries.sort((a, b) => a.sortTitle.compareTo(b.sortTitle));
+    return nextSeries;
+  }
+
+  void _setResolving(String normalizedTitle, bool isResolving) {
+    if (isResolving) {
+      _resolvingKeys.add(normalizedTitle);
+    } else {
+      _resolvingKeys.remove(normalizedTitle);
+    }
+    final id = 'scraped:$normalizedTitle';
+    _series = [
+      for (final series in _series)
+        series.id == id ? series.copyWith(isResolving: isResolving) : series,
+    ];
+    notifyListeners();
   }
 
   Future<List<AniListSearchResult>> _searchAnime(

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:langchain_core/chat_models.dart';
 import 'package:langchain_core/prompts.dart';
+import 'package:langchain_core/tools.dart';
 import 'package:langchain_openai/langchain_openai.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -180,13 +181,63 @@ class AiAgentService extends ChangeNotifier {
     if (!_config.isReady) return null;
 
     try {
+      var title = await _inferAnimeTitleWithTool(file);
+      title ??= await _inferAnimeTitlePlain(file);
+      if (title == null) return null;
+      LoggerService().log('[AI Agent] "$title" inferred from ${file.fileName}');
+      return title;
+    } catch (e) {
+      LoggerService().log('[AI Agent] Title inference failed: $e');
+      return null;
+    }
+  }
+
+  Future<String?> _inferAnimeTitleWithTool(ParsedAnimeFile file) async {
+    try {
       final model = ChatOpenAI(
         apiKey: _config.apiKey.trim(),
         baseUrl: _normalizeBaseUrl(_config.baseUrl),
         defaultOptions: ChatOpenAIOptions(
           model: _config.model.trim(),
           temperature: 0,
-          maxTokens: 1200,
+          maxTokens: 1600,
+          tools: const [_libraryGroupTool],
+          toolChoice: ChatToolChoice.forced(name: _libraryGroupToolName),
+        ),
+      );
+      final result = await model
+          .invoke(
+            PromptValue.chat([
+              ChatMessage.system(_toolSystemPrompt),
+              ChatMessage.humanText(_userPrompt(file)),
+            ]),
+          )
+          .timeout(const Duration(seconds: 10));
+      for (final toolCall in result.output.toolCalls) {
+        if (toolCall.name != _libraryGroupToolName) continue;
+        final title = _cleanTitle(
+          (toolCall.arguments['canonical_title'] as String?) ??
+              _canonicalTitleFromRaw(toolCall.argumentsRaw) ??
+              '',
+        );
+        if (title != null) return title;
+      }
+      return _cleanTitle(result.output.contentAsString);
+    } catch (e) {
+      LoggerService().log('[AI Agent] Tool title inference failed: $e');
+      return null;
+    }
+  }
+
+  Future<String?> _inferAnimeTitlePlain(ParsedAnimeFile file) async {
+    try {
+      final model = ChatOpenAI(
+        apiKey: _config.apiKey.trim(),
+        baseUrl: _normalizeBaseUrl(_config.baseUrl),
+        defaultOptions: ChatOpenAIOptions(
+          model: _config.model.trim(),
+          temperature: 0,
+          maxTokens: 1600,
         ),
       );
       final result = await model
@@ -197,15 +248,49 @@ class AiAgentService extends ChangeNotifier {
             ]),
           )
           .timeout(const Duration(seconds: 10));
-      final title = _cleanTitle(result.output.contentAsString);
-      if (title == null) return null;
-      LoggerService().log('[AI Agent] "$title" inferred from ${file.fileName}');
-      return title;
+      return _cleanTitle(result.output.contentAsString);
     } catch (e) {
-      LoggerService().log('[AI Agent] Title inference failed: $e');
+      LoggerService().log('[AI Agent] Plain title inference failed: $e');
       return null;
     }
   }
+
+  static const _libraryGroupToolName = 'set_library_group_title';
+
+  static const _libraryGroupTool = ToolSpec(
+    name: _libraryGroupToolName,
+    description:
+        'Set the canonical anime title that should be used to search AniList '
+        'and merge files into one library group.',
+    inputJsonSchema: {
+      'type': 'object',
+      'properties': {
+        'canonical_title': {
+          'type': 'string',
+          'description':
+              'The complete official anime series or movie title only.',
+        },
+        'confidence': {
+          'type': 'number',
+          'description': 'Confidence from 0 to 1.',
+        },
+        'reason': {
+          'type': 'string',
+          'description': 'Short private note for debugging.',
+        },
+      },
+      'required': ['canonical_title'],
+      'additionalProperties': false,
+    },
+  );
+
+  static const _toolSystemPrompt =
+      'You repair anime library grouping. Use the set_library_group_title tool '
+      'with the complete official anime title only. Exclude release group, '
+      'episode, version, resolution, source, audio, subtitle, and codec text. '
+      'When a suffix looks like an insert song, MV, PV, trailer, or edition, '
+      'return the parent anime title unless it is the official standalone '
+      'AniList title.';
 
   static const _systemPrompt =
       'You identify anime titles from release filenames. '
@@ -259,6 +344,17 @@ class AiAgentService extends ChangeNotifier {
     }
     if (cleaned.isEmpty || cleaned.length > 120) return null;
     return cleaned;
+  }
+
+  String? _canonicalTitleFromRaw(String value) {
+    if (value.trim().isEmpty) return null;
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is Map) return decoded['canonical_title'] as String?;
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 
   String _preferredModel(List<String> models) {

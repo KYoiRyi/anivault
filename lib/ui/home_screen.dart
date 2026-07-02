@@ -50,7 +50,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onLibraryChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {
+      _animeSeries = AnimeLibraryService().series;
+      _selectedSeriesIds.removeWhere(
+        (id) => !_animeSeries.any((series) => series.id == id),
+      );
+    });
   }
 
   void _onHistoryChanged() {
@@ -435,13 +441,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           )
         else if (_isScraping && _animeSeries.isEmpty)
-          const SliverFillRemaining(
-            hasScrollBody: false,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 110),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          )
+          const SliverToBoxAdapter(child: SizedBox.shrink())
         else if (visible.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
@@ -1094,7 +1094,9 @@ class _AnimeSeriesCardSurface extends StatelessWidget {
               Positioned(
                 top: 10,
                 right: 10,
-                child: _UnknownBadge(label: 'Unknown'),
+                child: _UnknownBadge(
+                  label: series.isResolving ? 'Resolving' : 'Unknown',
+                ),
               ),
             if (selectionMode)
               Positioned(

@@ -178,11 +178,21 @@ if (-not (Test-Path -LiteralPath $buildDir)) {
 }
 
 Write-Step 'Copy Windows release artifact'
+$updateArtifactInPlace = $false
 if (Test-Path -LiteralPath $artifactDir) {
-    Remove-Item -LiteralPath $artifactDir -Recurse -Force
+    try {
+        Remove-Item -LiteralPath $artifactDir -Recurse -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Could not replace artifact directory; updating files in place: $($_.Exception.Message)"
+        $updateArtifactInPlace = $true
+    }
 }
 
-New-Item -ItemType Directory -Path $artifactDir | Out-Null
+if ($updateArtifactInPlace) {
+    New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+} else {
+    New-Item -ItemType Directory -Path $artifactDir | Out-Null
+}
 Get-ChildItem -LiteralPath $buildDir -Force | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $artifactDir -Recurse -Force
 }
