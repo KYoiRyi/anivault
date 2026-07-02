@@ -218,14 +218,20 @@ class _HomeScreenState extends State<HomeScreen> {
           IndexedStack(
             index: _sectionIndex,
             children: [
-              _buildLibraryView(
-                busy: busy,
-                visible: visible,
-                topPadding: topPadding,
+              _NavScaleTransition(
+                pulseKey: _sectionIndex == 0 ? 0 : -1,
+                child: _buildLibraryView(
+                  busy: busy,
+                  visible: visible,
+                  topPadding: topPadding,
+                ),
               ),
-              SettingsContent(
-                topPadding: topPadding + 96,
-                onLibraryRefresh: _refreshAnimeLibrary,
+              _NavScaleTransition(
+                pulseKey: _sectionIndex == 1 ? 1 : -1,
+                child: SettingsContent(
+                  topPadding: topPadding + 96,
+                  onLibraryRefresh: _refreshAnimeLibrary,
+                ),
               ),
             ],
           ),
@@ -485,51 +491,54 @@ class _DemoTopGlassTabBar extends StatelessWidget {
 
           return Align(
             alignment: Alignment.topCenter,
-            child: SizedBox(
-              width: barWidth,
-              // ignore: experimental_member_use
-              child: GlassAdaptiveScope(
-                minQuality: GlassQuality.premium,
-                child: GlassTabBar.bottom(
-                  selectedIndex: selectedIndex,
-                  onTabSelected: onChanged,
-                  selectedIconColor: Colors.white,
-                  unselectedIconColor: Colors.white60,
-                  selectedLabelColor: Colors.white,
-                  unselectedLabelColor: Colors.white60,
-                  indicatorColor: Colors.white.withValues(alpha: 0.20),
-                  iconSize: 28,
-                  iconLabelSpacing: 0,
-                  quality: GlassQuality.premium,
-                  interactionBehavior: GlassInteractionBehavior.full,
-                  settings: barGlassSettings,
-                  tabWidth: effectiveTabWidth,
-                  barHeight: 42,
-                  horizontalPadding: horizontalPadding,
-                  verticalPadding: 8,
-                  spacing: 4,
-                  labelFontSize: 18,
-                  textStyle: const TextStyle(
-                    fontFamily: 'SF Pro Display',
-                    fontFamilyFallback: [
-                      '.AppleSystemUIFont',
-                      '-apple-system',
-                      'Segoe UI',
-                    ],
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+            child: _NavScaleTransition(
+              pulseKey: selectedIndex,
+              child: SizedBox(
+                width: barWidth,
+                // ignore: experimental_member_use
+                child: GlassAdaptiveScope(
+                  minQuality: GlassQuality.premium,
+                  child: GlassTabBar.bottom(
+                    selectedIndex: selectedIndex,
+                    onTabSelected: onChanged,
+                    selectedIconColor: Colors.white,
+                    unselectedIconColor: Colors.white60,
+                    selectedLabelColor: Colors.white,
+                    unselectedLabelColor: Colors.white60,
+                    indicatorColor: Colors.white.withValues(alpha: 0.20),
+                    iconSize: 28,
+                    iconLabelSpacing: 0,
+                    quality: GlassQuality.premium,
+                    interactionBehavior: GlassInteractionBehavior.full,
+                    settings: barGlassSettings,
+                    tabWidth: effectiveTabWidth,
+                    barHeight: 42,
+                    horizontalPadding: horizontalPadding,
+                    verticalPadding: 8,
+                    spacing: 4,
+                    labelFontSize: 18,
+                    textStyle: const TextStyle(
+                      fontFamily: 'SF Pro Display',
+                      fontFamilyFallback: [
+                        '.AppleSystemUIFont',
+                        '-apple-system',
+                        'Segoe UI',
+                      ],
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
+                    selectedLabelStyle: const TextStyle(
+                      fontFamily: 'SF Pro Display',
+                      fontFamilyFallback: [
+                        '.AppleSystemUIFont',
+                        '-apple-system',
+                        'Segoe UI',
+                      ],
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                    tabs: tabs,
                   ),
-                  selectedLabelStyle: const TextStyle(
-                    fontFamily: 'SF Pro Display',
-                    fontFamilyFallback: [
-                      '.AppleSystemUIFont',
-                      '-apple-system',
-                      'Segoe UI',
-                    ],
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
-                  tabs: tabs,
                 ),
               ),
             ),
@@ -586,63 +595,87 @@ class _FilterBar extends StatelessWidget {
         );
         return Align(
           alignment: Alignment.center,
-          child: SizedBox(
-            width: barWidth,
-            height: 80,
-            // ignore: experimental_member_use
-            child: GlassAdaptiveScope(
-              minQuality: GlassQuality.premium,
-              child: GlassTabBar.searchable(
-                selectedIndex: index,
-                isSearchActive: searchActive,
-                onTabSelected: (index) => onSelected(filters[index]),
-                tabWidth: tabWidth,
-                barHeight: 54,
-                searchBarHeight: 54,
-                horizontalPadding: 20,
-                verticalPadding: 10,
-                spacing: 8,
-                selectedIconColor: Colors.white,
-                unselectedIconColor: Colors.white60,
-                selectedLabelColor: Colors.white,
-                unselectedLabelColor: Colors.white60,
-                indicatorColor: Colors.white.withValues(alpha: 0.20),
-                labelFontSize: 10,
-                iconSize: 22,
-                iconLabelSpacing: 1,
-                quality: GlassQuality.premium,
-                interactionBehavior: GlassInteractionBehavior.full,
-                settings: barGlassSettings,
-                searchConfig: GlassSearchBarConfig(
-                  controller: searchController,
-                  hintText: 'Search library',
-                  showsCancelButton: true,
-                  autoFocusOnExpand: false,
-                  searchIconColor: Colors.white70,
-                  textColor: Colors.white,
-                  hintStyle: const TextStyle(color: Colors.white54),
-                  onChanged: onSearchChanged,
-                  onSearchToggle: onSearchActiveChanged,
+          child: _NavScaleTransition(
+            pulseKey: searchActive ? -1 : index,
+            child: SizedBox(
+              width: barWidth,
+              height: 80,
+              // ignore: experimental_member_use
+              child: GlassAdaptiveScope(
+                minQuality: GlassQuality.premium,
+                child: GlassTabBar.searchable(
+                  selectedIndex: index,
+                  isSearchActive: searchActive,
+                  onTabSelected: (index) => onSelected(filters[index]),
+                  tabWidth: tabWidth,
+                  barHeight: 54,
+                  searchBarHeight: 54,
+                  horizontalPadding: 20,
+                  verticalPadding: 10,
+                  spacing: 8,
+                  selectedIconColor: Colors.white,
+                  unselectedIconColor: Colors.white60,
+                  selectedLabelColor: Colors.white,
+                  unselectedLabelColor: Colors.white60,
+                  indicatorColor: Colors.white.withValues(alpha: 0.20),
+                  labelFontSize: 10,
+                  iconSize: 22,
+                  iconLabelSpacing: 1,
+                  quality: GlassQuality.premium,
+                  interactionBehavior: GlassInteractionBehavior.full,
+                  settings: barGlassSettings,
+                  searchConfig: GlassSearchBarConfig(
+                    controller: searchController,
+                    hintText: 'Search library',
+                    showsCancelButton: true,
+                    autoFocusOnExpand: false,
+                    searchIconColor: Colors.white70,
+                    textColor: Colors.white,
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    onChanged: onSearchChanged,
+                    onSearchToggle: onSearchActiveChanged,
+                  ),
+                  tabs: const [
+                    GlassTab(label: 'All', icon: Icon(Icons.apps_rounded)),
+                    GlassTab(
+                      label: 'Matched',
+                      icon: Icon(Icons.verified_rounded),
+                    ),
+                    GlassTab(
+                      label: 'Unknown',
+                      icon: Icon(Icons.help_outline_rounded),
+                    ),
+                    GlassTab(
+                      label: 'Multi-file',
+                      icon: Icon(Icons.video_library_rounded),
+                    ),
+                  ],
                 ),
-                tabs: const [
-                  GlassTab(label: 'All', icon: Icon(Icons.apps_rounded)),
-                  GlassTab(
-                    label: 'Matched',
-                    icon: Icon(Icons.verified_rounded),
-                  ),
-                  GlassTab(
-                    label: 'Unknown',
-                    icon: Icon(Icons.help_outline_rounded),
-                  ),
-                  GlassTab(
-                    label: 'Multi-file',
-                    icon: Icon(Icons.video_library_rounded),
-                  ),
-                ],
               ),
             ),
           ),
         );
+      },
+    );
+  }
+}
+
+class _NavScaleTransition extends StatelessWidget {
+  final int pulseKey;
+  final Widget child;
+
+  const _NavScaleTransition({required this.pulseKey, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(pulseKey),
+      tween: Tween(begin: 0.97, end: 1),
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutBack,
+      child: child,
+      builder: (context, scale, child) {
+        return Transform.scale(scale: scale, child: child);
       },
     );
   }
