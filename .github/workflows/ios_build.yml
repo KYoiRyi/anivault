@@ -10,7 +10,7 @@ on:
 jobs:
   build_ios:
     name: Build iOS IPA
-    runs-on: macos-15
+    runs-on: macos-14
     permissions:
       contents: write
       
@@ -63,16 +63,12 @@ jobs:
           cargo build --target aarch64-apple-ios --release
           cd ../..
 
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
-
       - name: Build anivault_anitomy for iOS (Compile from source)
         run: |
           cmake -S native/anivault_anitomy -B native/anivault_anitomy/build_ios \
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
             -DCMAKE_BUILD_TYPE=Release
           cmake --build native/anivault_anitomy/build_ios --config Release
 
@@ -107,7 +103,7 @@ jobs:
         run: |
           flutter build ios --release --no-codesign > flutter_build.log 2>&1 || true
           cd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" OTHER_LDFLAGS="-force_load $(pwd)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -force_load $(pwd)/../native/anivault_anitomy/build_ios/libanivault_anitomy.a -framework CoreML" > ../xcodebuild.log 2>&1 || true
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" OTHER_LDFLAGS="-force_load $(pwd)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -force_load $(pwd)/../native/anivault_anitomy/build_ios/libanivault_anitomy.a -framework CoreML" > ../xcodebuild.log 2>&1 || true
           cd ..
           if [ ! -d "build/ios/iphoneos/Runner.app" ]; then
             echo "Build failed!"
