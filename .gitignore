@@ -1,5 +1,6 @@
 build/
 .dart_tool/
+.build-cache/
 .flutter-plugins-dependencies
 native/**/target/
 native/**/*.dll

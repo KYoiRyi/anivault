@@ -5,9 +5,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:xml/xml.dart';
 
+import 'package:anivault/services/ai_agent_service.dart';
 import 'package:anivault/services/logger_service.dart';
 
 class ParsedAnimeFile {
@@ -65,18 +64,38 @@ class AnimeEpisodeGroup {
 class AnimeSeries {
   final String id;
   final int? anidbId;
+  final int? anilistId;
   final String title;
   final String sortTitle;
   final String? coverUrl;
+  final String? description;
+  final int? averageScore;
+  final int? meanScore;
+  final String? format;
+  final String? status;
+  final String? season;
+  final int? startYear;
+  final int? duration;
+  final List<String> genres;
   final bool isUnknown;
   final List<AnimeEpisodeGroup> episodes;
 
   const AnimeSeries({
     required this.id,
-    required this.anidbId,
+    this.anidbId,
+    required this.anilistId,
     required this.title,
     required this.sortTitle,
     required this.coverUrl,
+    this.description,
+    this.averageScore,
+    this.meanScore,
+    this.format,
+    this.status,
+    this.season,
+    this.startYear,
+    this.duration,
+    this.genres = const [],
     required this.isUnknown,
     required this.episodes,
   });
@@ -85,84 +104,121 @@ class AnimeSeries {
       episodes.fold(0, (sum, episode) => sum + episode.files.length);
 }
 
-class AniDbTitleEntry {
-  final int aid;
-  final String type;
-  final String language;
+class AniListSearchResult {
+  static const currentCacheVersion = 2;
+
+  final int id;
   final String title;
-  final String normalizedTitle;
+  final String? englishTitle;
+  final String? nativeTitle;
+  final String? coverUrl;
+  final String? description;
+  final int? averageScore;
+  final int? meanScore;
+  final String? format;
+  final String? status;
+  final String? season;
+  final int? duration;
+  final List<String> genres;
+  final int? startYear;
+  final int? episodes;
+  final double score;
+  final int cacheVersion;
 
-  const AniDbTitleEntry({
-    required this.aid,
-    required this.type,
-    required this.language,
+  const AniListSearchResult({
+    required this.id,
     required this.title,
-    required this.normalizedTitle,
+    this.englishTitle,
+    this.nativeTitle,
+    this.coverUrl,
+    this.description,
+    this.averageScore,
+    this.meanScore,
+    this.format,
+    this.status,
+    this.season,
+    this.duration,
+    this.genres = const [],
+    this.startYear,
+    this.episodes,
+    required this.score,
+    this.cacheVersion = currentCacheVersion,
   });
-}
 
-class AniDbAnimeDetails {
-  final int aid;
-  final Map<String, String> titlesByLanguage;
-  final String? mainTitle;
-  final String? picture;
-
-  const AniDbAnimeDetails({
-    required this.aid,
-    required this.titlesByLanguage,
-    required this.mainTitle,
-    required this.picture,
-  });
-
-  String? titleFor(String languageCode) {
-    return titlesByLanguage[languageCode] ??
-        titlesByLanguage[_languageAlias(languageCode)] ??
-        titlesByLanguage['en'] ??
-        titlesByLanguage['zh-Hans'] ??
-        mainTitle;
-  }
-
-  String? get coverUrl {
-    if (picture == null || picture!.isEmpty) return null;
-    return 'https://cdn-eu.anidb.net/images/main/$picture';
-  }
+  String get displayTitle => englishTitle?.isNotEmpty == true
+      ? englishTitle!
+      : nativeTitle?.isNotEmpty == true
+      ? nativeTitle!
+      : title;
 
   Map<String, dynamic> toJson() {
     return {
-      'aid': aid,
-      'titlesByLanguage': titlesByLanguage,
-      'mainTitle': mainTitle,
-      'picture': picture,
+      'id': id,
+      'title': title,
+      'englishTitle': englishTitle,
+      'nativeTitle': nativeTitle,
+      'coverUrl': coverUrl,
+      'description': description,
+      'averageScore': averageScore,
+      'meanScore': meanScore,
+      'format': format,
+      'status': status,
+      'season': season,
+      'duration': duration,
+      'genres': genres,
+      'startYear': startYear,
+      'episodes': episodes,
+      'score': score,
+      'cacheVersion': cacheVersion,
     };
   }
 
-  factory AniDbAnimeDetails.fromJson(Map<String, dynamic> json) {
-    final rawTitles = json['titlesByLanguage'];
-    return AniDbAnimeDetails(
-      aid: (json['aid'] as num?)?.toInt() ?? 0,
-      titlesByLanguage: rawTitles is Map
-          ? rawTitles.map((key, value) => MapEntry('$key', '$value'))
-          : const {},
-      mainTitle: json['mainTitle'] as String?,
-      picture: json['picture'] as String?,
+  factory AniListSearchResult.fromJson(Map<String, dynamic> json) {
+    return AniListSearchResult(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      title: json['title'] as String? ?? '',
+      englishTitle: json['englishTitle'] as String?,
+      nativeTitle: json['nativeTitle'] as String?,
+      coverUrl: json['coverUrl'] as String?,
+      description: json['description'] as String?,
+      averageScore: (json['averageScore'] as num?)?.toInt(),
+      meanScore: (json['meanScore'] as num?)?.toInt(),
+      format: json['format'] as String?,
+      status: json['status'] as String?,
+      season: json['season'] as String?,
+      duration: (json['duration'] as num?)?.toInt(),
+      genres:
+          (json['genres'] as List?)?.whereType<String>().toList() ?? const [],
+      startYear: (json['startYear'] as num?)?.toInt(),
+      episodes: (json['episodes'] as num?)?.toInt(),
+      score: (json['score'] as num?)?.toDouble() ?? 0,
+      cacheVersion: (json['cacheVersion'] as num?)?.toInt() ?? 0,
     );
   }
+
+  bool get hasCurrentMetadata => cacheVersion >= currentCacheVersion;
 }
+
+typedef AniListMatchResolver =
+    Future<AniListSearchResult?> Function(
+      String parsedTitle,
+      List<AniListSearchResult> candidates,
+    );
 
 class AnimeLibraryService extends ChangeNotifier {
   static final AnimeLibraryService _instance = AnimeLibraryService._internal();
   factory AnimeLibraryService() => _instance;
   AnimeLibraryService._internal();
 
-  static const _titleDumpUrl = 'https://anidb.net/api/anime-titles.xml.gz';
-  static const _titleDumpFile = 'anime-titles.xml';
-  static const _detailsCacheFile = 'anime-details-cache.json';
+  static const _graphqlUrl = 'https://graphql.anilist.co';
+  static const _detailsCacheFile = 'anilist-details-cache.json';
+  static const _selectionCacheFile = 'anilist-selection-cache.json';
   static const _userAgent = 'AniVault/1.0';
 
   final _filenameParser = AnimeFilenameParser();
-  final List<AniDbTitleEntry> _titles = [];
-  final Map<int, AniDbAnimeDetails> _detailsCache = {};
-  DateTime? _lastHttpApiRequest;
+  final Map<int, AniListSearchResult> _detailsCache = {};
+  final Map<String, int> _selectionCache = {};
+  DateTime? _lastGraphQlRequest;
 
   bool _isReady = false;
   bool _isScanning = false;
@@ -177,7 +233,7 @@ class AnimeLibraryService extends ChangeNotifier {
   Future<void> initialize() async {
     if (_isReady) return;
     await _loadDetailsCache();
-    await _loadOrRefreshTitleDump();
+    await _loadSelectionCache();
     _isReady = true;
     notifyListeners();
   }
@@ -185,6 +241,7 @@ class AnimeLibraryService extends ChangeNotifier {
   Future<void> refreshLibrary(
     List<String> paths, {
     required String languageCode,
+    AniListMatchResolver? resolveAmbiguousMatch,
   }) async {
     _isScanning = true;
     _lastError = null;
@@ -193,53 +250,81 @@ class AnimeLibraryService extends ChangeNotifier {
     try {
       await initialize();
       final parsedFiles = paths.map(_filenameParser.parse).toList();
-      final knownBuckets = <int, List<ParsedAnimeFile>>{};
-      final unknownFiles = <ParsedAnimeFile>[];
-
+      final titleBuckets = <String, List<ParsedAnimeFile>>{};
       for (final parsed in parsedFiles) {
-        final match = _matchTitle(parsed.normalizedTitle);
+        titleBuckets.putIfAbsent(parsed.normalizedTitle, () => []).add(parsed);
+      }
+
+      final knownBuckets = <int, List<ParsedAnimeFile>>{};
+      final unmatchedBuckets = <String, List<ParsedAnimeFile>>{};
+
+      for (final entry in titleBuckets.entries) {
+        final titleFiles = entry.value;
+        final parsedTitle = titleFiles.first.title;
+        final match = await _resolveTitle(
+          parsedTitle,
+          entry.key,
+          titleFiles,
+          resolveAmbiguousMatch,
+        );
         if (match == null) {
-          unknownFiles.add(parsed);
+          unmatchedBuckets.putIfAbsent(entry.key, () => []).addAll(titleFiles);
           continue;
         }
-        knownBuckets.putIfAbsent(match.aid, () => []).add(parsed);
+        knownBuckets.putIfAbsent(match.id, () => []).addAll(titleFiles);
       }
 
       final nextSeries = <AnimeSeries>[];
 
       for (final entry in knownBuckets.entries) {
-        final aid = entry.key;
+        final details = _detailsCache[entry.key];
         final files = entry.value;
-        final details = await _fetchAnimeDetails(aid);
-        final fallbackTitle = _bestTitleFromDump(aid, languageCode);
-        final title =
-            details?.titleFor(languageCode) ??
-            fallbackTitle ??
-            files.first.title;
-
+        final title = _titleFor(details, languageCode) ?? files.first.title;
         nextSeries.add(
           AnimeSeries(
-            id: 'anidb:$aid',
-            anidbId: aid,
+            id: 'anilist:${entry.key}',
+            anidbId: null,
+            anilistId: entry.key,
             title: title,
             sortTitle: _normalizeTitle(title),
             coverUrl: details?.coverUrl,
+            description: details?.description,
+            averageScore: details?.averageScore,
+            meanScore: details?.meanScore,
+            format: details?.format,
+            status: details?.status,
+            season: details?.season,
+            startYear: details?.startYear,
+            duration: details?.duration,
+            genres: details?.genres ?? const [],
             isUnknown: false,
             episodes: _groupEpisodes(files),
           ),
         );
       }
 
-      if (unknownFiles.isNotEmpty) {
+      for (final entry in unmatchedBuckets.entries) {
+        final files = entry.value;
+        final title = files.first.title;
         nextSeries.add(
           AnimeSeries(
-            id: 'unknown',
+            id: 'scraped:${entry.key}',
             anidbId: null,
-            title: 'Unknown',
-            sortTitle: 'zzzz_unknown',
+            anilistId: null,
+            title: title,
+            sortTitle: 'zzzz_${_normalizeTitle(title)}',
             coverUrl: null,
+            description: null,
+            averageScore: null,
+            meanScore: null,
+            format: null,
+            status: null,
+            season: null,
+            startYear: null,
+            duration: null,
+            genres: const [],
             isUnknown: true,
-            episodes: _groupEpisodes(unknownFiles, keepParsedTitles: true),
+            episodes: _groupEpisodes(files),
           ),
         );
       }
@@ -248,95 +333,323 @@ class AnimeLibraryService extends ChangeNotifier {
       _series = nextSeries;
     } catch (e) {
       _lastError = e.toString();
-      LoggerService().log('[Library] Scrape failed: $e');
+      LoggerService().log('[Library] AniList scrape failed: $e');
     } finally {
       _isScanning = false;
       notifyListeners();
     }
   }
 
-  Future<void> _loadOrRefreshTitleDump() async {
-    final cacheDir = await _metadataDirectory();
-    final titleFile = File(p.join(cacheDir.path, _titleDumpFile));
+  Future<AniListSearchResult?> _resolveTitle(
+    String parsedTitle,
+    String normalizedTitle,
+    List<ParsedAnimeFile> titleFiles,
+    AniListMatchResolver? resolver,
+  ) async {
+    final cachedId = _selectionCache[normalizedTitle];
+    if (cachedId != null) {
+      final cached = await _fetchAnimeById(cachedId);
+      if (cached != null) return cached;
+    }
 
-    if (await titleFile.exists()) {
-      final age = DateTime.now().difference(await titleFile.lastModified());
-      if (age < const Duration(days: 1)) {
-        await _loadTitleDump(titleFile);
-        return;
+    final candidates = await _searchAnime(parsedTitle, normalizedTitle);
+    if (candidates.isEmpty) {
+      return _resolveWithAgent(
+        parsedTitle,
+        normalizedTitle,
+        titleFiles,
+        resolver,
+      );
+    }
+
+    return _selectAndCacheCandidate(
+      parsedTitle,
+      normalizedTitle,
+      candidates,
+      resolver,
+    );
+  }
+
+  Future<AniListSearchResult?> _resolveWithAgent(
+    String parsedTitle,
+    String normalizedTitle,
+    List<ParsedAnimeFile> titleFiles,
+    AniListMatchResolver? resolver,
+  ) async {
+    final inferredTitle = await AiAgentService().inferAnimeTitle(
+      titleFiles.first,
+    );
+    if (inferredTitle == null ||
+        _normalizeTitle(inferredTitle) == normalizedTitle) {
+      return null;
+    }
+
+    final inferredNormalizedTitle = _normalizeTitle(inferredTitle);
+    final cachedId = _selectionCache[inferredNormalizedTitle];
+    if (cachedId != null) {
+      final cached = await _fetchAnimeById(cachedId);
+      if (cached != null) {
+        _selectionCache[normalizedTitle] = cached.id;
+        await _saveSelectionCache();
+        return cached;
       }
     }
 
+    final candidates = await _searchAnime(
+      inferredTitle,
+      inferredNormalizedTitle,
+    );
+    if (candidates.isEmpty) return null;
+
+    final selected = await _selectCandidate(
+      inferredTitle,
+      candidates,
+      resolver,
+    );
+    if (selected == null) return null;
+
+    _detailsCache[selected.id] = selected;
+    _selectionCache[normalizedTitle] = selected.id;
+    _selectionCache[inferredNormalizedTitle] = selected.id;
+    await _saveDetailsCache();
+    await _saveSelectionCache();
+    LoggerService().log(
+      '[AI Agent] "$parsedTitle" matched as "${selected.displayTitle}"',
+    );
+    return selected;
+  }
+
+  Future<AniListSearchResult?> _selectAndCacheCandidate(
+    String parsedTitle,
+    String normalizedTitle,
+    List<AniListSearchResult> candidates,
+    AniListMatchResolver? resolver,
+  ) async {
+    final selected = await _selectCandidate(parsedTitle, candidates, resolver);
+    if (selected == null) return null;
+
+    _detailsCache[selected.id] = selected;
+    _selectionCache[normalizedTitle] = selected.id;
+    await _saveDetailsCache();
+    await _saveSelectionCache();
+    return selected;
+  }
+
+  Future<AniListSearchResult?> _selectCandidate(
+    String parsedTitle,
+    List<AniListSearchResult> candidates,
+    AniListMatchResolver? resolver,
+  ) async {
+    final confident =
+        candidates.first.score >= 0.92 ||
+        (candidates.length == 1 && candidates.first.score >= 0.72);
+    return confident
+        ? candidates.first
+        : await resolver?.call(parsedTitle, candidates.take(6).toList());
+  }
+
+  Future<List<AniListSearchResult>> _searchAnime(
+    String title,
+    String normalizedTitle,
+  ) async {
+    if (title.trim().isEmpty) return const [];
+    final data = await _postGraphQl(
+      r'''
+query ($search: String!, $perPage: Int) {
+  Page(page: 1, perPage: $perPage) {
+    media(search: $search, type: ANIME, isAdult: false) {
+      id
+      title { romaji english native userPreferred }
+      description(asHtml: false)
+      coverImage { large extraLarge }
+      startDate { year }
+      episodes
+      duration
+      averageScore
+      meanScore
+      format
+      status
+      season
+      genres
+    }
+  }
+}
+''',
+      {'search': title, 'perPage': 8},
+    ).timeout(const Duration(seconds: 10));
+
+    final page = data['Page'];
+    final media = page is Map ? page['media'] : null;
+    if (media is! List) return const [];
+
+    final results = media
+        .whereType<Map>()
+        .map((raw) => _parseSearchResult(raw, normalizedTitle))
+        .where((result) => result.title.isNotEmpty)
+        .toList();
+    results.sort((a, b) => b.score.compareTo(a.score));
+    return results.where((result) => result.score >= 0.34).toList();
+  }
+
+  Future<AniListSearchResult?> _fetchAnimeById(int id) async {
+    final cached = _detailsCache[id];
+    if (cached != null && cached.hasCurrentMetadata) return cached;
+
+    Map<String, dynamic> data;
     try {
-      LoggerService().log('[AniDB] Updating title dump...');
-      final request = await HttpClient().getUrl(Uri.parse(_titleDumpUrl));
-      request.headers.set(HttpHeaders.userAgentHeader, _userAgent);
-      final response = await request.close();
-      if (response.statusCode != HttpStatus.ok) {
-        throw HttpException('AniDB title dump HTTP ${response.statusCode}');
-      }
-
-      final compressed = await consolidateHttpClientResponseBytes(response);
-      final xmlBytes = gzip.decode(compressed);
-      await titleFile.writeAsBytes(xmlBytes, flush: true);
-      await _loadTitleDump(titleFile);
+      data = await _postGraphQl(
+        r'''
+query ($id: Int!) {
+  Media(id: $id, type: ANIME) {
+    id
+    title { romaji english native userPreferred }
+    description(asHtml: false)
+    coverImage { large extraLarge }
+    startDate { year }
+    episodes
+    duration
+    averageScore
+    meanScore
+    format
+    status
+    season
+    genres
+  }
+}
+''',
+        {'id': id},
+      ).timeout(const Duration(seconds: 10));
     } catch (e) {
-      if (await titleFile.exists()) {
-        LoggerService().log('[AniDB] Using cached title dump after error: $e');
-        await _loadTitleDump(titleFile);
-      } else {
-        _lastError = 'AniDB title dump unavailable: $e';
-        LoggerService().log('[AniDB] Title dump unavailable: $e');
+      if (cached != null) {
+        LoggerService().log('[AniList] Using stale metadata for id=$id: $e');
+        return cached;
       }
+      rethrow;
+    }
+
+    final raw = data['Media'];
+    if (raw is! Map) return null;
+    final result = _parseSearchResult(raw, '');
+    _detailsCache[id] = result;
+    await _saveDetailsCache();
+    return result;
+  }
+
+  AniListSearchResult _parseSearchResult(Map raw, String normalizedQuery) {
+    final titleMap = raw['title'] is Map ? raw['title'] as Map : const {};
+    final coverMap = raw['coverImage'] is Map
+        ? raw['coverImage'] as Map
+        : const {};
+    final startDate = raw['startDate'] is Map
+        ? raw['startDate'] as Map
+        : const {};
+    final romaji = titleMap['romaji'] as String?;
+    final english = titleMap['english'] as String?;
+    final native = titleMap['native'] as String?;
+    final preferred = titleMap['userPreferred'] as String?;
+    final titles = [
+      preferred,
+      romaji,
+      english,
+      native,
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).toList();
+    final score = normalizedQuery.isEmpty
+        ? 1.0
+        : titles
+              .map(
+                (value) => _titleScore(normalizedQuery, _normalizeTitle(value)),
+              )
+              .fold<double>(0, (best, score) => score > best ? score : best);
+
+    return AniListSearchResult(
+      id: (raw['id'] as num?)?.toInt() ?? 0,
+      title: preferred ?? romaji ?? english ?? native ?? '',
+      englishTitle: english,
+      nativeTitle: native,
+      coverUrl:
+          coverMap['extraLarge'] as String? ?? coverMap['large'] as String?,
+      description: _cleanDescription(raw['description'] as String?),
+      averageScore: (raw['averageScore'] as num?)?.toInt(),
+      meanScore: (raw['meanScore'] as num?)?.toInt(),
+      format: raw['format'] as String?,
+      status: raw['status'] as String?,
+      season: raw['season'] as String?,
+      duration: (raw['duration'] as num?)?.toInt(),
+      genres:
+          (raw['genres'] as List?)?.whereType<String>().toList() ?? const [],
+      startYear: (startDate['year'] as num?)?.toInt(),
+      episodes: (raw['episodes'] as num?)?.toInt(),
+      score: score,
+    );
+  }
+
+  String? _cleanDescription(String? value) {
+    if (value == null) return null;
+    final cleaned = value
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+        .replaceAll(RegExp(r'<[^>]+>'), '')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+    return cleaned.isEmpty ? null : cleaned;
+  }
+
+  Future<Map<String, dynamic>> _postGraphQl(
+    String query,
+    Map<String, Object?> variables,
+  ) async {
+    final now = DateTime.now();
+    final lastRequest = _lastGraphQlRequest;
+    if (lastRequest != null) {
+      final wait =
+          const Duration(milliseconds: 650) - now.difference(lastRequest);
+      if (!wait.isNegative) await Future.delayed(wait);
+    }
+    _lastGraphQlRequest = DateTime.now();
+
+    final client = HttpClient();
+    try {
+      final request = await client.postUrl(Uri.parse(_graphqlUrl));
+      request.headers.set(HttpHeaders.userAgentHeader, _userAgent);
+      request.headers.contentType = ContentType.json;
+      request.write(jsonEncode({'query': query, 'variables': variables}));
+      final response = await request.close();
+      final body = utf8.decode(
+        await consolidateHttpClientResponseBytes(response),
+      );
+      if (response.statusCode != HttpStatus.ok) {
+        throw HttpException('AniList HTTP ${response.statusCode}: $body');
+      }
+      final decoded = jsonDecode(body);
+      if (decoded is! Map) {
+        throw const FormatException('Invalid AniList response');
+      }
+      if (decoded['errors'] != null) {
+        throw FormatException('AniList GraphQL errors: ${decoded['errors']}');
+      }
+      final data = decoded['data'];
+      if (data is! Map) {
+        throw const FormatException('AniList response has no data');
+      }
+      return Map<String, dynamic>.from(data);
+    } finally {
+      client.close(force: true);
     }
   }
 
-  Future<void> _loadTitleDump(File titleFile) async {
-    _titles.clear();
-    final document = XmlDocument.parse(await titleFile.readAsString());
-    for (final anime in document.findAllElements('anime')) {
-      final aid = int.tryParse(anime.getAttribute('aid') ?? '');
-      if (aid == null) continue;
-
-      for (final titleNode in anime.findElements('title')) {
-        final title = titleNode.innerText.trim();
-        if (title.isEmpty) continue;
-        final language =
-            titleNode.getAttribute('xml:lang') ??
-            titleNode.getAttribute('lang') ??
-            '';
-        _titles.add(
-          AniDbTitleEntry(
-            aid: aid,
-            type: titleNode.getAttribute('type') ?? '',
-            language: language,
-            title: title,
-            normalizedTitle: _normalizeTitle(title),
-          ),
-        );
-      }
+  String? _titleFor(AniListSearchResult? details, String languageCode) {
+    if (details == null) return null;
+    final wantsNative = const {'zh', 'ja', 'ko'}.contains(languageCode);
+    if (wantsNative && details.nativeTitle?.isNotEmpty == true) {
+      return details.nativeTitle;
     }
-    LoggerService().log('[AniDB] Loaded ${_titles.length} title aliases.');
-  }
-
-  AniDbTitleEntry? _matchTitle(String normalizedTitle) {
-    if (normalizedTitle.isEmpty || _titles.isEmpty) return null;
-
-    AniDbTitleEntry? best;
-    var bestScore = 0.0;
-
-    for (final title in _titles) {
-      final score = _titleScore(normalizedTitle, title.normalizedTitle);
-      if (score > bestScore) {
-        bestScore = score;
-        best = title;
-      }
-      if (score >= 1.0 && (title.type == 'main' || title.type == 'official')) {
-        return title;
-      }
-    }
-
-    return bestScore >= 0.86 ? best : null;
+    return details.englishTitle?.isNotEmpty == true
+        ? details.englishTitle
+        : details.title;
   }
 
   double _titleScore(String left, String right) {
@@ -360,29 +673,6 @@ class AnimeLibraryService extends ChangeNotifier {
     final overlap = leftTokens.intersection(rightTokens).length;
     final union = leftTokens.union(rightTokens).length;
     return overlap / union;
-  }
-
-  String? _bestTitleFromDump(int aid, String languageCode) {
-    final candidates = _titles.where((title) => title.aid == aid).toList();
-    if (candidates.isEmpty) return null;
-
-    String? pick(String language, String type) {
-      for (final title in candidates) {
-        if (title.language == language && title.type == type) {
-          return title.title;
-        }
-      }
-      return null;
-    }
-
-    final alias = _languageAlias(languageCode);
-    return pick(languageCode, 'official') ??
-        pick(alias, 'official') ??
-        pick('en', 'official') ??
-        pick(languageCode, 'main') ??
-        pick(alias, 'main') ??
-        pick('x-jat', 'main') ??
-        candidates.first.title;
   }
 
   List<AnimeEpisodeGroup> _groupEpisodes(
@@ -426,9 +716,15 @@ class AnimeLibraryService extends ChangeNotifier {
     groups.sort((a, b) {
       final aNum = a.number;
       final bNum = b.number;
-      if (aNum != null && bNum != null) return aNum.compareTo(bNum);
-      if (aNum != null) return -1;
-      if (bNum != null) return 1;
+      if (aNum != null && bNum != null) {
+        return aNum.compareTo(bNum);
+      }
+      if (aNum != null) {
+        return -1;
+      }
+      if (bNum != null) {
+        return 1;
+      }
       return a.title.compareTo(b.title);
     });
 
@@ -440,95 +736,9 @@ class AnimeLibraryService extends ChangeNotifier {
     return 'Episode ${file.episodeNumber!.toString().padLeft(2, '0')}';
   }
 
-  Future<AniDbAnimeDetails?> _fetchAnimeDetails(int aid) async {
-    final cached = _detailsCache[aid];
-    if (cached != null) return cached;
-
-    final prefs = await SharedPreferences.getInstance();
-    final client = prefs.getString('anidb_client') ?? '';
-    final clientVer = prefs.getInt('anidb_clientver') ?? 1;
-    if (client.trim().isEmpty) {
-      return null;
-    }
-
-    try {
-      final now = DateTime.now();
-      final lastRequest = _lastHttpApiRequest;
-      if (lastRequest != null) {
-        final wait =
-            const Duration(milliseconds: 2200) - now.difference(lastRequest);
-        if (!wait.isNegative) await Future.delayed(wait);
-      }
-      _lastHttpApiRequest = DateTime.now();
-
-      final uri = Uri.parse('http://api.anidb.net:9001/httpapi').replace(
-        queryParameters: {
-          'request': 'anime',
-          'client': client,
-          'clientver': '$clientVer',
-          'protover': '1',
-          'aid': '$aid',
-        },
-      );
-
-      final request = await HttpClient().getUrl(uri);
-      request.headers.set(HttpHeaders.userAgentHeader, _userAgent);
-      final response = await request.close();
-      if (response.statusCode != HttpStatus.ok) {
-        throw HttpException('AniDB details HTTP ${response.statusCode}');
-      }
-
-      final body = utf8.decode(
-        await consolidateHttpClientResponseBytes(response),
-      );
-      if (body.contains('<error>')) {
-        throw FormatException(body.replaceAll(RegExp(r'\s+'), ' ').trim());
-      }
-
-      final details = _parseAnimeDetails(aid, body);
-      _detailsCache[aid] = details;
-      await _saveDetailsCache();
-      return details;
-    } catch (e) {
-      LoggerService().log('[AniDB] Details unavailable for aid=$aid: $e');
-      return null;
-    }
-  }
-
-  AniDbAnimeDetails _parseAnimeDetails(int aid, String body) {
-    final document = XmlDocument.parse(body);
-    final anime = document.findAllElements('anime').first;
-    final titlesByLanguage = <String, String>{};
-    String? mainTitle;
-
-    for (final titleNode in anime.findAllElements('title')) {
-      final title = titleNode.innerText.trim();
-      if (title.isEmpty) continue;
-      final language =
-          titleNode.getAttribute('xml:lang') ??
-          titleNode.getAttribute('lang') ??
-          '';
-      final type = titleNode.getAttribute('type') ?? '';
-      if (type == 'official') {
-        titlesByLanguage.putIfAbsent(language, () => title);
-      }
-      if (type == 'main') {
-        mainTitle ??= title;
-      }
-    }
-
-    final picture = anime.findElements('picture').firstOrNull?.innerText.trim();
-    return AniDbAnimeDetails(
-      aid: aid,
-      titlesByLanguage: titlesByLanguage,
-      mainTitle: mainTitle,
-      picture: picture == null || picture.isEmpty ? null : picture,
-    );
-  }
-
   Future<Directory> _metadataDirectory() async {
     final supportDir = await getApplicationSupportDirectory();
-    final dir = Directory(p.join(supportDir.path, 'anidb'));
+    final dir = Directory(p.join(supportDir.path, 'anilist'));
     if (!await dir.exists()) await dir.create(recursive: true);
     return dir;
   }
@@ -544,17 +754,17 @@ class AnimeLibraryService extends ChangeNotifier {
         ..clear()
         ..addEntries(
           decoded.entries.map((entry) {
-            final aid = int.tryParse('${entry.key}') ?? 0;
+            final id = int.tryParse('${entry.key}') ?? 0;
             return MapEntry(
-              aid,
-              AniDbAnimeDetails.fromJson(
+              id,
+              AniListSearchResult.fromJson(
                 Map<String, dynamic>.from(entry.value as Map),
               ),
             );
           }),
         );
     } catch (e) {
-      LoggerService().log('[AniDB] Failed to load details cache: $e');
+      LoggerService().log('[AniList] Failed to load details cache: $e');
     }
   }
 
@@ -562,9 +772,34 @@ class AnimeLibraryService extends ChangeNotifier {
     final dir = await _metadataDirectory();
     final file = File(p.join(dir.path, _detailsCacheFile));
     final data = _detailsCache.map(
-      (aid, details) => MapEntry('$aid', details.toJson()),
+      (id, details) => MapEntry('$id', details.toJson()),
     );
     await file.writeAsString(jsonEncode(data), flush: true);
+  }
+
+  Future<void> _loadSelectionCache() async {
+    try {
+      final dir = await _metadataDirectory();
+      final file = File(p.join(dir.path, _selectionCacheFile));
+      if (!await file.exists()) return;
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is! Map) return;
+      _selectionCache
+        ..clear()
+        ..addEntries(
+          decoded.entries.map(
+            (entry) => MapEntry('${entry.key}', (entry.value as num).toInt()),
+          ),
+        );
+    } catch (e) {
+      LoggerService().log('[AniList] Failed to load selection cache: $e');
+    }
+  }
+
+  Future<void> _saveSelectionCache() async {
+    final dir = await _metadataDirectory();
+    final file = File(p.join(dir.path, _selectionCacheFile));
+    await file.writeAsString(jsonEncode(_selectionCache), flush: true);
   }
 }
 
@@ -574,7 +809,7 @@ class AnimeFilenameParser {
     caseSensitive: false,
   );
   static final _resolutionPattern = RegExp(
-    r'(480p|576p|720p|1080p|1440p|2160p|4k|8k)',
+    r'(?:\b|_)(480p|576p|720p|1080p|1440p|2160p|4k|8k|\d{3,4}[x\u00d7]\d{3,4})(?:\b|_)',
     caseSensitive: false,
   );
   static final _episodePatterns = [
@@ -586,17 +821,26 @@ class AnimeFilenameParser {
       r'(?:^|[\s._-])(?:ep|episode)[\s._-]*(\d{1,4})(?:v\d+)?\b',
       caseSensitive: false,
     ),
+    RegExp(
+      r'(?:^|[\s._-])(?:\u7b2c)?(\d{1,4})(?:v\d+)?(?:\u8bdd|\u8a71|\u96c6)(?:[\s._-]|$)',
+      caseSensitive: false,
+    ),
     RegExp(r'(?:^|[\s._-])(\d{1,4})(?:v\d+)?(?:[\s._-]|$)'),
   ];
+  static final _bracketPattern = RegExp(
+    r'[\[\(\{\u3010\u300c\u300e]([^\]\)\}\u3011\u300d\u300f]+)[\]\)\}\u3011\u300d\u300f]',
+  );
+  static final _leadingBracketPattern = RegExp(
+    r'^[\[\(\{\u3010\u300c\u300e]([^\]\)\}\u3011\u300d\u300f]+)[\]\)\}\u3011\u300d\u300f]',
+  );
+  static final _multiGroupPrefixPattern = RegExp(
+    r'^\s*[\[\(\{\u3010\u300c\u300e][^\]\)\}\u3011\u300d\u300f]+[\]\)\}\u3011\u300d\u300f]\s*&\s*[\[\(\{\u3010\u300c\u300e]',
+  );
 
   ParsedAnimeFile parse(String path) {
     final fileName = p.basename(path);
     final nameWithoutExtension = fileName.replaceFirst(_videoExtPattern, '');
-    final bracketTokens = RegExp(r'[\[【(]([^\]】)]+)[\]】)]')
-        .allMatches(nameWithoutExtension)
-        .map((match) => match.group(1)!.trim())
-        .where((token) => token.isNotEmpty)
-        .toList();
+    final bracketTokens = _bracketTokens(nameWithoutExtension);
 
     final releaseGroup = _releaseGroup(nameWithoutExtension, bracketTokens);
     final resolution = _findResolution(nameWithoutExtension, bracketTokens);
@@ -615,8 +859,16 @@ class AnimeFilenameParser {
     );
   }
 
+  List<String> _bracketTokens(String name) {
+    return _bracketPattern
+        .allMatches(name)
+        .map((match) => match.group(1)!.trim())
+        .where((token) => token.isNotEmpty)
+        .toList();
+  }
+
   String? _releaseGroup(String name, List<String> bracketTokens) {
-    final firstBracket = RegExp(r'^[\[【(]([^\]】)]+)[\]】)]').firstMatch(name);
+    final firstBracket = _leadingBracketPattern.firstMatch(name);
     if (firstBracket != null) return firstBracket.group(1)?.trim();
     return bracketTokens.isNotEmpty ? bracketTokens.first : null;
   }
@@ -666,18 +918,23 @@ class AnimeFilenameParser {
       return true;
     }).toList();
 
+    if (usefulBracketTokens.length >= 3 &&
+        _multiGroupPrefixPattern.hasMatch(name)) {
+      return _cleanTitle(usefulBracketTokens[2]);
+    }
+
     if (usefulBracketTokens.length >= 2) {
       return _cleanTitle(usefulBracketTokens[1]);
     }
 
-    var title = name.replaceAll(RegExp(r'^[\[【(][^\]】)]+[\]】)]\s*'), '');
-    title = title.replaceAll(RegExp(r'[\[【(][^\]】)]+[\]】)]'), ' ');
+    var title = name.replaceAll(_leadingBracketPattern, '');
+    title = title.replaceAll(_bracketPattern, ' ');
     if (episode != null) {
       title = title.replaceAll(
         RegExp(
-          r'[-_\s]*(?:s\d{1,2}e|ep|episode)?\s*0*'
+          r'[-_\s]*(?:s\d{1,2}e|ep|episode|\u7b2c)?\s*0*'
           '$episode'
-          r'(?:v\d+)?\b.*$',
+          r'(?:v\d+)?(?:\u8bdd|\u8a71|\u96c6)?\b.*$',
           caseSensitive: false,
         ),
         '',
@@ -689,6 +946,13 @@ class AnimeFilenameParser {
   String _cleanTitle(String value) {
     return value
         .replaceAll(RegExp(r'[._]+'), ' ')
+        .replaceAll(
+          RegExp(
+            r'\s+-\s+(?:ray\s+)?(?:movie|mv|pv|cm|ncop|nced)(?:\s+v\d+)?\s*$',
+            caseSensitive: false,
+          ),
+          '',
+        )
         .replaceAll(RegExp(r'\s+-\s+$'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
@@ -711,6 +975,10 @@ class AnimeFilenameParser {
       'bluray',
       'jpsc',
       'ma10p',
+      'gb',
+      'big5',
+      'chs',
+      'cht',
     ];
     return techWords.any(lower.contains) ||
         RegExp(r'^[a-f0-9]{8}$', caseSensitive: false).hasMatch(value);
@@ -724,6 +992,7 @@ class AnimeFilenameParser {
         number == 576 ||
         number == 720 ||
         number == 1080 ||
+        number == 1440 ||
         number == 2160;
   }
 }
@@ -731,25 +1000,12 @@ class AnimeFilenameParser {
 String _normalizeTitle(String value) {
   return value
       .toLowerCase()
-      .replaceAll(RegExp(r'[\[\]\(\)【】「」『』]'), ' ')
+      .replaceAll(
+        RegExp(r'[\[\]\(\)\u3010\u3011\u300c\u300d\u300e\u300f\u300a\u300b]'),
+        ' ',
+      )
       .replaceAll(RegExp(r'[^a-z0-9\u3040-\u30ff\u3400-\u9fff]+'), ' ')
       .replaceAll(RegExp(r'\b(the|a|an|season|part)\b'), ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
-}
-
-String _languageAlias(String languageCode) {
-  return switch (languageCode) {
-    'zh' => 'zh-Hans',
-    'cn' => 'zh-Hans',
-    'tw' => 'zh-Hant',
-    _ => languageCode,
-  };
-}
-
-extension _FirstOrNullExtension<E> on Iterable<E> {
-  E? get firstOrNull {
-    final iterator = this.iterator;
-    return iterator.moveNext() ? iterator.current : null;
-  }
 }

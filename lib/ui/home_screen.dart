@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _filterSearchActive = false;
   String _filter = 'All';
   String _query = '';
+  final Set<String> _selectedSeriesIds = {};
 
   @override
   void initState() {
@@ -165,14 +166,59 @@ class _HomeScreenState extends State<HomeScreen> {
       await AnimeLibraryService().refreshLibrary(
         sourcePaths,
         languageCode: language,
+        resolveAmbiguousMatch: _chooseAniListMatch,
       );
       if (!mounted) return;
       setState(() => _animeSeries = AnimeLibraryService().series);
+      _selectedSeriesIds.removeWhere(
+        (id) => !_animeSeries.any((series) => series.id == id),
+      );
     } catch (e) {
       LoggerService().log('[Library Error] Metadata refresh failed: $e');
     } finally {
       if (mounted) setState(() => _isScraping = false);
     }
+  }
+
+  Future<AniListSearchResult?> _chooseAniListMatch(
+    String parsedTitle,
+    List<AniListSearchResult> candidates,
+  ) async {
+    if (!mounted) return null;
+    AniListSearchResult? selected;
+    await showGlassActionSheet<void>(
+      context: context,
+      title: 'Choose anime',
+      message: parsedTitle,
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.chromeFor(context),
+      actions: [
+        for (final candidate in candidates)
+          GlassActionSheetAction(
+            label: _candidateLabel(candidate),
+            icon: const Icon(Icons.movie_filter_rounded),
+            onPressed: () => selected = candidate,
+          ),
+        GlassActionSheetAction(
+          label: 'Keep as unknown',
+          icon: const Icon(Icons.help_outline_rounded),
+          style: GlassActionSheetStyle.destructive,
+          onPressed: () => selected = null,
+        ),
+      ],
+      cancelLabel: 'Skip',
+    );
+    return selected;
+  }
+
+  String _candidateLabel(AniListSearchResult candidate) {
+    final meta = [
+      if (candidate.startYear != null) '${candidate.startYear}',
+      if (candidate.episodes != null) '${candidate.episodes} eps',
+    ].join(' · ');
+    return meta.isEmpty
+        ? candidate.displayTitle
+        : '${candidate.displayTitle}  ($meta)';
   }
 
   List<AnimeSeries> get _visibleSeries {
@@ -190,6 +236,48 @@ class _HomeScreenState extends State<HomeScreen> {
       };
       return matchesQuery && matchesFilter;
     }).toList();
+  }
+
+  bool get _selectionMode => _selectedSeriesIds.isNotEmpty;
+
+  List<String> _pathsForSeries(AnimeSeries series) {
+    return [
+      for (final episode in series.episodes)
+        for (final file in episode.files) file.path,
+    ];
+  }
+
+  Future<void> _removeSeriesFromLibrary(List<AnimeSeries> seriesList) async {
+    if (seriesList.isEmpty) return;
+    final removePaths = seriesList.expand(_pathsForSeries).toSet();
+    final nextPaths = _mediaPaths
+        .where((path) => !removePaths.contains(path))
+        .toList();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('media_library', nextPaths);
+    if (!mounted) return;
+    setState(() {
+      _mediaPaths = nextPaths;
+      for (final series in seriesList) {
+        _selectedSeriesIds.remove(series.id);
+      }
+    });
+    await _refreshAnimeLibrary(nextPaths);
+  }
+
+  Future<void> _removeSelectedSeries() async {
+    final selected = _animeSeries
+        .where((series) => _selectedSeriesIds.contains(series.id))
+        .toList();
+    await _removeSeriesFromLibrary(selected);
+  }
+
+  void _toggleSeriesSelection(AnimeSeries series) {
+    setState(() {
+      if (!_selectedSeriesIds.add(series.id)) {
+        _selectedSeriesIds.remove(series.id);
+      }
+    });
   }
 
   @override
@@ -261,6 +349,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   _filter = filter;
                   _filterSearchActive = false;
                 }),
+              ),
+            ),
+          if (_sectionIndex == 0 && _selectionMode)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: MediaQuery.paddingOf(context).bottom + 84,
+              child: _SelectionDeleteBar(
+                count: _selectedSeriesIds.length,
+                onCancel: () => setState(_selectedSeriesIds.clear),
+                onDelete: _removeSelectedSeries,
               ),
             ),
         ],
@@ -337,19 +436,90 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: index,
                   child: _AnimeSeriesCard(
                     series: series,
+                    selected: _selectedSeriesIds.contains(series.id),
+                    selectionMode: _selectionMode,
                     onTap: () {
+                      if (_selectionMode) {
+                        _toggleSeriesSelection(series);
+                        return;
+                      }
                       Navigator.of(context).push(
                         AniScalePageRoute(
-                          page: AnimeSeriesScreen(series: series),
+                          page: AnimeSeriesScreen(
+                            series: series,
+                            onDeleteSeries: _removeSeriesFromLibrary,
+                          ),
                         ),
                       );
                     },
+                    onSelect: () => _toggleSeriesSelection(series),
+                    onDelete: () => _removeSeriesFromLibrary([series]),
                   ),
                 );
               },
             ),
           ),
       ],
+    );
+  }
+}
+
+class _SelectionDeleteBar extends StatelessWidget {
+  final int count;
+  final VoidCallback onCancel;
+  final VoidCallback onDelete;
+
+  const _SelectionDeleteBar({
+    required this.count,
+    required this.onCancel,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondary = AniGlassTheme.secondaryTextColor(context);
+    return Align(
+      alignment: Alignment.center,
+      child: GlassButton.custom(
+        quality: GlassQuality.premium,
+        settings: AniGlassTheme.chromeFor(context),
+        height: 56,
+        onTap: () {},
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '$count selected',
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              GlassButton(
+                quality: GlassQuality.premium,
+                settings: AniGlassTheme.chromeFor(context),
+                width: 38,
+                height: 38,
+                icon: Icon(Icons.close_rounded, color: secondary),
+                onTap: onCancel,
+              ),
+              const SizedBox(width: 8),
+              GlassButton(
+                quality: GlassQuality.premium,
+                settings: AniGlassTheme.chromeFor(context),
+                width: 38,
+                height: 38,
+                icon: const Icon(Icons.delete_outline_rounded),
+                onTap: onDelete,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -759,74 +929,147 @@ class _EmptyLibrary extends StatelessWidget {
 class _AnimeSeriesCard extends StatelessWidget {
   final AnimeSeries series;
   final VoidCallback onTap;
+  final VoidCallback onSelect;
+  final VoidCallback onDelete;
+  final bool selected;
+  final bool selectionMode;
 
-  const _AnimeSeriesCard({required this.series, required this.onTap});
+  const _AnimeSeriesCard({
+    required this.series,
+    required this.onTap,
+    required this.onSelect,
+    required this.onDelete,
+    required this.selected,
+    required this.selectionMode,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _SeriesCover(series: series),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Color(0xEE050505)],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 12,
-                right: 12,
-                bottom: 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      series.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        height: 1.12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${series.episodes.length} episodes  -  ${series.fileCount} files',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (series.isUnknown)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: _UnknownBadge(label: 'Unknown'),
-                ),
-            ],
+    return GlassMenu(
+      settings: AniGlassTheme.chromeFor(context),
+      quality: GlassQuality.premium,
+      menuWidth: 220,
+      items: [
+        GlassMenuItem(
+          title: selected ? 'Deselect' : 'Select',
+          icon: Icon(
+            selected
+                ? Icons.check_circle_rounded
+                : Icons.radio_button_unchecked_rounded,
           ),
+          onTap: onSelect,
+        ),
+        GlassMenuItem(
+          title: 'Delete',
+          icon: const Icon(Icons.delete_outline_rounded),
+          isDestructive: true,
+          onTap: onDelete,
+        ),
+      ],
+      triggerBuilder: (context, toggle) {
+        return GestureDetector(
+          onLongPress: toggle,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onTap,
+            child: _AnimeSeriesCardSurface(
+              series: series,
+              selected: selected,
+              selectionMode: selectionMode,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AnimeSeriesCardSurface extends StatelessWidget {
+  final AnimeSeries series;
+  final bool selected;
+  final bool selectionMode;
+
+  const _AnimeSeriesCardSurface({
+    required this.series,
+    required this.selected,
+    required this.selectionMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: selected
+              ? Colors.lightBlueAccent.withValues(alpha: 0.78)
+              : Colors.white.withValues(alpha: 0.10),
+          width: selected ? 2 : 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _SeriesCover(series: series),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xEE050505)],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    series.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      height: 1.12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${series.episodes.length} episodes  -  ${series.fileCount} files',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            if (series.isUnknown)
+              Positioned(
+                top: 10,
+                right: 10,
+                child: _UnknownBadge(label: 'Unknown'),
+              ),
+            if (selectionMode)
+              Positioned(
+                top: 10,
+                left: 10,
+                child: Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color: selected ? Colors.lightBlueAccent : Colors.white70,
+                  size: 26,
+                ),
+              ),
+          ],
         ),
       ),
     );

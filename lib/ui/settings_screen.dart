@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:anivault/services/ai_agent_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
@@ -57,101 +57,22 @@ class SettingsContent extends StatefulWidget {
 }
 
 class _SettingsContentState extends State<SettingsContent> {
-  final _clientCtrl = TextEditingController();
-  final _versionCtrl = TextEditingController();
-
   @override
   void initState() {
     super.initState();
-    _loadAniDb();
-  }
-
-  @override
-  void dispose() {
-    _clientCtrl.dispose();
-    _versionCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadAniDb() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _clientCtrl.text = prefs.getString('anidb_client') ?? '';
-      _versionCtrl.text = '${prefs.getInt('anidb_clientver') ?? 1}';
-    });
-  }
-
-  Future<void> _saveAniDb() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('anidb_client', _clientCtrl.text.trim());
-    await prefs.setInt(
-      'anidb_clientver',
-      int.tryParse(_versionCtrl.text.trim()) ?? 1,
-    );
-    await widget.onLibraryRefresh?.call();
-    LoggerService().log('[Settings] AniDB API settings saved.');
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('AniDB settings saved')));
+    AiAgentService().initialize();
   }
 
   @override
   Widget build(BuildContext context) {
-    final textColor = AniGlassTheme.textColor(context);
     return ListView(
       padding: EdgeInsets.fromLTRB(20, widget.topPadding, 20, 36),
       children: [
-        _SettingsPanel(
+        const _SettingsPanel(
           icon: Icons.cloud_sync_rounded,
-          title: 'AniDB API',
-          subtitle: 'Metadata matching for imported anime',
-          child: Column(
-            children: [
-              GlassTextField(
-                quality: GlassQuality.premium,
-                useOwnLayer: true,
-                settings: AniGlassTheme.chromeFor(context),
-                controller: _clientCtrl,
-                placeholder: 'Client name',
-                textStyle: TextStyle(color: textColor),
-                placeholderStyle: TextStyle(
-                  color: AniGlassTheme.tertiaryTextColor(context),
-                ),
-              ),
-              const SizedBox(height: 12),
-              GlassTextField(
-                quality: GlassQuality.premium,
-                useOwnLayer: true,
-                settings: AniGlassTheme.chromeFor(context),
-                controller: _versionCtrl,
-                placeholder: 'Client version',
-                keyboardType: TextInputType.number,
-                textStyle: TextStyle(color: textColor),
-                placeholderStyle: TextStyle(
-                  color: AniGlassTheme.tertiaryTextColor(context),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Align(
-                alignment: Alignment.centerRight,
-                child: GlassButton.custom(
-                  quality: GlassQuality.premium,
-                  settings: AniGlassTheme.chromeFor(context),
-                  shape: const LiquidRoundedSuperellipse(borderRadius: 14),
-                  onTap: _saveAniDb,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    child: Text('Save', style: TextStyle(color: textColor)),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          title: 'AniList Metadata',
+          subtitle: 'GraphQL search for imported anime',
+          child: _AniListStatus(),
         ),
         const SizedBox(height: 16),
         const _SettingsPanel(
@@ -161,7 +82,32 @@ class _SettingsContentState extends State<SettingsContent> {
           child: _PremiumStatus(),
         ),
         const SizedBox(height: 16),
+        _SettingsPanel(
+          icon: Icons.science_rounded,
+          title: 'Experimental',
+          subtitle: 'AI-assisted matching for difficult releases',
+          child: _ExperimentalPanel(onLibraryRefresh: widget.onLibraryRefresh),
+        ),
+        const SizedBox(height: 16),
         const _AppearancePanel(),
+      ],
+    );
+  }
+}
+
+class _AniListStatus extends StatelessWidget {
+  const _AniListStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _StatusRow(label: 'Source', value: 'AniList GraphQL'),
+        SizedBox(height: 8),
+        _StatusRow(label: 'Matching', value: 'Anitomy-style filename parsing'),
+        SizedBox(height: 8),
+        _StatusRow(label: 'Choice', value: 'Glass action sheet on ambiguity'),
       ],
     );
   }
@@ -294,6 +240,555 @@ class _PremiumStatus extends StatelessWidget {
         SizedBox(height: 8),
         _StatusRow(label: 'Fallback', value: 'Blocked by policy'),
       ],
+    );
+  }
+}
+
+class _ExperimentalPanel extends StatelessWidget {
+  final Future<void> Function()? onLibraryRefresh;
+
+  const _ExperimentalPanel({this.onLibraryRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AiAgentService(),
+      builder: (context, _) {
+        final service = AiAgentService();
+        final config = service.config;
+        final textColor = AniGlassTheme.textColor(context);
+        final secondary = AniGlassTheme.secondaryTextColor(context);
+        return GlassButton.custom(
+          quality: GlassQuality.premium,
+          settings: AniGlassTheme.chromeFor(context),
+          height: 64,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    AiAgentSettingsScreen(onLibraryRefresh: onLibraryRefresh),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome_rounded, color: textColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AI Agent',
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        config.isReady ? config.model : 'Not configured',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: secondary, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: secondary),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class AiAgentSettingsScreen extends StatefulWidget {
+  final Future<void> Function()? onLibraryRefresh;
+
+  const AiAgentSettingsScreen({super.key, this.onLibraryRefresh});
+
+  @override
+  State<AiAgentSettingsScreen> createState() => _AiAgentSettingsScreenState();
+}
+
+class _AiAgentSettingsScreenState extends State<AiAgentSettingsScreen> {
+  final _baseUrlCtrl = TextEditingController();
+  final _apiKeyCtrl = TextEditingController();
+  bool _enabled = false;
+  String _model = '';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _baseUrlCtrl.dispose();
+    _apiKeyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    await AiAgentService().initialize();
+    if (!mounted) return;
+    final config = AiAgentService().config;
+    setState(() {
+      _enabled = config.enabled;
+      _baseUrlCtrl.text = config.baseUrl;
+      _apiKeyCtrl.text = config.apiKey;
+      _model = config.model;
+    });
+  }
+
+  Future<void> _save({bool refresh = false}) async {
+    setState(() => _saving = true);
+    await AiAgentService().saveConfig(
+      enabled: _enabled,
+      baseUrl: _baseUrlCtrl.text,
+      apiKey: _apiKeyCtrl.text,
+      model: _model,
+    );
+    if (refresh) await widget.onLibraryRefresh?.call();
+    if (!mounted) return;
+    setState(() => _saving = false);
+  }
+
+  Future<void> _fetchModels() async {
+    await _save();
+    final models = await AiAgentService().fetchModels(
+      baseUrl: _baseUrlCtrl.text,
+      apiKey: _apiKeyCtrl.text,
+    );
+    if (!mounted) return;
+    setState(() => _model = AiAgentService().config.model);
+    final message = models.isEmpty
+        ? 'Model fetch failed'
+        : 'Fetched ${models.length} models';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final light = Theme.of(context).brightness == Brightness.light;
+    final textColor = AniGlassTheme.textColor(context);
+    return GlassScaffold(
+      background: AniGlassTheme.background(
+        light: light,
+        style: ThemeService().backgroundStyle,
+      ),
+      statusBarStyle: light
+          ? GlassStatusBarStyle.dark
+          : GlassStatusBarStyle.light,
+      settings: AniGlassTheme.chromeFor(context),
+      appBar: GlassAppBar(
+        title: Text('AI Agent', style: TextStyle(color: textColor)),
+        leading: GlassButton(
+          quality: GlassQuality.premium,
+          settings: AniGlassTheme.chromeFor(context),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onTap: () => Navigator.pop(context),
+        ),
+      ),
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          MediaQuery.paddingOf(context).top + 76,
+          20,
+          36,
+        ),
+        children: [
+          ListenableBuilder(
+            listenable: AiAgentService(),
+            builder: (context, _) {
+              final service = AiAgentService();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _AgentSwitchStrip(
+                    title: 'AI Agent',
+                    subtitle: 'Fallback when AniList has no match',
+                    enabled: _enabled,
+                    onChanged: (value) {
+                      setState(() => _enabled = value);
+                      _save();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _AgentInputStrip(
+                    controller: _baseUrlCtrl,
+                    title: 'Base URL',
+                    placeholder: 'https://api.openai.com/v1',
+                    icon: Icons.link_rounded,
+                    onSubmitted: (_) => _save(),
+                  ),
+                  const SizedBox(height: 12),
+                  _AgentPasswordStrip(
+                    controller: _apiKeyCtrl,
+                    onSubmitted: (_) => _save(),
+                  ),
+                  const SizedBox(height: 12),
+                  _ModelGlassMenu(
+                    models: service.config.models,
+                    selectedModel: _model,
+                    onSelected: (model) {
+                      setState(() => _model = model);
+                      _save();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AgentActionStrip(
+                          icon: Icons.cloud_download_rounded,
+                          label: service.isFetchingModels
+                              ? 'Fetching'
+                              : 'Fetch Models',
+                          onTap: () {
+                            if (service.isFetchingModels) return;
+                            _fetchModels();
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _AgentActionStrip(
+                          icon: Icons.save_rounded,
+                          label: _saving ? 'Saving' : 'Save',
+                          onTap: () {
+                            if (_saving) return;
+                            _save(refresh: true);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (service.lastError != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      service.lastError!,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgentSwitchStrip extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  const _AgentSwitchStrip({
+    required this.title,
+    required this.subtitle,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    return _AgentStripShell(
+      child: Row(
+        children: [
+          Icon(Icons.auto_awesome_rounded, color: textColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _StripText(title: title, subtitle: subtitle),
+          ),
+          GlassSwitch(
+            value: enabled,
+            onChanged: onChanged,
+            quality: GlassQuality.premium,
+            settings: AniGlassTheme.chromeFor(context),
+            activeColor: textColor.withValues(alpha: 0.72),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgentStripShell extends StatelessWidget {
+  final Widget child;
+
+  const _AgentStripShell({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassButton.custom(
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.chromeFor(context),
+      height: 64,
+      onTap: () {},
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _StripText extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _StripText({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondary = AniGlassTheme.secondaryTextColor(context);
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: textColor, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: secondary, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+class _AgentInputStrip extends StatelessWidget {
+  final TextEditingController controller;
+  final String title;
+  final String placeholder;
+  final IconData icon;
+  final ValueChanged<String> onSubmitted;
+
+  const _AgentInputStrip({
+    required this.controller,
+    required this.title,
+    required this.placeholder,
+    required this.icon,
+    required this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondary = AniGlassTheme.secondaryTextColor(context);
+    return _AgentStripShell(
+      child: Row(
+        children: [
+          Icon(icon, color: textColor),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 78,
+            child: Text(
+              title,
+              style: TextStyle(color: secondary, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onSubmitted: onSubmitted,
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: placeholder,
+                hintStyle: TextStyle(color: secondary),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgentPasswordStrip extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
+
+  const _AgentPasswordStrip({
+    required this.controller,
+    required this.onSubmitted,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondary = AniGlassTheme.secondaryTextColor(context);
+    return _AgentStripShell(
+      child: Row(
+        children: [
+          Icon(Icons.key_rounded, color: textColor),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 78,
+            child: Text(
+              'API Key',
+              style: TextStyle(color: secondary, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              obscureText: true,
+              onSubmitted: onSubmitted,
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'sk-...',
+                hintStyle: TextStyle(color: secondary),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelGlassMenu extends StatelessWidget {
+  final List<String> models;
+  final String selectedModel;
+  final ValueChanged<String> onSelected;
+
+  const _ModelGlassMenu({
+    required this.models,
+    required this.selectedModel,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondary = AniGlassTheme.secondaryTextColor(context);
+    final label = selectedModel.isEmpty ? 'Fetch models first' : selectedModel;
+    final visibleModels = models.isEmpty
+        ? <String>[if (selectedModel.isNotEmpty) selectedModel]
+        : models;
+    return _AgentStripShell(
+      child: Row(
+        children: [
+          Icon(Icons.memory_rounded, color: textColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _StripText(title: 'Model', subtitle: label),
+          ),
+          GlassMenu(
+            settings: AniGlassTheme.chromeFor(context),
+            quality: GlassQuality.premium,
+            menuWidth: 320,
+            items: visibleModels
+                .map(
+                  (model) => GlassMenuItem(
+                    title: model,
+                    maxLines: 2,
+                    icon: Icon(
+                      model == selectedModel
+                          ? Icons.check_circle_rounded
+                          : Icons.smart_toy_rounded,
+                    ),
+                    isSelected: model == selectedModel,
+                    titleStyle: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    onTap: () => onSelected(model),
+                  ),
+                )
+                .toList(),
+            triggerBuilder: (context, toggle) {
+              return GlassButton(
+                quality: GlassQuality.premium,
+                settings: AniGlassTheme.chromeFor(context),
+                shape: const LiquidOval(),
+                width: 42,
+                height: 42,
+                icon: Icon(Icons.expand_more_rounded, color: secondary),
+                onTap: () {
+                  if (visibleModels.isEmpty) return;
+                  toggle();
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AgentActionStrip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _AgentActionStrip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    return GlassButton.custom(
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.chromeFor(context),
+      height: 56,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: textColor, size: 18),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: textColor, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

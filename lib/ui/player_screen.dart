@@ -327,19 +327,27 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   void _showVideoSettings() {
+    var pausedAtFull = false;
     GlassModalSheet.show(
       context: context,
       initialState: GlassSheetState.half,
-      halfSize: 0.58,
-      fullSize: 0.92,
+      halfSize: 0.56,
+      fullSize: 0.9,
       quality: GlassQuality.premium,
       settings: AniGlassTheme.playerPanelFor(context),
       barrierColor: Colors.black45,
-      expandedColor: const Color(0xF20B0F17),
-      fillTransition: GlassFillTransition.gradual,
-      enableInteractionGlow: true,
-      enableSaturationGlow: true,
-      stretch: 0.62,
+      fillTransition: GlassFillTransition.instant,
+      interactionScale: 1.01,
+      stretch: 0.5,
+      suppressInteractionOnChildren: true,
+      onStateChanged: (state) {
+        if (state == GlassSheetState.full && !pausedAtFull) {
+          pausedAtFull = true;
+          player.pause();
+        } else if (state != GlassSheetState.full) {
+          pausedAtFull = false;
+        }
+      },
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -347,7 +355,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             return ListView(
               controller: scrollData?.controller,
               physics: scrollData?.physics,
-              padding: const EdgeInsets.fromLTRB(22, 18, 22, 36),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
               children: [
                 Row(
                   children: [
@@ -368,6 +376,11 @@ class _PlayerScreenState extends State<PlayerScreen>
                       onTap: () => Navigator.pop(context),
                     ),
                   ],
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Pull the drawer to full height to pause playback.',
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
                 ),
                 const SizedBox(height: 18),
                 _glassSettingsSection(
@@ -1166,55 +1179,65 @@ class _PlayerScreenState extends State<PlayerScreen>
     required String subtitle,
     required Widget child,
   }) {
-    return GlassCard(
-      useOwnLayer:
-          false, // Inherit root playerPanel layer to avoid nested BackdropFilter repaint lags
-      settings: RecommendedGlassSettings.playerSection,
-      padding: const EdgeInsets.all(16),
-      shape: const LiquidRoundedSuperellipse(borderRadius: 34),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              GlassButton.custom(
-                settings: RecommendedGlassSettings.playerHighlight,
-                width: 42,
-                height: 42,
-                shape: const LiquidOval(),
-                onTap: () {},
-                enabled: false,
-                child: Icon(icon, color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w300,
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
                       ),
+                      child: Icon(icon, color: Colors.white, size: 18),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.56),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w300,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.56),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                child,
+              ],
+            ),
           ),
-          const SizedBox(height: 14),
-          child,
         ],
       ),
     );

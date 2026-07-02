@@ -336,6 +336,28 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.2"
+  langchain_core:
+    dependency: "direct main"
+    description:
+      path: "third_party/langchain_dart/packages/langchain_core"
+      relative: true
+    source: path
+    version: "0.4.1"
+  langchain_openai:
+    dependency: "direct main"
+    description:
+      path: "third_party/langchain_dart/packages/langchain_openai"
+      relative: true
+    source: path
+    version: "0.8.1+1"
+  langchain_tiktoken:
+    dependency: transitive
+    description:
+      name: langchain_tiktoken
+      sha256: c1804f4b3e56574ca67e562305d9f11e3eabe3c8aa87fea8635992f7efc66674
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   leak_tracker:
     dependency: transitive
     description:
@@ -496,6 +518,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.3.0"
+  openai_dart:
+    dependency: transitive
+    description:
+      name: openai_dart
+      sha256: "4731f94ea9a09cd9e92333debcfb87efda2764718e506538206df9f540e9ab60"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0"
   package_config:
     dependency: transitive
     description:
@@ -624,6 +654,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  rxdart:
+    dependency: transitive
+    description:
+      name: rxdart
+      sha256: "5c3004a4a8dbb94bd4bf5412a4def4acdaa12e12f269737a5751369e12d1a962"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.28.0"
   safe_local_storage:
     dependency: transitive
     description:
@@ -828,6 +866,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  web_socket:
+    dependency: transitive
+    description:
+      name: web_socket
+      sha256: "34d64019aa8e36bf9842ac014bb5d2f5586ca73df5e4d9bf5c936975cae6982c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   win32:
     dependency: transitive
     description:

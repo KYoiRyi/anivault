@@ -24,4 +24,26 @@ void main() {
     expect(parsed.episodeNumber, 1);
     expect(parsed.resolution, '1080p');
   });
+
+  test('parses Chinese fansub filename with full-width brackets', () {
+    final parsed = AnimeFilenameParser().parse(
+      r'/media/【喵萌奶茶屋】&【千夏字幕组】[Girls Band Cry][01][1080p][简日内嵌].mkv',
+    );
+
+    expect(parsed.releaseGroup, '喵萌奶茶屋');
+    expect(parsed.title, 'Girls Band Cry');
+    expect(parsed.episodeNumber, 1);
+    expect(parsed.resolution, '1080p');
+  });
+
+  test('strips music video suffix from unknown-episode movie filenames', () {
+    final parsed = AnimeFilenameParser().parse(
+      r'/media/[Nekomoe kissaten&LoliHouse] Chou Kaguya-hime! - ray MV v2 [WebRip 2160p HEVC-10bit AAC ASSx2].mkv',
+    );
+
+    expect(parsed.releaseGroup, 'Nekomoe kissaten&LoliHouse');
+    expect(parsed.title, 'Chou Kaguya-hime!');
+    expect(parsed.episodeNumber, isNull);
+    expect(parsed.resolution, '2160p');
+  });
 }

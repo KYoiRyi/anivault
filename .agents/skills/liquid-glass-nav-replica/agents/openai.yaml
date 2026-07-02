@@ -1,0 +1,4 @@
+interface:
+  display_name: "Liquid Glass Nav Replica"
+  short_description: "Replicate liquid glass nav effects"
+  default_prompt: "Use $liquid-glass-nav-replica to port a liquid_glass_widgets demo navigation effect into this Flutter app."
