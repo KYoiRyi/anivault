@@ -18,7 +18,12 @@ target_include_directories(anivault_anitomy PRIVATE
 target_compile_features(anivault_anitomy PRIVATE cxx_std_23)
 
 if(NOT MSVC)
-  target_compile_options(anivault_anitomy PRIVATE -std=c++23)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND
+      CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+    target_compile_options(anivault_anitomy PRIVATE -std=c++2b)
+  else()
+    target_compile_options(anivault_anitomy PRIVATE -std=c++23)
+  endif()
 endif()
 
 if(WIN32)

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/ai_agent_service.dart';
+import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
@@ -90,7 +93,26 @@ class _SettingsContentState extends State<SettingsContent> {
         ),
         const SizedBox(height: 16),
         const _AppearancePanel(),
+        const SizedBox(height: 16),
+        _SettingsLogButton(onTap: _showCompactLogs),
       ],
+    );
+  }
+
+  void _showCompactLogs() {
+    GlassModalSheet.show(
+      context: context,
+      initialState: GlassSheetState.half,
+      halfSize: 0.46,
+      fullSize: 0.82,
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.heroFor(context),
+      barrierColor: Colors.black45,
+      fillTransition: GlassFillTransition.instant,
+      interactionScale: 1.01,
+      stretch: 0.35,
+      suppressInteractionOnChildren: true,
+      builder: (context) => const _CompactLogSheet(),
     );
   }
 }
@@ -310,6 +332,142 @@ class _ExperimentalPanel extends StatelessWidget {
   }
 }
 
+class _SettingsLogButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _SettingsLogButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondary = AniGlassTheme.secondaryTextColor(context);
+    return GlassButton.custom(
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.chromeFor(context),
+      shape: const LiquidRoundedSuperellipse(borderRadius: 20),
+      height: 62,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Icon(Icons.terminal_rounded, color: textColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Logs',
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  ListenableBuilder(
+                    listenable: LoggerService(),
+                    builder: (context, _) => Text(
+                      '${LoggerService().logs.length} recent lines',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: secondary, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.keyboard_arrow_up_rounded, color: secondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactLogSheet extends StatelessWidget {
+  const _CompactLogSheet();
+
+  Future<void> _copyLogs(BuildContext context, List<String> logs) async {
+    await Clipboard.setData(ClipboardData(text: logs.join('\n')));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Copied ${logs.length} log lines')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scrollData = ScrollControllerProvider.of(context);
+    final textColor = AniGlassTheme.textColor(context);
+    final secondary = AniGlassTheme.secondaryTextColor(context);
+    return ListenableBuilder(
+      listenable: LoggerService(),
+      builder: (context, _) {
+        final logs = LoggerService().logs.take(120).toList();
+        return ListView(
+          controller: scrollData?.controller,
+          physics: scrollData?.physics,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 34),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Logs',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                GlassButton(
+                  quality: GlassQuality.premium,
+                  settings: AniGlassTheme.chromeFor(context),
+                  icon: const Icon(Icons.copy_rounded),
+                  onTap: () => _copyLogs(context, logs),
+                ),
+                const SizedBox(width: 8),
+                GlassButton(
+                  quality: GlassQuality.premium,
+                  settings: AniGlassTheme.chromeFor(context),
+                  icon: const Icon(Icons.close_rounded),
+                  onTap: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${logs.length} shown / ${LoggerService().logs.length} total',
+              style: TextStyle(color: secondary, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            if (logs.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 34),
+                child: Center(
+                  child: Text(
+                    'No logs yet',
+                    style: TextStyle(color: secondary),
+                  ),
+                ),
+              )
+            else
+              ...logs.map(
+                (line) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _LogLine(line: line),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class AiAgentSettingsScreen extends StatefulWidget {
   final Future<void> Function()? onLibraryRefresh;
 
@@ -359,6 +517,9 @@ class _AiAgentSettingsScreenState extends State<AiAgentSettingsScreen> {
       apiKey: _apiKeyCtrl.text,
       model: _model,
     );
+    if (AiAgentService().config.isReady) {
+      unawaited(AnimeLibraryService().retryUnresolvedQueue());
+    }
     if (refresh) await widget.onLibraryRefresh?.call();
     if (!mounted) return;
     setState(() => _saving = false);
@@ -1009,6 +1170,7 @@ class _LogLineState extends State<_LogLine> {
     final isError =
         widget.line.toLowerCase().contains('error') ||
         widget.line.toLowerCase().contains('failed');
+    final textColor = AniGlassTheme.textColor(context);
     return InkWell(
       onTap: () => setState(() => _expanded = !_expanded),
       child: Padding(
@@ -1039,8 +1201,8 @@ class _LogLineState extends State<_LogLine> {
                 overflow: _expanded
                     ? TextOverflow.visible
                     : TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Color(0xCC0F172A),
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.82),
                   fontSize: 12,
                   fontFamily: 'Consolas',
                 ),

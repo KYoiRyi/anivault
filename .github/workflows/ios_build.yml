@@ -63,6 +63,14 @@ jobs:
           cargo build --target aarch64-apple-ios --release
           cd ../..
 
+      - name: Cache anivault_anitomy iOS build
+        uses: actions/cache@v4
+        with:
+          path: native/anivault_anitomy/build_ios
+          key: ${{ runner.os }}-anitomy-ios-${{ hashFiles('native/anivault_anitomy/**/*') }}
+          restore-keys: |
+            ${{ runner.os }}-anitomy-ios-
+
       - name: Build anivault_anitomy for iOS (Compile from source)
         run: |
           cmake -S native/anivault_anitomy -B native/anivault_anitomy/build_ios \

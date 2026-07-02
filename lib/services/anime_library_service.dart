@@ -254,6 +254,8 @@ class AnimeLibraryService extends ChangeNotifier {
   bool _isResolvingUnresolved = false;
   String? _lastError;
   List<AnimeSeries> _series = [];
+  List<String> _lastRefreshPaths = const [];
+  String _lastLanguageCode = 'en';
 
   bool get isReady => _isReady;
   bool get isScanning => _isScanning;
@@ -274,6 +276,8 @@ class AnimeLibraryService extends ChangeNotifier {
     required String languageCode,
     AniListMatchResolver? resolveAmbiguousMatch,
   }) async {
+    _lastRefreshPaths = List.unmodifiable(paths);
+    _lastLanguageCode = languageCode;
     _isScanning = true;
     _lastError = null;
     notifyListeners();
@@ -374,10 +378,25 @@ class AnimeLibraryService extends ChangeNotifier {
     } finally {
       _isScanning = false;
       notifyListeners();
-      if (!_isResolvingUnresolved) {
-        unawaited(_resolveUnresolvedInBackground(paths, languageCode));
-      }
+      unawaited(retryUnresolvedQueue(paths: paths, languageCode: languageCode));
     }
+  }
+
+  Future<void> retryUnresolvedQueue({
+    List<String>? paths,
+    String? languageCode,
+  }) async {
+    final effectivePaths = paths ?? _lastRefreshPaths;
+    if (effectivePaths.isNotEmpty) {
+      _lastRefreshPaths = List.unmodifiable(effectivePaths);
+    }
+    if (languageCode != null && languageCode.isNotEmpty) {
+      _lastLanguageCode = languageCode;
+    }
+    await _resolveUnresolvedInBackground(
+      effectivePaths,
+      languageCode ?? _lastLanguageCode,
+    );
   }
 
   Future<AniListSearchResult?> _resolveTitle(
@@ -408,7 +427,11 @@ class AnimeLibraryService extends ChangeNotifier {
   ) async {
     await initialize();
     if (_isResolvingUnresolved || _unresolvedCache.isEmpty) return;
-    if (!AiAgentService().config.isReady) return;
+    await AiAgentService().initialize();
+    if (!AiAgentService().config.isReady) {
+      _clearResolvingState();
+      return;
+    }
 
     _isResolvingUnresolved = true;
     var changed = false;
@@ -419,7 +442,8 @@ class AnimeLibraryService extends ChangeNotifier {
         final normalizedTitle = entry.key;
         final path = entry.value;
         _setResolving(normalizedTitle, true);
-        if (!availablePaths.contains(path) || !File(path).existsSync()) {
+        if ((availablePaths.isNotEmpty && !availablePaths.contains(path)) ||
+            !File(path).existsSync()) {
           _unresolvedCache.remove(normalizedTitle);
           _setResolving(normalizedTitle, false);
           changed = true;
@@ -466,16 +490,14 @@ class AnimeLibraryService extends ChangeNotifier {
         await _saveDetailsCache();
         await _saveSelectionCache();
         await _saveUnresolvedCache();
-        await refreshLibrary(paths, languageCode: languageCode);
+        if (paths.isNotEmpty) {
+          await refreshLibrary(paths, languageCode: languageCode);
+        }
       }
     } catch (e) {
       LoggerService().log('[AI Agent] Background unresolved retry failed: $e');
     } finally {
-      _resolvingKeys.clear();
-      _series = [
-        for (final series in _series)
-          series.isResolving ? series.copyWith(isResolving: false) : series,
-      ];
+      _clearResolvingState(notify: false);
       _isResolvingUnresolved = false;
       notifyListeners();
     }
@@ -556,6 +578,15 @@ class AnimeLibraryService extends ChangeNotifier {
         series.id == id ? series.copyWith(isResolving: isResolving) : series,
     ];
     notifyListeners();
+  }
+
+  void _clearResolvingState({bool notify = true}) {
+    _resolvingKeys.clear();
+    _series = [
+      for (final series in _series)
+        series.isResolving ? series.copyWith(isResolving: false) : series,
+    ];
+    if (notify) notifyListeners();
   }
 
   Future<List<AniListSearchResult>> _searchAnime(
