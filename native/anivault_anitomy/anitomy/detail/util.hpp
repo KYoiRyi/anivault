@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <charconv>
+#include <cstdlib>
 #include <fstream>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -62,7 +64,8 @@ constexpr int to_int(const std::string_view str) noexcept {
 
 inline float to_float(const std::string_view str) noexcept {
   float value{.0f};
-  std::from_chars(str.data(), str.data() + str.size(), value);
+  std::string s{str};
+  value = static_cast<float>(std::strtod(s.c_str(), nullptr));
   return value;
 }
 
