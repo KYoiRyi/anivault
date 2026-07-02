@@ -261,6 +261,7 @@ class _ExperimentalPanel extends StatelessWidget {
         return GlassButton.custom(
           quality: GlassQuality.premium,
           settings: AniGlassTheme.chromeFor(context),
+          shape: const LiquidRoundedSuperellipse(borderRadius: 18),
           height: 64,
           onTap: () {
             Navigator.push(

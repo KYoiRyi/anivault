@@ -12,6 +12,7 @@ import 'package:anivault/ui/performance_hud.dart';
 import 'package:anivault/services/shader_service.dart';
 import 'package:anivault/services/ffi_engine.dart';
 import 'package:anivault/services/logger_service.dart';
+import 'package:anivault/services/watch_history_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   final String videoPath;
@@ -42,6 +43,10 @@ class _PlayerScreenState extends State<PlayerScreen>
   String _currentModelKey = 'Balanced';
   bool _isHwAccelerated = true;
   bool _showHUD = false;
+
+  int _accumulatedSecondsWatched = 0;
+  DateTime? _lastPositionTime;
+  Timer? _progressSaveTimer;
 
   // Subtitle custom settings
   double _subtitleSize =
@@ -126,7 +131,23 @@ class _PlayerScreenState extends State<PlayerScreen>
         SharedPreferences.getInstance().then((prefs) {
           prefs.setInt('pos_${widget.videoPath}', posMs);
         });
+
+        final now = DateTime.now();
+        if (player.state.playing) {
+          if (_lastPositionTime != null) {
+            final diffMs = now.difference(_lastPositionTime!).inMilliseconds;
+            if (diffMs > 0 && diffMs < 3000) {
+              // filter seeks
+              _accumulatedSecondsWatched += (diffMs / 1000).round();
+            }
+          }
+        }
+        _lastPositionTime = now;
       }
+    });
+
+    _progressSaveTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      _saveProgress();
     });
 
     Future.microtask(() async {
@@ -1292,8 +1313,25 @@ class _PlayerScreenState extends State<PlayerScreen>
     fontSize: 12,
     fontWeight: FontWeight.w400,
   );
+  void _saveProgress() {
+    final posMs = player.state.position.inMilliseconds;
+    final durationMs = player.state.duration.inMilliseconds;
+    if (posMs > 0 && durationMs > 0) {
+      WatchHistoryService().saveWatchProgress(
+        videoPath: widget.videoPath,
+        progressMs: posMs,
+        durationMs: durationMs,
+        secondsWatched: _accumulatedSecondsWatched,
+      );
+      _accumulatedSecondsWatched = 0;
+    }
+  }
+
   @override
   void dispose() {
+    _progressSaveTimer?.cancel();
+    _saveProgress();
+
     // Save position one last time immediately on dispose
     final posMs = player.state.position.inMilliseconds;
     if (posMs > 0) {

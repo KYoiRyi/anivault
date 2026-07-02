@@ -14,6 +14,8 @@ import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/anime_series_screen.dart';
 import 'package:anivault/ui/page_transition.dart';
 import 'package:anivault/ui/settings_screen.dart';
+import 'package:anivault/services/watch_history_service.dart';
+import 'package:anivault/ui/homepage_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,11 +43,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WatchHistoryService().initialize();
+    AnimeLibraryService().addListener(_onLibraryChanged);
+    WatchHistoryService().addListener(_onHistoryChanged);
     _syncMedia();
+  }
+
+  void _onLibraryChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onHistoryChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    AnimeLibraryService().removeListener(_onLibraryChanged);
+    WatchHistoryService().removeListener(_onHistoryChanged);
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -288,9 +303,23 @@ class _HomeScreenState extends State<HomeScreen> {
     final light = Theme.of(context).brightness == Brightness.light;
     final backgroundStyle = ThemeService().backgroundStyle;
 
+    final lastRecord = WatchHistoryService().getLastWatchedRecord();
+    AnimeSeries? lastSeries;
+    if (lastRecord != null) {
+      for (final s in _animeSeries) {
+        if (s.id == lastRecord.seriesId) {
+          lastSeries = s;
+          break;
+        }
+      }
+    }
+    final coverUrl =
+        lastSeries?.coverUrl ??
+        (_animeSeries.isNotEmpty ? _animeSeries.first.coverUrl : null);
+
     return GlassScaffold(
       background: AniGlassTheme.background(
-        coverUrl: _animeSeries.isNotEmpty ? _animeSeries.first.coverUrl : null,
+        coverUrl: coverUrl,
         light: light,
         style: backgroundStyle,
       ),
@@ -307,6 +336,14 @@ class _HomeScreenState extends State<HomeScreen> {
           _PageSwitchTransition(
             selectedIndex: _sectionIndex,
             child: _sectionIndex == 0
+                ? HomepageView(
+                    key: const ValueKey('home-page'),
+                    topPadding: topPadding,
+                    scrollController: _scrollController,
+                    onNavigateToLibrary: (index) =>
+                        setState(() => _sectionIndex = index),
+                  )
+                : _sectionIndex == 1
                 ? _buildLibraryView(
                     key: const ValueKey('library-page'),
                     busy: busy,
@@ -326,14 +363,15 @@ class _HomeScreenState extends State<HomeScreen> {
             child: _DemoTopGlassTabBar(
               selectedIndex: _sectionIndex,
               onChanged: (index) => setState(() => _sectionIndex = index),
-              tabWidth: 92,
+              tabWidth: 86,
               tabs: const [
+                GlassTab(label: 'Home'),
                 GlassTab(label: 'Library'),
                 GlassTab(label: 'Settings'),
               ],
             ),
           ),
-          if (_sectionIndex == 0)
+          if (_sectionIndex == 1)
             Positioned(
               left: 0,
               right: 0,
@@ -351,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }),
               ),
             ),
-          if (_sectionIndex == 0 && _selectionMode)
+          if (_sectionIndex == 1 && _selectionMode)
             Positioned(
               left: 20,
               right: 20,

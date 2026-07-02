@@ -160,6 +160,8 @@ $previousFingerprint = if (Test-Path -LiteralPath $stampFile) {
     ''
 }
 
+Assert-NotLockedByRunningProcess -ExecutablePath (Join-Path $artifactDir 'anivault.exe')
+
 $hasReleaseOutput = Test-Path -LiteralPath (Join-Path $buildDir 'anivault.exe')
 if (-not $ForceBuild -and $hasReleaseOutput -and $fingerprint -eq $previousFingerprint) {
     Write-Step 'Inputs unchanged; reuse cached Windows release build'
