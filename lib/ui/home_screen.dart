@@ -522,6 +522,7 @@ class _SelectionDeleteBar extends StatelessWidget {
       child: GlassButton.custom(
         quality: GlassQuality.premium,
         settings: AniGlassTheme.chromeFor(context),
+        shape: const LiquidRoundedSuperellipse(borderRadius: 18),
         height: 56,
         onTap: () {},
         child: Padding(
