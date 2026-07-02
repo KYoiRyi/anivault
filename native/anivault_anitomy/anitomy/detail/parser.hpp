@@ -96,7 +96,9 @@ public:
       add_element(parse_episode_title(tokens_));
     }
 
-    std::ranges::sort(elements_, {}, &Element::position);
+    std::sort(elements_.begin(), elements_.end(), [](const Element& a, const Element& b) {
+      return a.position < b.position;
+    });
   }
 
 private:
@@ -108,13 +110,13 @@ private:
 
   constexpr void add_elements(std::vector<Element>&& elements) noexcept {
     if (!elements.empty()) {
-      std::ranges::move(elements, std::back_inserter(elements_));
+      std::move(elements.begin(), elements.end(), std::back_inserter(elements_));
     }
   }
 
   [[nodiscard]] bool contains(ElementKind kind) const noexcept {
     const auto is_kind = [&kind](const Element& element) { return element.kind == kind; };
-    return std::ranges::any_of(elements_, is_kind);
+    return std::any_of(elements_.begin(), elements_.end(), is_kind);
   }
 
   std::vector<Element> elements_;

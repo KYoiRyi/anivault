@@ -36,7 +36,7 @@ inline std::optional<Element> parse_file_extension(std::span<Token> tokens) noex
     // clang-format on
 
     return (is_keyword_token(token) || is_text_token(token)) &&
-           std::ranges::contains(extensions, token.value);
+           (std::find(extensions.begin(), extensions.end(), token.value) != extensions.end());
   };
 
   static constexpr auto is_dot = [](const Token& token) {
