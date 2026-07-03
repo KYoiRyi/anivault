@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -42,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _filter = 'All';
   String _query = '';
   final Set<String> _selectedSeriesIds = {};
+  String? _sessionBackgroundCoverUrl;
 
   @override
   void initState() {
@@ -56,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() {
       _animeSeries = AnimeLibraryService().series;
+      _chooseSessionBackgroundCover();
       _selectedSeriesIds.removeWhere(
         (id) => !_animeSeries.any((series) => series.id == id),
       );
@@ -245,7 +248,10 @@ class _HomeScreenState extends State<HomeScreen> {
         resolveAmbiguousMatch: _chooseAniListMatch,
       );
       if (!mounted) return;
-      setState(() => _animeSeries = AnimeLibraryService().series);
+      setState(() {
+        _animeSeries = AnimeLibraryService().series;
+        _chooseSessionBackgroundCover();
+      });
       _selectedSeriesIds.removeWhere(
         (id) => !_animeSeries.any((series) => series.id == id),
       );
@@ -254,6 +260,17 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _isScraping = false);
     }
+  }
+
+  void _chooseSessionBackgroundCover() {
+    if (_sessionBackgroundCoverUrl != null) return;
+    final covers = _animeSeries
+        .map((series) => series.coverUrl)
+        .whereType<String>()
+        .where((url) => url.trim().isNotEmpty)
+        .toList();
+    if (covers.isEmpty) return;
+    _sessionBackgroundCoverUrl = covers[math.Random().nextInt(covers.length)];
   }
 
   Future<AniListSearchResult?> _chooseAniListMatch(
@@ -364,19 +381,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final light = Theme.of(context).brightness == Brightness.light;
     final backgroundStyle = ThemeService().backgroundStyle;
 
-    final lastRecord = WatchHistoryService().getLastWatchedRecord();
-    AnimeSeries? lastSeries;
-    if (lastRecord != null) {
-      for (final s in _animeSeries) {
-        if (s.id == lastRecord.seriesId) {
-          lastSeries = s;
-          break;
-        }
-      }
-    }
-    final coverUrl =
-        lastSeries?.coverUrl ??
-        (_animeSeries.isNotEmpty ? _animeSeries.first.coverUrl : null);
+    _chooseSessionBackgroundCover();
+    final coverUrl = _sessionBackgroundCoverUrl;
 
     return GlassScaffold(
       background: AniGlassTheme.background(

@@ -101,24 +101,26 @@ class AniGlassTheme {
   static LiquidGlassSettings chromeFor(BuildContext context) {
     if (!isLight(context)) return chrome;
     return chrome.copyWith(
-      glassColor: const Color(0xDDEFF1F5),
-      backerColor: const Color(0xFFEFF1F5),
-      platformViewFallbackColor: const Color(0xFFEFF1F5),
-      shadowElevation: 2.0,
-      whitenStrength: 0.36,
-      ambientStrength: 0.08,
+      glassColor: const Color(0xE9F3F6FA),
+      backerColor: const Color(0xFFF3F6FA),
+      platformViewFallbackColor: const Color(0xFFF3F6FA),
+      shadowElevation: 5.0,
+      whitenStrength: 0.2,
+      ambientStrength: 0.16,
+      lightIntensity: 0.58,
     );
   }
 
   static LiquidGlassSettings heroFor(BuildContext context) {
     if (!isLight(context)) return hero;
     return hero.copyWith(
-      glassColor: const Color(0xEEF7F8FB),
-      backerColor: const Color(0xFFF7F8FB),
-      platformViewFallbackColor: const Color(0xFFF7F8FB),
-      shadowElevation: 2.0,
-      whitenStrength: 0.42,
-      ambientStrength: 0.1,
+      glassColor: const Color(0xEDF4F7FB),
+      backerColor: const Color(0xFFF4F7FB),
+      platformViewFallbackColor: const Color(0xFFF4F7FB),
+      shadowElevation: 6.0,
+      whitenStrength: 0.22,
+      ambientStrength: 0.18,
+      lightIntensity: 0.62,
     );
   }
 
@@ -256,6 +258,17 @@ class AniGlassTheme {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [Colors.transparent, Color(0xDD050505)],
+              ),
+            ),
+          ),
+        ],
+        if (light) ...const [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x66FFFFFF), Color(0xCCFFFFFF)],
               ),
             ),
           ),
