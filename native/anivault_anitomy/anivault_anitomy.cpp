@@ -14,7 +14,7 @@
 #define ANIVAULT_ANITOMY_API __declspec(dllimport)
 #endif
 #else
-#define ANIVAULT_ANITOMY_API __attribute__((visibility("default")))
+#define ANIVAULT_ANITOMY_API __attribute__((visibility("default"))) __attribute__((used))
 #endif
 
 namespace {

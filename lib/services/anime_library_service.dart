@@ -972,7 +972,13 @@ query ($id: Int!) {
 class AnitomyFilenameParser {
   ParsedAnimeFile parse(String path) {
     final fileName = p.basename(path);
-    final decoded = AnitomyNative().parse(fileName);
+    Map<String, dynamic> decoded;
+    try {
+      decoded = AnitomyNative().parse(fileName);
+    } catch (e) {
+      LoggerService().log('[Anitomy] Native parser unavailable: $e');
+      decoded = const {};
+    }
     final title = _stringValue(decoded['title']);
     final episode = _episodeNumber(_stringValue(decoded['episode']));
     final parsedTitle = title ?? fileName;
