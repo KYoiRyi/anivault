@@ -120,6 +120,8 @@ Set-Location -LiteralPath $repoRoot
 
 $cacheRoot = Join-Path $repoRoot '.build-cache'
 $pubCache = Join-Path $cacheRoot 'pub-cache'
+$goModCache = Join-Path $cacheRoot 'go\mod'
+$goBuildCache = Join-Path $cacheRoot 'go\build'
 $stampFile = Join-Path $cacheRoot 'windows-release.sha256'
 $buildDir = Join-Path $repoRoot 'build\windows\x64\runner\Release'
 $artifactDir = Join-Path $repoRoot 'AniVault-windows-release'
@@ -129,8 +131,13 @@ Assert-WithinRoot -CandidatePath $artifactDir -RootPath $repoRoot
 
 New-Item -ItemType Directory -Path $cacheRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $pubCache -Force | Out-Null
+New-Item -ItemType Directory -Path $goModCache -Force | Out-Null
+New-Item -ItemType Directory -Path $goBuildCache -Force | Out-Null
 
 $env:PUB_CACHE = $pubCache
+$env:GOMODCACHE = $goModCache
+$env:GOCACHE = $goBuildCache
+$env:GOWORK = 'off'
 if (-not $env:CMAKE_BUILD_PARALLEL_LEVEL) {
     $env:CMAKE_BUILD_PARALLEL_LEVEL = [string][Math]::Max(1, [Environment]::ProcessorCount)
 }
@@ -175,6 +182,18 @@ if (-not $ForceBuild -and $hasReleaseOutput -and $fingerprint -eq $previousFinge
 
 if (-not (Test-Path -LiteralPath $buildDir)) {
     throw "Windows build finished but release directory was not found at $buildDir"
+}
+
+$torrentNativeDir = Join-Path $repoRoot 'native\anivault_torrent'
+if (Test-Path -LiteralPath $torrentNativeDir) {
+    Invoke-Checked -Message 'Build native torrent engine for Windows' -Action {
+        Push-Location -LiteralPath $torrentNativeDir
+        try {
+            go build -buildmode=c-shared -ldflags "-linkmode external -extldflags '-static'" -o (Join-Path $buildDir 'anivault_torrent.dll') .
+        } finally {
+            Pop-Location
+        }
+    }
 }
 
 Write-Step 'Copy Windows release artifact'

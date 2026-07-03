@@ -12,6 +12,7 @@ import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/anime_series_screen.dart';
+import 'package:anivault/ui/bt_downloads_view.dart';
 import 'package:anivault/ui/page_transition.dart';
 import 'package:anivault/ui/settings_screen.dart';
 import 'package:anivault/services/watch_history_service.dart';
@@ -356,6 +357,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     visible: visible,
                     topPadding: topPadding,
                   )
+                : _sectionIndex == 2
+                ? BtDownloadsView(
+                    key: const ValueKey('bt-page'),
+                    topPadding: topPadding + 96,
+                    onLibraryRefresh: _syncMedia,
+                  )
                 : SettingsContent(
                     key: const ValueKey('settings-page'),
                     topPadding: topPadding + 96,
@@ -373,6 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
               tabs: const [
                 GlassTab(label: 'Home'),
                 GlassTab(label: 'Library'),
+                GlassTab(label: 'BT'),
                 GlassTab(label: 'Settings'),
               ],
             ),
