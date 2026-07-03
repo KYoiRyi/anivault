@@ -27,10 +27,12 @@ build_target() {
   local abi="$1"
   local goarch="$2"
   local cc="$3"
-  local goarm="${4:-}"
+  local cxx="$4"
+  local goarm="${5:-}"
 
   export GOARCH="${goarch}"
   export CC="${TOOLCHAIN_BIN}/${cc}"
+  export CXX="${TOOLCHAIN_BIN}/${cxx}"
   if [[ -n "${goarm}" ]]; then
     export GOARM="${goarm}"
   else
@@ -41,6 +43,6 @@ build_target() {
   go build -buildmode=c-shared -o "${OUT_ROOT}/${abi}/libanivault_torrent.so" .
 }
 
-build_target "arm64-v8a" "arm64" "aarch64-linux-android${API_LEVEL}-clang"
-build_target "armeabi-v7a" "arm" "armv7a-linux-androideabi${API_LEVEL}-clang" "7"
-build_target "x86_64" "amd64" "x86_64-linux-android${API_LEVEL}-clang"
+build_target "arm64-v8a" "arm64" "aarch64-linux-android${API_LEVEL}-clang" "aarch64-linux-android${API_LEVEL}-clang++"
+build_target "armeabi-v7a" "arm" "armv7a-linux-androideabi${API_LEVEL}-clang" "armv7a-linux-androideabi${API_LEVEL}-clang++" "7"
+build_target "x86_64" "amd64" "x86_64-linux-android${API_LEVEL}-clang" "x86_64-linux-android${API_LEVEL}-clang++"
