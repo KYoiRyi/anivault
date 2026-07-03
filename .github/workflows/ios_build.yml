@@ -141,11 +141,21 @@ jobs:
       - name: Push logs on failure
         if: failure()
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add *.log
-          git commit -m "chore: upload build logs [skip ci]" || true
-          git push || true
+          echo "::group::flutter_build.log"
+          tail -n 240 flutter_build.log || true
+          echo "::endgroup::"
+          echo "::group::xcodebuild.log"
+          tail -n 320 xcodebuild.log || true
+          echo "::endgroup::"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs
+          path: |
+            flutter_build.log
+            xcodebuild.log
         
       - name: Generate IPA archive
         run: |
