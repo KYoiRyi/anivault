@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/cinematic_edge_bar.dart';
 import 'package:anivault/ui/performance_hud.dart';
@@ -45,8 +46,14 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _showHUD = false;
 
   int _accumulatedSecondsWatched = 0;
-  DateTime? _lastPositionTime;
   Timer? _progressSaveTimer;
+  Timer? _watchTickTimer;
+  final FocusNode _keyboardFocusNode = FocusNode();
+  bool _isLocked = false;
+  Offset? _lastDoubleTapPosition;
+  double _gestureStartVolume = 100.0;
+  double _gestureStartBrightness = 0.5;
+  double _horizontalDragDx = 0;
 
   // Subtitle custom settings
   double _subtitleSize =
@@ -131,18 +138,13 @@ class _PlayerScreenState extends State<PlayerScreen>
         SharedPreferences.getInstance().then((prefs) {
           prefs.setInt('pos_${widget.videoPath}', posMs);
         });
+      }
+    });
 
-        final now = DateTime.now();
-        if (player.state.playing) {
-          if (_lastPositionTime != null) {
-            final diffMs = now.difference(_lastPositionTime!).inMilliseconds;
-            if (diffMs > 0 && diffMs < 3000) {
-              // filter seeks
-              _accumulatedSecondsWatched += (diffMs / 1000).round();
-            }
-          }
-        }
-        _lastPositionTime = now;
+    _watchTickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (player.state.playing &&
+          player.state.position < player.state.duration) {
+        _accumulatedSecondsWatched += 1;
       }
     });
 
@@ -1330,6 +1332,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void dispose() {
     _progressSaveTimer?.cancel();
+    _watchTickTimer?.cancel();
     _saveProgress();
 
     // Save position one last time immediately on dispose
@@ -1341,6 +1344,8 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
 
     _exitFullscreen();
+    ScreenBrightness.instance.resetApplicationScreenBrightness();
+    _keyboardFocusNode.dispose();
     player.dispose();
     previewPlayer.dispose();
     super.dispose();
@@ -1435,9 +1440,108 @@ class _PlayerScreenState extends State<PlayerScreen>
   void _noopSeg(int v) {}
 
   void _toggleControls() {
+    if (_isLocked) return;
     setState(() {
       _showControls = !_showControls;
     });
+  }
+
+  void _toggleLock() {
+    setState(() {
+      _isLocked = !_isLocked;
+      _showControls = !_isLocked;
+    });
+  }
+
+  void _handleDoubleTap() {
+    if (_isLocked) return;
+    final position = _lastDoubleTapPosition;
+    final width = MediaQuery.sizeOf(context).width;
+    if (position == null || width <= 0) {
+      player.playOrPause();
+      return;
+    }
+    if (position.dx < width * 0.38) {
+      _seekRelative(const Duration(seconds: -10));
+    } else if (position.dx > width * 0.62) {
+      _seekRelative(const Duration(seconds: 10));
+    } else {
+      player.playOrPause();
+    }
+  }
+
+  void _seekRelative(Duration delta) {
+    final duration = player.state.duration;
+    final current = player.state.position;
+    var next = current + delta;
+    if (next < Duration.zero) next = Duration.zero;
+    if (duration > Duration.zero && next > duration) next = duration;
+    player.seek(next);
+    previewPlayer.seek(next);
+  }
+
+  void _handleHorizontalDragStart(DragStartDetails details) {
+    if (_isLocked) return;
+    _horizontalDragDx = 0;
+  }
+
+  void _handleHorizontalDragUpdate(DragUpdateDetails details) {
+    if (_isLocked) return;
+    _horizontalDragDx += details.delta.dx;
+  }
+
+  void _handleHorizontalDragEnd(DragEndDetails details) {
+    if (_isLocked) return;
+    final seconds = (_horizontalDragDx / 8).round().clamp(-90, 90);
+    if (seconds != 0) {
+      _seekRelative(Duration(seconds: seconds));
+    }
+    _horizontalDragDx = 0;
+  }
+
+  Future<void> _handleVerticalDragStart(DragStartDetails details) async {
+    if (_isLocked) return;
+    _gestureStartVolume = player.state.volume;
+    try {
+      _gestureStartBrightness = await ScreenBrightness.instance.application;
+    } catch (_) {
+      _gestureStartBrightness = 0.5;
+    }
+  }
+
+  Future<void> _handleVerticalDragUpdate(DragUpdateDetails details) async {
+    if (_isLocked) return;
+    final size = MediaQuery.sizeOf(context);
+    final delta = -details.primaryDelta! / math.max(size.height, 1);
+    if (details.localPosition.dx < size.width / 2) {
+      final next = (_gestureStartBrightness + delta).clamp(0.02, 1.0);
+      try {
+        await ScreenBrightness.instance.setApplicationScreenBrightness(next);
+      } catch (e) {
+        LoggerService().log('[Player] Brightness gesture failed: $e');
+      }
+    } else {
+      final next = (_gestureStartVolume + delta * 120).clamp(0.0, 100.0);
+      player.setVolume(next);
+      previewPlayer.setVolume(0);
+    }
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.space) {
+      if (!_isLocked) player.playOrPause();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft && !_isLocked) {
+      _seekRelative(const Duration(seconds: -10));
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight && !_isLocked) {
+      _seekRelative(const Duration(seconds: 10));
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -1457,49 +1561,122 @@ class _PlayerScreenState extends State<PlayerScreen>
         ),
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              // 2. Gesture Detector Layer
-              GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _toggleControls,
-                onDoubleTap: () {
-                  final pos = player.state.position;
-                  player.seek(pos + const Duration(seconds: 10));
-                },
-                onScaleUpdate: (details) {
-                  setState(() {
-                    _scale = details.scale.clamp(1.0, 3.0);
-                  });
-                },
-                child: const SizedBox.expand(),
-              ),
+          body: Focus(
+            autofocus: true,
+            focusNode: _keyboardFocusNode,
+            onKeyEvent: _handleKeyEvent,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 2. Gesture Detector Layer
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onDoubleTapDown: (details) {
+                    _lastDoubleTapPosition = details.localPosition;
+                  },
+                  onTap: _toggleControls,
+                  onDoubleTap: _handleDoubleTap,
+                  onHorizontalDragStart: _handleHorizontalDragStart,
+                  onHorizontalDragUpdate: _handleHorizontalDragUpdate,
+                  onHorizontalDragEnd: _handleHorizontalDragEnd,
+                  onVerticalDragStart: _handleVerticalDragStart,
+                  onVerticalDragUpdate: _handleVerticalDragUpdate,
+                  onScaleUpdate: (details) {
+                    if (_isLocked) return;
+                    setState(() {
+                      _scale = details.scale.clamp(1.0, 3.0);
+                    });
+                  },
+                  child: const SizedBox.expand(),
+                ),
 
-              // Custom Subtitle Overlay Layer (always visible over video)
-              _buildSubtitleOverlay(),
+                // Custom Subtitle Overlay Layer (always visible over video)
+                _buildSubtitleOverlay(),
 
-              _buildGlassWarmupLayer(),
+                _buildGlassWarmupLayer(),
 
-              // 3. Floating Floating Controls Island
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                opacity: _showControls ? 1.0 : 0.0,
-                child: IgnorePointer(
-                  ignoring: !_showControls,
-                  child: Stack(
-                    children: [
-                      // Top left back button & Title (Round liquid glass button)
-                      Positioned(
-                        top: 40,
-                        left: 24,
-                        child: Row(
-                          children: [
-                            GlassButton.custom(
+                // 3. Floating Floating Controls Island
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  opacity: _showControls ? 1.0 : 0.0,
+                  child: IgnorePointer(
+                    ignoring: !_showControls,
+                    child: Stack(
+                      children: [
+                        // Top left back button & Title (Round liquid glass button)
+                        Positioned(
+                          top: 40,
+                          left: 24,
+                          child: Row(
+                            children: [
+                              GlassButton.custom(
+                                useOwnLayer: false,
+                                width: 48,
+                                height: 48,
+                                settings:
+                                    RecommendedGlassSettings.playerHighlight,
+                                interactionScale: 1.08,
+                                stretch: 0.75,
+                                glowColor: const Color(0xFF8FEAFF),
+                                glowOpacity: 0.45,
+                                glowBlurRadius: 18,
+                                shape: const LiquidOval(),
+                                onTap: () => Navigator.of(context).pop(),
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Text(
+                                widget.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Center Right Floating Settings Button (Round liquid glass button)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: GlassButton.custom(
                               useOwnLayer: false,
-                              width: 48,
-                              height: 48,
+                              width: 56,
+                              height: 56,
+                              settings:
+                                  RecommendedGlassSettings.playerHighlight,
+                              interactionScale: 1.08,
+                              stretch: 0.75,
+                              glowColor: const Color(0xFFFF9AF2),
+                              glowOpacity: 0.45,
+                              glowBlurRadius: 18,
+                              shape: const LiquidOval(),
+                              onTap: _showVideoSettings,
+                              child: const Icon(
+                                Icons.layers_rounded,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 16),
+                            child: GlassButton.custom(
+                              useOwnLayer: false,
+                              width: 56,
+                              height: 56,
                               settings:
                                   RecommendedGlassSettings.playerHighlight,
                               interactionScale: 1.08,
@@ -1508,112 +1685,101 @@ class _PlayerScreenState extends State<PlayerScreen>
                               glowOpacity: 0.45,
                               glowBlurRadius: 18,
                               shape: const LiquidOval(),
-                              onTap: () => Navigator.of(context).pop(),
+                              onTap: _toggleLock,
                               child: const Icon(
-                                Icons.arrow_back_ios_new_rounded,
+                                Icons.lock_rounded,
                                 color: Colors.white,
-                                size: 18,
+                                size: 26,
                               ),
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              widget.title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Center Right Floating Settings Button (Round liquid glass button)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 16),
-                          child: GlassButton.custom(
-                            useOwnLayer: false,
-                            width: 56,
-                            height: 56,
-                            settings: RecommendedGlassSettings.playerHighlight,
-                            interactionScale: 1.08,
-                            stretch: 0.75,
-                            glowColor: const Color(0xFFFF9AF2),
-                            glowOpacity: 0.45,
-                            glowBlurRadius: 18,
-                            shape: const LiquidOval(),
-                            onTap: _showVideoSettings,
-                            child: const Icon(
-                              Icons.layers_rounded,
-                              color: Colors.white,
-                              size: 28,
                             ),
                           ),
                         ),
-                      ),
 
-                      // Center Play/Pause Floating Island (Round liquid glass button)
-                      Align(
-                        alignment: Alignment.center,
-                        child: StreamBuilder<bool>(
-                          stream: player.stream.playing,
-                          builder: (context, playing) {
-                            final isPlaying = playing.data ?? false;
-                            return GlassButton.custom(
-                              useOwnLayer: false,
-                              width: 96,
-                              height: 96,
-                              settings:
-                                  RecommendedGlassSettings.playerHighlight,
-                              interactionScale: 1.05,
-                              stretch: 0.6,
-                              glowColor: Colors.white,
-                              glowOpacity: 0.42,
-                              glowBlurRadius: 24,
-                              shape: const LiquidOval(),
-                              onTap: () => player.playOrPause(),
-                              child: Icon(
-                                isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                size: 48,
-                                color: Colors.white,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      // 4. Cinematic Edge Bar (Edge-to-Edge)
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: SafeArea(
-                          top: false,
-                          child: CinematicEdgeBar(
-                            player: player,
-                            previewPlayer: previewPlayer,
-                            previewController: previewController,
+                        // Center Play/Pause Floating Island (Round liquid glass button)
+                        Align(
+                          alignment: Alignment.center,
+                          child: StreamBuilder<bool>(
+                            stream: player.stream.playing,
+                            builder: (context, playing) {
+                              final isPlaying = playing.data ?? false;
+                              return GlassButton.custom(
+                                useOwnLayer: false,
+                                width: 96,
+                                height: 96,
+                                settings:
+                                    RecommendedGlassSettings.playerHighlight,
+                                interactionScale: 1.05,
+                                stretch: 0.6,
+                                glowColor: Colors.white,
+                                glowOpacity: 0.42,
+                                glowBlurRadius: 24,
+                                shape: const LiquidOval(),
+                                onTap: () => player.playOrPause(),
+                                child: Icon(
+                                  isPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  size: 48,
+                                  color: Colors.white,
+                                ),
+                              );
+                            },
                           ),
                         ),
-                      ),
-                    ],
+
+                        // 4. Cinematic Edge Bar (Edge-to-Edge)
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: SafeArea(
+                            top: false,
+                            child: CinematicEdgeBar(
+                              player: player,
+                              previewPlayer: previewPlayer,
+                              previewController: previewController,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // 5. Performance HUD (Independent from controls but over video)
-              if (_showHUD)
-                Positioned(
-                  top: 96,
-                  left: 16,
-                  right: 16,
-                  child: PerformanceHUD(player: player, controller: controller),
-                ),
-            ],
+                // 5. Performance HUD (Independent from controls but over video)
+                if (_showHUD)
+                  Positioned(
+                    top: 96,
+                    left: 16,
+                    right: 16,
+                    child: PerformanceHUD(
+                      player: player,
+                      controller: controller,
+                    ),
+                  ),
+                if (_isLocked)
+                  Center(
+                    child: GlassButton.custom(
+                      useOwnLayer: false,
+                      width: 104,
+                      height: 104,
+                      settings: RecommendedGlassSettings.playerHighlight,
+                      interactionScale: 1.04,
+                      stretch: 0.55,
+                      glowColor: Colors.white,
+                      glowOpacity: 0.42,
+                      glowBlurRadius: 22,
+                      shape: const LiquidOval(),
+                      onTap: _toggleLock,
+                      child: const Icon(
+                        Icons.lock_open_rounded,
+                        color: Colors.white,
+                        size: 44,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

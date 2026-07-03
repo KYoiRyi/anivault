@@ -55,6 +55,7 @@ dependencies:
     path: third_party/smb_connect
   xml: ^6.6.1
   ffi: ^2.2.0
+  screen_brightness: ^2.1.11
 
 dev_dependencies:
   flutter_test:
