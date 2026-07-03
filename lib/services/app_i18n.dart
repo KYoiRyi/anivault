@@ -1,0 +1,106 @@
+import 'dart:ui';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+
+class AppI18n extends ChangeNotifier {
+  static final AppI18n _instance = AppI18n._internal();
+  factory AppI18n() => _instance;
+  AppI18n._internal();
+
+  Locale _locale = PlatformDispatcher.instance.locale;
+
+  Locale get locale => _locale;
+  String get languageCode => _locale.languageCode == 'zh' ? 'zh' : 'en';
+  bool get isChinese => languageCode == 'zh';
+
+  void update(Locale locale) {
+    final next = locale.languageCode == 'zh'
+        ? Locale('zh', locale.countryCode)
+        : const Locale('en');
+    if (_locale == next) return;
+    _locale = next;
+    notifyListeners();
+  }
+
+  String t(String key) =>
+      (_strings[languageCode] ?? _strings['en']!)[key] ?? key;
+
+  String animeTitle({
+    String? userPreferred,
+    String? romaji,
+    String? english,
+    String? native,
+  }) {
+    final candidates = isChinese
+        ? [native, userPreferred, english, romaji]
+        : [english, userPreferred, romaji, native];
+    for (final candidate in candidates) {
+      final value = candidate?.trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return '';
+  }
+}
+
+const _strings = {
+  'en': {
+    'todayContinue': 'Continue Watching',
+    'weeklyProgress': 'Weekly Progress',
+    'todayUpdates': 'Today Updates',
+    'seasonProgress': 'Season Progress',
+    'recommendations': 'New Anime Picks',
+    'backgroundRefreshing': 'Refreshing',
+    'fromLocalLibrary': 'From local library',
+    'anilistAi': 'AniList + AI Agent',
+    'emptyUpdates': 'No airing updates found today',
+    'emptySeasonProgress': 'Season progress appears after matched local anime',
+    'emptyRecommendations':
+        'Seasonal recommendations will appear after refresh',
+    'aiReason': 'AI Recommendation',
+    'fallbackReason': 'This title is worth adding to the seasonal shortlist.',
+    'description': 'Synopsis',
+    'noDescription': 'No synopsis yet.',
+    'justUpdated': 'Just updated',
+    'waitingRefresh': 'Waiting refresh',
+    'minutesAgo': 'minutes ago',
+    'hoursAgo': 'hours ago',
+    'seasonalAnime': 'Seasonal anime',
+    'airingToday': 'Airing today',
+    'episodeUpdate': 'Episode',
+    'timePending': 'Time pending',
+    'winter': 'Winter',
+    'spring': 'Spring',
+    'summer': 'Summer',
+    'fall': 'Fall',
+  },
+  'zh': {
+    'todayContinue': '今日继续观看',
+    'weeklyProgress': '本周追番进度',
+    'todayUpdates': '今日更新',
+    'seasonProgress': '追番进度',
+    'recommendations': '新番推荐',
+    'backgroundRefreshing': '正在后台刷新',
+    'fromLocalLibrary': '来自本地媒体库',
+    'anilistAi': 'AniList + AI Agent',
+    'emptyUpdates': '今天还没有抓到更新情报',
+    'emptySeasonProgress': '本季度番剧会在入库并识别后显示进度',
+    'emptyRecommendations': '后台会自动拉取本季新番并生成推荐理由',
+    'aiReason': 'AI 推荐理由',
+    'fallbackReason': '这部作品适合加入本季候选片单。',
+    'description': '简介',
+    'noDescription': '暂无简介。',
+    'justUpdated': '刚刚更新',
+    'waitingRefresh': '等待刷新',
+    'minutesAgo': '分钟前',
+    'hoursAgo': '小时前',
+    'seasonalAnime': '本季新番',
+    'airingToday': '今日放送',
+    'episodeUpdate': '第',
+    'timePending': '时间待定',
+    'winter': '冬季',
+    'spring': '春季',
+    'summer': '夏季',
+    'fall': '秋季',
+  },
+};

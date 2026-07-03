@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:anivault/ui/home_screen.dart';
 import 'package:anivault/services/shader_service.dart';
@@ -7,6 +8,7 @@ import 'package:anivault/services/smb_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/services/torrent_service.dart';
 import 'package:anivault/services/home_insights_service.dart';
+import 'package:anivault/services/app_i18n.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -46,6 +48,19 @@ class AniVaultApp extends StatelessWidget {
         return MaterialApp(
           title: 'AniVault',
           debugShowCheckedModeBanner: false,
+          supportedLocales: const [Locale('en'), Locale('zh')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          localeResolutionCallback: (locale, supportedLocales) {
+            final resolved = locale?.languageCode == 'zh'
+                ? const Locale('zh')
+                : const Locale('en');
+            AppI18n().update(resolved);
+            return resolved;
+          },
           themeMode: ThemeService().themeMode,
           theme: _buildTheme(Brightness.light),
           darkTheme: _buildTheme(Brightness.dark),

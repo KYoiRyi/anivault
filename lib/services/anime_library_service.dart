@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:anivault/services/anitomy_native.dart';
 import 'package:anivault/services/ai_agent_service.dart';
+import 'package:anivault/services/app_i18n.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/torrent_service.dart';
 
@@ -786,13 +787,12 @@ query ($id: Int!) {
 
   String? _titleFor(AniListSearchResult? details, String languageCode) {
     if (details == null) return null;
-    final wantsNative = const {'zh', 'ja', 'ko'}.contains(languageCode);
-    if (wantsNative && details.nativeTitle?.isNotEmpty == true) {
-      return details.nativeTitle;
-    }
-    return details.englishTitle?.isNotEmpty == true
-        ? details.englishTitle
-        : details.title;
+    return AppI18n().animeTitle(
+      userPreferred: details.title,
+      english: details.englishTitle,
+      native: details.nativeTitle,
+      romaji: details.title,
+    );
   }
 
   double _titleScore(String left, String right) {

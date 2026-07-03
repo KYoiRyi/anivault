@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:anivault/services/anime_library_service.dart';
+import 'package:anivault/services/app_i18n.dart';
 import 'package:anivault/services/home_insights_service.dart';
 import 'package:anivault/services/watch_history_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
@@ -40,6 +41,7 @@ class _HomepageViewState extends State<HomepageView> {
 
     return ListenableBuilder(
       listenable: Listenable.merge([
+        AppI18n(),
         WatchHistoryService(),
         AnimeLibraryService(),
         HomeInsightsService(),
@@ -142,7 +144,7 @@ class _HomepageViewState extends State<HomepageView> {
 
   Widget _buildContinueWatchingHeader(Color textColor) {
     return Text(
-      '今日继续观看',
+      AppI18n().t('todayContinue'),
       style: TextStyle(
         color: textColor,
         fontSize: 20,
@@ -405,7 +407,7 @@ class _HomepageViewState extends State<HomepageView> {
 
   Widget _buildWeeklyProgressHeader(Color textColor) {
     return Text(
-      '本周追番进度',
+      AppI18n().t('weeklyProgress'),
       style: TextStyle(
         color: textColor,
         fontSize: 20,
@@ -587,14 +589,21 @@ class _HomepageViewState extends State<HomepageView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildSectionTitle(
-          '今日更新',
-          service.refreshing ? '正在后台刷新' : _refreshLabel(service.lastRefresh),
+          AppI18n().t('todayUpdates'),
+          service.refreshing
+              ? AppI18n().t('backgroundRefreshing')
+              : _refreshLabel(service.lastRefresh),
           textColor,
           secondary,
         ),
         const SizedBox(height: 12),
         if (updates.isEmpty)
-          _buildInsightEmptyCard(context, '今天还没有抓到更新情报', textColor, secondary)
+          _buildInsightEmptyCard(
+            context,
+            AppI18n().t('emptyUpdates'),
+            textColor,
+            secondary,
+          )
         else
           ScrollConfiguration(
             behavior: const MaterialScrollBehavior().copyWith(
@@ -633,12 +642,19 @@ class _HomepageViewState extends State<HomepageView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSectionTitle('$seasonName追番进度', '来自本地媒体库', textColor, secondary),
+        _buildSectionTitle(
+          AppI18n().isChinese
+              ? '$seasonName${AppI18n().t('seasonProgress')}'
+              : '$seasonName ${AppI18n().t('seasonProgress')}',
+          AppI18n().t('fromLocalLibrary'),
+          textColor,
+          secondary,
+        ),
         const SizedBox(height: 12),
         if (progress.isEmpty)
           _buildInsightEmptyCard(
             context,
-            '本季度番剧会在入库并识别后显示进度',
+            AppI18n().t('emptySeasonProgress'),
             textColor,
             secondary,
           )
@@ -682,12 +698,17 @@ class _HomepageViewState extends State<HomepageView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSectionTitle('新番推荐', 'AniList + AI Agent', textColor, secondary),
+        _buildSectionTitle(
+          AppI18n().t('recommendations'),
+          AppI18n().t('anilistAi'),
+          textColor,
+          secondary,
+        ),
         const SizedBox(height: 12),
         if (recommendations.isEmpty)
           _buildInsightEmptyCard(
             context,
-            '后台会自动拉取本季新番并生成推荐理由',
+            AppI18n().t('emptyRecommendations'),
             textColor,
             secondary,
           )
@@ -785,18 +806,24 @@ class _HomepageViewState extends State<HomepageView> {
   }
 
   String _refreshLabel(DateTime? value) {
-    if (value == null) return '等待刷新';
+    if (value == null) return AppI18n().t('waitingRefresh');
     final diff = DateTime.now().difference(value);
-    if (diff.inMinutes < 1) return '刚刚更新';
-    if (diff.inHours < 1) return '${diff.inMinutes} 分钟前';
-    return '${diff.inHours} 小时前';
+    if (diff.inMinutes < 1) return AppI18n().t('justUpdated');
+    if (diff.inHours < 1) {
+      return AppI18n().isChinese
+          ? '${diff.inMinutes} ${AppI18n().t('minutesAgo')}'
+          : '${diff.inMinutes} ${AppI18n().t('minutesAgo')}';
+    }
+    return AppI18n().isChinese
+        ? '${diff.inHours} ${AppI18n().t('hoursAgo')}'
+        : '${diff.inHours} ${AppI18n().t('hoursAgo')}';
   }
 
   String _seasonName(int month) {
-    if (month <= 3) return '冬季';
-    if (month <= 6) return '春季';
-    if (month <= 9) return '夏季';
-    return '秋季';
+    if (month <= 3) return AppI18n().t('winter');
+    if (month <= 6) return AppI18n().t('spring');
+    if (month <= 9) return AppI18n().t('summer');
+    return AppI18n().t('fall');
   }
 
   void _showAnimeInsightDetails(SeasonalAnimeItem item) {
@@ -827,7 +854,7 @@ class _HomepageViewState extends State<HomepageView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.title,
+                        item.localizedTitle(),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -859,17 +886,19 @@ class _HomepageViewState extends State<HomepageView> {
             ),
             const SizedBox(height: 18),
             _DetailSection(
-              title: 'AI 推荐理由',
-              body: item.reason.isEmpty ? '这部作品适合加入本季候选片单。' : item.reason,
+              title: AppI18n().t('aiReason'),
+              body: item.reason.isEmpty
+                  ? AppI18n().t('fallbackReason')
+                  : item.reason,
               textColor: textColor,
               secondary: secondary,
             ),
             const SizedBox(height: 16),
             _DetailSection(
-              title: '简介',
+              title: AppI18n().t('description'),
               body: item.description?.isNotEmpty == true
                   ? item.description!
-                  : '暂无简介。',
+                  : AppI18n().t('noDescription'),
               textColor: textColor,
               secondary: secondary,
             ),
@@ -890,7 +919,7 @@ class _HomepageViewState extends State<HomepageView> {
       if (item.episodes != null) '${item.episodes} episodes',
       if (item.nextEpisode != null) 'Ep ${item.nextEpisode}',
     ];
-    return parts.isEmpty ? 'Seasonal anime' : parts.join('  ·  ');
+    return parts.isEmpty ? AppI18n().t('seasonalAnime') : parts.join('  ·  ');
   }
 
   Widget _buildFallbackCover(AnimeSeries series) {
@@ -1048,7 +1077,7 @@ class _TodayUpdateTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.title,
+                      item.localizedTitle(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -1061,8 +1090,10 @@ class _TodayUpdateTile extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       item.nextEpisode == null
-                          ? '今日放送'
-                          : '第 ${item.nextEpisode} 集更新',
+                          ? AppI18n().t('airingToday')
+                          : AppI18n().isChinese
+                          ? '${AppI18n().t('episodeUpdate')} ${item.nextEpisode} 集更新'
+                          : '${AppI18n().t('episodeUpdate')} ${item.nextEpisode}',
                       style: TextStyle(
                         color: secondary,
                         fontSize: 12,
@@ -1090,7 +1121,7 @@ class _TodayUpdateTile extends StatelessWidget {
   }
 
   String _timeLabel(DateTime? time) {
-    if (time == null) return '时间待定';
+    if (time == null) return AppI18n().t('timePending');
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 }
@@ -1219,7 +1250,7 @@ class _RecommendationTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.title,
+                        item.localizedTitle(),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1232,7 +1263,7 @@ class _RecommendationTile extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         item.averageScore == null
-                            ? '本季新番'
+                            ? AppI18n().t('seasonalAnime')
                             : 'AniList ${item.averageScore}/100',
                         style: TextStyle(
                           color: secondary,

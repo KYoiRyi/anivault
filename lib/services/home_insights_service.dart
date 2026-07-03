@@ -7,12 +7,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:anivault/services/ai_agent_service.dart';
 import 'package:anivault/services/anime_library_service.dart';
+import 'package:anivault/services/app_i18n.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/watch_history_service.dart';
 
 class SeasonalAnimeItem {
   final int id;
   final String title;
+  final String? romajiTitle;
+  final String? englishTitle;
+  final String? nativeTitle;
   final String? coverUrl;
   final String? description;
   final int? averageScore;
@@ -27,6 +31,9 @@ class SeasonalAnimeItem {
   const SeasonalAnimeItem({
     required this.id,
     required this.title,
+    this.romajiTitle,
+    this.englishTitle,
+    this.nativeTitle,
     this.coverUrl,
     this.description,
     this.averageScore,
@@ -43,6 +50,9 @@ class SeasonalAnimeItem {
     return SeasonalAnimeItem(
       id: id,
       title: title,
+      romajiTitle: romajiTitle,
+      englishTitle: englishTitle,
+      nativeTitle: nativeTitle,
       coverUrl: coverUrl,
       description: description,
       averageScore: averageScore,
@@ -59,6 +69,9 @@ class SeasonalAnimeItem {
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
+    'romajiTitle': romajiTitle,
+    'englishTitle': englishTitle,
+    'nativeTitle': nativeTitle,
     'coverUrl': coverUrl,
     'description': description,
     'averageScore': averageScore,
@@ -75,6 +88,9 @@ class SeasonalAnimeItem {
     return SeasonalAnimeItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
       title: json['title'] as String? ?? '',
+      romajiTitle: json['romajiTitle'] as String?,
+      englishTitle: json['englishTitle'] as String?,
+      nativeTitle: json['nativeTitle'] as String?,
       coverUrl: json['coverUrl'] as String?,
       description: json['description'] as String?,
       averageScore: (json['averageScore'] as num?)?.toInt(),
@@ -92,6 +108,13 @@ class SeasonalAnimeItem {
       reason: json['reason'] as String? ?? '',
     );
   }
+
+  String localizedTitle() => AppI18n().animeTitle(
+    userPreferred: title,
+    romaji: romajiTitle,
+    english: englishTitle,
+    native: nativeTitle,
+  );
 }
 
 class SeasonalProgressItem {
@@ -316,7 +339,7 @@ query ($season: MediaSeason!, $year: Int!) {
       if (AiAgentService().config.isReady) {
         reason =
             await AiAgentService().recommendAnimeReason(
-              title: item.title,
+              title: item.localizedTitle(),
               genres: item.genres,
               tags: item.tags,
               description: item.description,
@@ -338,6 +361,10 @@ query ($season: MediaSeason!, $year: Int!) {
     DateTime? airingAt,
   }) {
     final titleMap = raw['title'] is Map ? raw['title'] as Map : const {};
+    final romaji = titleMap['romaji'] as String?;
+    final english = titleMap['english'] as String?;
+    final native = titleMap['native'] as String?;
+    final userPreferred = titleMap['userPreferred'] as String?;
     final coverMap = raw['coverImage'] is Map
         ? raw['coverImage'] as Map
         : const {};
@@ -357,12 +384,15 @@ query ($season: MediaSeason!, $year: Int!) {
         const [];
     final item = SeasonalAnimeItem(
       id: (raw['id'] as num?)?.toInt() ?? 0,
-      title:
-          titleMap['userPreferred'] as String? ??
-          titleMap['english'] as String? ??
-          titleMap['romaji'] as String? ??
-          titleMap['native'] as String? ??
-          '',
+      title: AppI18n().animeTitle(
+        userPreferred: userPreferred,
+        romaji: romaji,
+        english: english,
+        native: native,
+      ),
+      romajiTitle: romaji,
+      englishTitle: english,
+      nativeTitle: native,
       coverUrl:
           coverMap['extraLarge'] as String? ?? coverMap['large'] as String?,
       description: _cleanDescription(raw['description'] as String?),
