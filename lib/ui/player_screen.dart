@@ -177,8 +177,11 @@ class _PlayerScreenState extends State<PlayerScreen>
 
         // Configure player lossless audio properties
         await nativePlayer.setProperty('audio-format', 'float');
-        await nativePlayer.setProperty('audio-channels', 'auto-safe');
+        await nativePlayer.setProperty('audio-channels', 'auto');
+        await nativePlayer.setProperty('ad-lavc-ac3drc', '0');
+        await nativePlayer.setProperty('audio-normalize-downmix', 'no');
         await nativePlayer.setProperty('resample-filter', 'soxr');
+        await nativePlayer.setProperty('audio-resample-filter-size', '32');
         await nativePlayer.setProperty('audio-pitch-correction', 'no');
 
         // Open main player first to split the heavy startup loading workload
@@ -209,9 +212,11 @@ class _PlayerScreenState extends State<PlayerScreen>
             await nativePreviewPlayer.setProperty('hwdec', 'auto');
             await previewPlayer.setVolume(0);
             await nativePreviewPlayer.setProperty('audio-format', 'float');
+            await nativePreviewPlayer.setProperty('audio-channels', 'auto');
+            await nativePreviewPlayer.setProperty('ad-lavc-ac3drc', '0');
             await nativePreviewPlayer.setProperty(
-              'audio-channels',
-              'auto-safe',
+              'audio-normalize-downmix',
+              'no',
             );
             await nativePreviewPlayer.setProperty('resample-filter', 'soxr');
 
@@ -548,11 +553,20 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ),
                 const SizedBox(height: 14),
                 _glassSettingsSection(
+                  icon: Icons.graphic_eq_rounded,
+                  title: 'Audio',
+                  subtitle: 'High quality EAC3 output and track selection',
+                  child: _buildAudioTrackSelector(),
+                ),
+                const SizedBox(height: 14),
+                _glassSettingsSection(
                   icon: Icons.subtitles_rounded,
                   title: 'Subtitles',
                   subtitle: 'Flutter overlay layout and typography',
                   child: Column(
                     children: [
+                      _buildSubtitleTrackSelector(),
+                      const SizedBox(height: 14),
                       _settingsSliderRow(
                         label: 'Font Size',
                         value: _subtitleSize,
@@ -1301,6 +1315,211 @@ class _PlayerScreenState extends State<PlayerScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAudioTrackSelector() {
+    return StreamBuilder<Tracks>(
+      stream: player.stream.tracks,
+      initialData: player.state.tracks,
+      builder: (context, tracksSnapshot) {
+        return StreamBuilder<Track>(
+          stream: player.stream.track,
+          initialData: player.state.track,
+          builder: (context, trackSnapshot) {
+            final tracks =
+                tracksSnapshot.data?.audio ?? player.state.tracks.audio;
+            final selected =
+                trackSnapshot.data?.audio ?? player.state.track.audio;
+            return _trackSelectorButton(
+              icon: Icons.graphic_eq_rounded,
+              label: _trackLabel(selected, fallback: 'Auto audio'),
+              onTap: () => _showAudioTrackPicker(tracks),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSubtitleTrackSelector() {
+    return StreamBuilder<Tracks>(
+      stream: player.stream.tracks,
+      initialData: player.state.tracks,
+      builder: (context, tracksSnapshot) {
+        return StreamBuilder<Track>(
+          stream: player.stream.track,
+          initialData: player.state.track,
+          builder: (context, trackSnapshot) {
+            final tracks =
+                tracksSnapshot.data?.subtitle ?? player.state.tracks.subtitle;
+            final selected =
+                trackSnapshot.data?.subtitle ?? player.state.track.subtitle;
+            return _trackSelectorButton(
+              icon: Icons.closed_caption_rounded,
+              label: _trackLabel(selected, fallback: 'Auto subtitles'),
+              onTap: () => _showSubtitleTrackPicker(tracks),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _trackSelectorButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GlassButton.custom(
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.playerControlFor(context),
+      shape: const LiquidRoundedSuperellipse(borderRadius: 100),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _trackLabel(dynamic track, {required String fallback}) {
+    final id = track.id as String? ?? '';
+    if (id == 'no') return 'Off';
+    if (id == 'auto') return fallback;
+    final parts = <String>[
+      if ((track.title as String?)?.trim().isNotEmpty == true)
+        (track.title as String).trim(),
+      if ((track.language as String?)?.trim().isNotEmpty == true)
+        (track.language as String).trim(),
+      if ((track.codec as String?)?.trim().isNotEmpty == true)
+        (track.codec as String).trim().toUpperCase(),
+      if (track.channelscount != null) '${track.channelscount}ch',
+    ];
+    return parts.isEmpty ? 'Track $id' : parts.join(' · ');
+  }
+
+  void _showAudioTrackPicker(List<AudioTrack> tracks) {
+    _showTrackPicker(
+      title: 'Audio Track',
+      tracks: tracks,
+      selectedId: player.state.track.audio.id,
+      labelFor: (track) => _trackLabel(track, fallback: 'Auto audio'),
+      onSelect: (track) async {
+        await player.setAudioTrack(track);
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  void _showSubtitleTrackPicker(List<SubtitleTrack> tracks) {
+    _showTrackPicker(
+      title: 'Subtitle Track',
+      tracks: tracks,
+      selectedId: player.state.track.subtitle.id,
+      labelFor: (track) => _trackLabel(track, fallback: 'Auto subtitles'),
+      onSelect: (track) async {
+        await player.setSubtitleTrack(track);
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  void _showTrackPicker<T>({
+    required String title,
+    required List<T> tracks,
+    required String selectedId,
+    required String Function(T track) labelFor,
+    required Future<void> Function(T track) onSelect,
+  }) {
+    GlassModalSheet.show(
+      context: context,
+      initialState: GlassSheetState.peek,
+      peekSize: 0.36,
+      halfSize: 0.5,
+      fullSize: 0.72,
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.playerPanelFor(context),
+      barrierColor: Colors.black38,
+      fillTransition: GlassFillTransition.instant,
+      builder: (context) {
+        final scrollData = ScrollControllerProvider.of(context);
+        return ListView(
+          controller: scrollData?.controller,
+          physics: scrollData?.physics,
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 14),
+            for (final track in tracks)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GlassButton.custom(
+                  quality: GlassQuality.premium,
+                  settings: AniGlassTheme.playerControlFor(context),
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 22),
+                  onTap: () async {
+                    await onSelect(track);
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          (track as dynamic).id == selectedId
+                              ? Icons.check_circle_rounded
+                              : Icons.circle_outlined,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            labelFor(track),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
