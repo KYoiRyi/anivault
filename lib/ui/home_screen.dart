@@ -89,6 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final docDir = await getApplicationDocumentsDirectory();
       final validExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm'];
       final discoveredPaths = <String>[];
+      final activeBtPaths = _activeIncompleteBtPaths();
 
       await for (final entity in _safeWalk(docDir)) {
         if (entity is! File) {
@@ -96,7 +97,9 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         final path = entity.path;
         final isVideo = validExtensions.any(path.toLowerCase().endsWith);
-        if (isVideo && !knownPaths.contains(path)) {
+        if (isVideo &&
+            !knownPaths.contains(path) &&
+            !activeBtPaths.contains(PathResolver.resolve(path))) {
           discoveredPaths.add(path);
         }
       }
@@ -118,7 +121,9 @@ class _HomeScreenState extends State<HomeScreen> {
             }
             final path = entity.path;
             final isVideo = validExtensions.any(path.toLowerCase().endsWith);
-            if (isVideo && !knownPaths.contains(path)) {
+            if (isVideo &&
+                !knownPaths.contains(path) &&
+                !activeBtPaths.contains(PathResolver.resolve(path))) {
               discoveredPaths.add(path);
             }
           }
@@ -136,6 +141,24 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _isSyncing = false);
     }
+  }
+
+  Set<String> _activeIncompleteBtPaths() {
+    return {
+      for (final task in TorrentService().tasks)
+        if (!task.complete)
+          for (final file in task.files)
+            if (_isVideoFilePath(file.path)) PathResolver.resolve(file.path),
+    };
+  }
+
+  bool _isVideoFilePath(String path) {
+    final lower = path.toLowerCase();
+    return lower.endsWith('.mp4') ||
+        lower.endsWith('.mkv') ||
+        lower.endsWith('.avi') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.webm');
   }
 
   Stream<FileSystemEntity> _safeWalk(Directory root) async* {

@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 
 	g "github.com/anacrolix/generics"
 	"github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
 )
 
@@ -56,6 +58,7 @@ type taskState struct {
 	GotInfo         bool        `json:"gotInfo"`
 	Files           []fileState `json:"files"`
 	Error           string      `json:"error,omitempty"`
+	Diagnostics     string      `json:"diagnostics,omitempty"`
 }
 
 type fileState struct {
@@ -124,7 +127,9 @@ func anivault_torrent_add_magnet(magnet *C.char) *C.char {
 		if err != nil {
 			return errResp(err.Error())
 		}
-		spec.DisableInitialPieceCheck = true
+		if infoBytes, ok := loadMetainfoBytes(dirForMetadata(), tInfoHashHex(spec)); ok {
+			spec.InfoBytes = infoBytes
+		}
 		t, _, err := mgr.client.AddTorrentSpec(spec)
 		if err != nil {
 			return errResp(err.Error())
@@ -237,13 +242,12 @@ func stateLocked(tsk *task) taskState {
 	diskDone := int64(0)
 	diskAllComplete := gotInfo
 	if gotInfo {
+		saveMetainfo(t)
 		for _, f := range t.Files() {
 			path := filepath.Join(mgr.downloadDir, filepath.FromSlash(f.Path()))
-			path, diskComplete := finalizeCompletedFile(path, f.Length())
+			path = finalizeLegacyPartFile(path, f.Length())
 			fileDone := f.BytesCompleted()
-			if diskComplete {
-				fileDone = f.Length()
-			} else {
+			if fileDone < f.Length() {
 				diskAllComplete = false
 			}
 			diskDone += fileDone
@@ -258,8 +262,23 @@ func stateLocked(tsk *task) taskState {
 	if diskDone > done {
 		done = diskDone
 	}
-	if diskAllComplete && total > 0 {
+	if t.Complete().Bool() && diskAllComplete && total > 0 {
 		t.DisallowDataDownload()
+	}
+	stats := t.Stats()
+	diagnostics := fmt.Sprintf(
+		"peers total=%d active=%d pending=%d halfOpen=%d seeders=%d piecesComplete=%d hashed=%d",
+		stats.TotalPeers,
+		stats.ActivePeers,
+		stats.PendingPeers,
+		stats.HalfOpenPeers,
+		stats.ConnectedSeeders,
+		stats.PiecesComplete,
+		stats.BytesHashed.Int64(),
+	)
+	errorText := tsk.Error
+	if gotInfo && total > 0 && done == 0 && !diskAllComplete {
+		errorText = diagnostics
 	}
 	progress := 0.0
 	if total > 0 {
@@ -273,12 +292,71 @@ func stateLocked(tsk *task) taskState {
 		DownloadedBytes: done,
 		TotalBytes:      total,
 		Progress:        progress,
-		Complete:        t.Complete().Bool() || (diskAllComplete && total > 0),
+		Complete:        t.Complete().Bool(),
 		Paused:          tsk.Paused,
 		GotInfo:         gotInfo,
 		Files:           files,
-		Error:           tsk.Error,
+		Error:           errorText,
+		Diagnostics:     diagnostics,
 	}
+}
+
+func saveMetainfo(t *torrent.Torrent) {
+	mi := t.Metainfo()
+	if len(mi.InfoBytes) == 0 {
+		return
+	}
+	path := metainfoPath(t.InfoHash().HexString())
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return
+	}
+	tmp := path + ".tmp"
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return
+	}
+	err = mi.Write(f)
+	closeErr := f.Close()
+	if err != nil || closeErr != nil {
+		_ = os.Remove(tmp)
+		return
+	}
+	_ = os.Rename(tmp, path)
+}
+
+func loadMetainfoBytes(dir, infoHash string) ([]byte, bool) {
+	path := filepath.Join(dir, ".metadata", infoHash+".torrent")
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, false
+	}
+	defer f.Close()
+	mi, err := metainfo.Load(f)
+	if err != nil || len(mi.InfoBytes) == 0 {
+		return nil, false
+	}
+	return mi.InfoBytes, true
+}
+
+func tInfoHashHex(spec *torrent.TorrentSpec) string {
+	if !spec.InfoHash.IsZero() {
+		return spec.InfoHash.HexString()
+	}
+	if spec.InfoHashV2.Ok {
+		return spec.InfoHashV2.Value.HexString()
+	}
+	return ""
+}
+
+func dirForMetadata() string {
+	return mgr.downloadDir
+}
+
+func metainfoPath(infoHash string) string {
+	return filepath.Join(mgr.downloadDir, ".metadata", infoHash+".torrent")
 }
 
 func removeTorrentFiles(tsk *task) {
@@ -288,22 +366,19 @@ func removeTorrentFiles(tsk *task) {
 	}
 }
 
-func finalizeCompletedFile(path string, length int64) (string, bool) {
-	if fileHasLength(path, length) {
-		return path, true
-	}
+func finalizeLegacyPartFile(path string, length int64) string {
 	partPath := path + ".part"
 	if !fileHasLength(partPath, length) {
-		return path, false
+		return path
 	}
 	if err := os.Rename(partPath, path); err == nil || fileHasLength(path, length) {
-		return path, true
+		return path
 	}
 	if err := copyFile(partPath, path); err == nil && fileHasLength(path, length) {
 		_ = os.Remove(partPath)
-		return path, true
+		return path
 	}
-	return path, false
+	return path
 }
 
 func fileHasLength(path string, length int64) bool {

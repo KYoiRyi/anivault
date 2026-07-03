@@ -45,6 +45,7 @@ class TorrentTaskState {
   final bool paused;
   final bool gotInfo;
   final String? error;
+  final String? diagnostics;
   final List<TorrentFileState> files;
 
   const TorrentTaskState({
@@ -59,6 +60,7 @@ class TorrentTaskState {
     required this.gotInfo,
     required this.files,
     this.error,
+    this.diagnostics,
   });
 
   factory TorrentTaskState.fromJson(Map<String, dynamic> json) {
@@ -73,6 +75,7 @@ class TorrentTaskState {
       paused: json['paused'] == true,
       gotInfo: json['gotInfo'] == true,
       error: json['error'] as String?,
+      diagnostics: json['diagnostics'] as String?,
       files:
           (json['files'] as List?)
               ?.whereType<Map>()
@@ -123,6 +126,7 @@ class TorrentService extends ChangeNotifier {
   final Map<String, String> _magnetsById = {};
   final Map<String, TorrentTaskState> _tasks = {};
   final Set<String> _completedLibraryPaths = {};
+  final Map<String, String> _lastLoggedDiagnostics = {};
   Directory? _downloadRoot;
   Timer? _pollTimer;
   bool _initialized = false;
@@ -212,12 +216,15 @@ class TorrentService extends ChangeNotifier {
           }),
         );
       for (final task in _tasks.values) {
+        _logTaskDiagnostics(task);
         if (task.hasCompletedLibraryMedia) {
           libraryChanged =
               await _markCompletedForLibrary(task) || libraryChanged;
         }
       }
-      libraryChanged = await _scanDownloadRootIntoLibrary() || libraryChanged;
+      libraryChanged =
+          await _scanDownloadRootIntoLibrary(_activeIncompletePaths()) ||
+          libraryChanged;
       await _savePersistedTasks();
       if (libraryChanged) {
         await _refreshLibraryFromPrefs();
@@ -229,6 +236,14 @@ class TorrentService extends ChangeNotifier {
       LoggerService().log('[BT] Poll failed: $e');
       notifyListeners();
     }
+  }
+
+  void _logTaskDiagnostics(TorrentTaskState task) {
+    final message = task.error ?? task.diagnostics;
+    if (message == null || message.trim().isEmpty) return;
+    if (_lastLoggedDiagnostics[task.id] == message) return;
+    _lastLoggedDiagnostics[task.id] = message;
+    LoggerService().log('[BT] ${task.name}: $message');
   }
 
   dynamic _check(Map<String, dynamic> response) {
@@ -293,7 +308,18 @@ class TorrentService extends ChangeNotifier {
     return changed;
   }
 
-  Future<bool> _scanDownloadRootIntoLibrary() async {
+  Set<String> _activeIncompletePaths() {
+    return {
+      for (final task in _tasks.values)
+        if (!task.complete)
+          for (final file in task.files)
+            if (_isFinalVideoPath(file.path)) PathResolver.resolve(file.path),
+    };
+  }
+
+  Future<bool> _scanDownloadRootIntoLibrary(
+    Set<String> activeIncompletePaths,
+  ) async {
     final root = _downloadRoot;
     if (root == null || !await root.exists()) return false;
     final discovered = <String>[];
@@ -313,6 +339,7 @@ class TorrentService extends ChangeNotifier {
     var changed = false;
     for (final path in discovered.toSet()) {
       final resolvedPath = PathResolver.resolve(path);
+      if (activeIncompletePaths.contains(resolvedPath)) continue;
       if (_completedLibraryPaths.contains(resolvedPath)) continue;
       _completedLibraryPaths.add(resolvedPath);
       await _addPathToMediaLibrary(resolvedPath);
