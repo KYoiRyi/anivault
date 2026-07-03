@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/theme_service.dart';
+import 'package:anivault/services/vfs_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/anime_series_screen.dart';
 import 'package:anivault/ui/bt_downloads_view.dart';
@@ -94,7 +95,13 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      knownPaths.removeWhere((path) => !File(path).existsSync());
+      for (final path in VFSService().getVirtualFiles()) {
+        if (!knownPaths.contains(path) && !discoveredPaths.contains(path)) {
+          discoveredPaths.add(path);
+        }
+      }
+
+      knownPaths.removeWhere((path) => !VFSService().existsSync(path));
       final mergedPaths = [...discoveredPaths, ...knownPaths];
       if (!mounted) return;
       setState(() => _mediaPaths = mergedPaths);

@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:anivault/services/anitomy_native.dart';
 import 'package:anivault/services/ai_agent_service.dart';
 import 'package:anivault/services/logger_service.dart';
+import 'package:anivault/services/vfs_service.dart';
 
 class ParsedAnimeFile {
   final String path;
@@ -443,7 +444,7 @@ class AnimeLibraryService extends ChangeNotifier {
         final path = entry.value;
         _setResolving(normalizedTitle, true);
         if ((availablePaths.isNotEmpty && !availablePaths.contains(path)) ||
-            !File(path).existsSync()) {
+            !VFSService().existsSync(path)) {
           _unresolvedCache.remove(normalizedTitle);
           _setResolving(normalizedTitle, false);
           changed = true;

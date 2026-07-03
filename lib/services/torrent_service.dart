@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/torrent_native.dart';
+import 'package:anivault/services/vfs_service.dart';
 
 class TorrentFileState {
   final String path;
@@ -101,7 +102,7 @@ class TorrentTaskState {
               _isVideoPath(file.path) &&
               file.length > 0 &&
               file.downloadedBytes >= file.length &&
-              File(file.path).existsSync(),
+              VFSService().existsSync(file.path),
         )
         .map((file) => file.path)
         .toList();
@@ -141,6 +142,9 @@ class TorrentService extends ChangeNotifier {
     if (_initialized) return;
     _initialized = true;
     await _loadPersistedTasks();
+    for (final path in _completedLibraryPaths) {
+      VFSService().registerVirtualFile(path);
+    }
     try {
       final dir = await _downloadDirectory();
       _check(TorrentNative().init(dir.path));
@@ -269,7 +273,7 @@ class TorrentService extends ChangeNotifier {
 
     var changed = false;
     for (final path in paths) {
-      if (!File(path).existsSync()) continue;
+      VFSService().registerVirtualFile(path);
       _completedLibraryPaths.add(path);
       await _addPathToMediaLibrary(path);
       LoggerService().log('[BT] Added to library: ${p.basename(path)}');
@@ -293,7 +297,7 @@ class TorrentService extends ChangeNotifier {
     final paths =
         prefs
             .getStringList('media_library')
-            ?.where((path) => File(path).existsSync())
+            ?.where((path) => VFSService().existsSync(path))
             .toList() ??
         const [];
     if (paths.isEmpty) return;
