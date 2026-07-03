@@ -192,6 +192,63 @@ class AiAgentService extends ChangeNotifier {
     }
   }
 
+  Future<String?> recommendAnimeReason({
+    required String title,
+    required List<String> genres,
+    required List<String> tags,
+    required String? description,
+    required int? averageScore,
+  }) async {
+    await initialize();
+    if (!_config.isReady) return null;
+
+    try {
+      final model = ChatOpenAI(
+        apiKey: _config.apiKey.trim(),
+        baseUrl: _normalizeBaseUrl(_config.baseUrl),
+        defaultOptions: ChatOpenAIOptions(
+          model: _config.model.trim(),
+          temperature: 0.45,
+          maxTokens: 120,
+        ),
+      );
+      final result = await model
+          .invoke(
+            PromptValue.chat([
+              ChatMessage.system(
+                '你是动画推荐助手。根据 AniList 的标题、标签、评分和简介，'
+                '用中文输出一句 22 到 38 字的推荐理由。不要剧透，不要编号，'
+                '不要提到 AniList，不要输出引号。',
+              ),
+              ChatMessage.humanText(
+                [
+                  '标题：$title',
+                  if (genres.isNotEmpty) '类型：${genres.take(5).join('、')}',
+                  if (tags.isNotEmpty) '标签：${tags.take(6).join('、')}',
+                  if (averageScore != null) '评分：$averageScore/100',
+                  if (description?.isNotEmpty == true)
+                    '简介：${description!.replaceAll('\n', ' ')}',
+                ].join('\n'),
+              ),
+            ]),
+          )
+          .timeout(const Duration(seconds: 10));
+      final cleaned = result.output.contentAsString
+          .replaceAll(
+            RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false),
+            '',
+          )
+          .replaceAll(RegExp(r'[\r\n]+'), ' ')
+          .replaceAll(RegExp(r'''^["“”']+|["“”']+$'''), '')
+          .trim();
+      if (cleaned.isEmpty) return null;
+      return cleaned.length > 56 ? '${cleaned.substring(0, 56)}…' : cleaned;
+    } catch (e) {
+      LoggerService().log('[AI Agent] Recommendation reason failed: $e');
+      return null;
+    }
+  }
+
   Future<String?> _inferAnimeTitleWithTool(ParsedAnimeFile file) async {
     try {
       final model = ChatOpenAI(

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:anivault/services/anime_library_service.dart';
+import 'package:anivault/services/home_insights_service.dart';
 import 'package:anivault/services/watch_history_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/player_screen.dart';
@@ -28,6 +29,7 @@ class _HomepageViewState extends State<HomepageView> {
   void initState() {
     super.initState();
     WatchHistoryService().initialize();
+    HomeInsightsService().initialize();
   }
 
   @override
@@ -36,7 +38,11 @@ class _HomepageViewState extends State<HomepageView> {
     final secondary = AniGlassTheme.secondaryTextColor(context);
 
     return ListenableBuilder(
-      listenable: WatchHistoryService(),
+      listenable: Listenable.merge([
+        WatchHistoryService(),
+        AnimeLibraryService(),
+        HomeInsightsService(),
+      ]),
       builder: (context, _) {
         final lastRecord = WatchHistoryService().getLastWatchedRecord();
         AnimeSeries? lastSeries;
@@ -117,6 +123,12 @@ class _HomepageViewState extends State<HomepageView> {
                       textColor,
                       secondary,
                     ),
+                    const SizedBox(height: 28),
+                    _buildTodayUpdatesSection(context, textColor, secondary),
+                    const SizedBox(height: 28),
+                    _buildSeasonProgressSection(context, textColor, secondary),
+                    const SizedBox(height: 28),
+                    _buildRecommendationsSection(context, textColor, secondary),
                   ],
                 ),
               ),
@@ -563,6 +575,214 @@ class _HomepageViewState extends State<HomepageView> {
     );
   }
 
+  Widget _buildTodayUpdatesSection(
+    BuildContext context,
+    Color textColor,
+    Color secondary,
+  ) {
+    final service = HomeInsightsService();
+    final updates = service.todayUpdates;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSectionTitle(
+          '今日更新',
+          service.refreshing ? '正在后台刷新' : _refreshLabel(service.lastRefresh),
+          textColor,
+          secondary,
+        ),
+        const SizedBox(height: 12),
+        if (updates.isEmpty)
+          _buildInsightEmptyCard(context, '今天还没有抓到更新情报', textColor, secondary)
+        else
+          SizedBox(
+            height: 174,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: updates.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final item = updates[index];
+                return _TodayUpdateTile(
+                  item: item,
+                  textColor: textColor,
+                  secondary: secondary,
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSeasonProgressSection(
+    BuildContext context,
+    Color textColor,
+    Color secondary,
+  ) {
+    final progress = HomeInsightsService().seasonProgress;
+    final seasonName = _seasonName(DateTime.now().month);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSectionTitle('$seasonName追番进度', '来自本地媒体库', textColor, secondary),
+        const SizedBox(height: 12),
+        if (progress.isEmpty)
+          _buildInsightEmptyCard(
+            context,
+            '本季度番剧会在入库并识别后显示进度',
+            textColor,
+            secondary,
+          )
+        else
+          GlassCard(
+            quality: GlassQuality.premium,
+            useOwnLayer: true,
+            settings: AniGlassTheme.heroFor(context),
+            padding: const EdgeInsets.all(16),
+            shape: const LiquidRoundedSuperellipse(borderRadius: 24),
+            child: Column(
+              children: [
+                for (final item in progress.take(4)) ...[
+                  _SeasonProgressRow(
+                    item: item,
+                    textColor: textColor,
+                    secondary: secondary,
+                  ),
+                  if (item != progress.take(4).last)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(
+                        height: 1,
+                        color: textColor.withValues(alpha: 0.08),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRecommendationsSection(
+    BuildContext context,
+    Color textColor,
+    Color secondary,
+  ) {
+    final recommendations = HomeInsightsService().recommendations;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSectionTitle('新番推荐', 'AniList + AI Agent', textColor, secondary),
+        const SizedBox(height: 12),
+        if (recommendations.isEmpty)
+          _buildInsightEmptyCard(
+            context,
+            '后台会自动拉取本季新番并生成推荐理由',
+            textColor,
+            secondary,
+          )
+        else
+          SizedBox(
+            height: 316,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: recommendations.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                return _RecommendationTile(
+                  item: recommendations[index],
+                  textColor: textColor,
+                  secondary: secondary,
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(
+    String title,
+    String subtitle,
+    Color textColor,
+    Color secondary,
+  ) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: secondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInsightEmptyCard(
+    BuildContext context,
+    String message,
+    Color textColor,
+    Color secondary,
+  ) {
+    return GlassCard(
+      quality: GlassQuality.premium,
+      useOwnLayer: true,
+      settings: AniGlassTheme.heroFor(context),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      shape: const LiquidRoundedSuperellipse(borderRadius: 22),
+      child: Row(
+        children: [
+          Icon(
+            Icons.auto_awesome_rounded,
+            color: textColor.withValues(alpha: 0.6),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: secondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _refreshLabel(DateTime? value) {
+    if (value == null) return '等待刷新';
+    final diff = DateTime.now().difference(value);
+    if (diff.inMinutes < 1) return '刚刚更新';
+    if (diff.inHours < 1) return '${diff.inMinutes} 分钟前';
+    return '${diff.inHours} 小时前';
+  }
+
+  String _seasonName(int month) {
+    if (month <= 3) return '冬季';
+    if (month <= 6) return '春季';
+    if (month <= 9) return '夏季';
+    return '秋季';
+  }
+
   Widget _buildFallbackCover(AnimeSeries series) {
     return Container(
       color: Colors.white.withValues(alpha: 0.05),
@@ -681,6 +901,336 @@ class RadialProgressPainter extends CustomPainter {
     return oldDelegate.progress != progress ||
         oldDelegate.color != color ||
         oldDelegate.backgroundColor != backgroundColor;
+  }
+}
+
+class _TodayUpdateTile extends StatelessWidget {
+  final SeasonalAnimeItem item;
+  final Color textColor;
+  final Color secondary;
+
+  const _TodayUpdateTile({
+    required this.item,
+    required this.textColor,
+    required this.secondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 280,
+      child: GlassCard(
+        quality: GlassQuality.premium,
+        useOwnLayer: true,
+        settings: AniGlassTheme.heroFor(context),
+        padding: const EdgeInsets.all(14),
+        shape: const LiquidRoundedSuperellipse(borderRadius: 22),
+        child: Row(
+          children: [
+            _Poster(url: item.coverUrl, width: 78, height: 118),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      height: 1.12,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    item.nextEpisode == null
+                        ? '今日放送'
+                        : '第 ${item.nextEpisode} 集更新',
+                    style: TextStyle(
+                      color: secondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _timeLabel(item.airingAt),
+                    style: TextStyle(color: secondary, fontSize: 12),
+                  ),
+                  const Spacer(),
+                  _TagWrap(
+                    tags: [...item.genres, ...item.tags].take(3).toList(),
+                    textColor: textColor,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _timeLabel(DateTime? time) {
+    if (time == null) return '时间待定';
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _SeasonProgressRow extends StatelessWidget {
+  final SeasonalProgressItem item;
+  final Color textColor;
+  final Color secondary;
+
+  const _SeasonProgressRow({
+    required this.item,
+    required this.textColor,
+    required this.secondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (item.progress * 100).round();
+    return Row(
+      children: [
+        _Poster(url: item.series.coverUrl, width: 48, height: 64),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.series.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: LinearProgressIndicator(
+                  value: item.progress,
+                  minHeight: 7,
+                  backgroundColor: textColor.withValues(alpha: 0.10),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF38BDF8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '${item.watchedEpisodes}/${item.totalEpisodes} · $pct%',
+          style: TextStyle(
+            color: secondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecommendationTile extends StatelessWidget {
+  final SeasonalAnimeItem item;
+  final Color textColor;
+  final Color secondary;
+
+  const _RecommendationTile({
+    required this.item,
+    required this.textColor,
+    required this.secondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 218,
+      child: GlassCard(
+        quality: GlassQuality.premium,
+        useOwnLayer: true,
+        settings: AniGlassTheme.heroFor(context),
+        padding: EdgeInsets.zero,
+        shape: const LiquidRoundedSuperellipse(borderRadius: 24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 142,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _Poster(url: item.coverUrl, width: 218, height: 142),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Color(0xAA000000)],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 12,
+                      right: 12,
+                      bottom: 10,
+                      child: _TagWrap(
+                        tags: [...item.genres, ...item.tags].take(3).toList(),
+                        textColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        height: 1.12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      item.averageScore == null
+                          ? '本季新番'
+                          : 'AniList ${item.averageScore}/100',
+                      style: TextStyle(
+                        color: secondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      item.reason,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: secondary,
+                        fontSize: 12,
+                        height: 1.36,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Poster extends StatelessWidget {
+  final String? url;
+  final double width;
+  final double height;
+
+  const _Poster({required this.url, required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: url == null
+            ? const ColoredBox(
+                color: Color(0xFF111827),
+                child: Icon(Icons.movie_filter_rounded, color: Colors.white54),
+              )
+            : Image.network(
+                url!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const ColoredBox(
+                  color: Color(0xFF111827),
+                  child: Icon(
+                    Icons.movie_filter_rounded,
+                    color: Colors.white54,
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _TagWrap extends StatelessWidget {
+  final List<String> tags;
+  final Color textColor;
+
+  const _TagWrap({required this.tags, required this.textColor});
+
+  @override
+  Widget build(BuildContext context) {
+    if (tags.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final tag in tags.take(3))
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: textColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: textColor.withValues(alpha: 0.14)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Text(
+                _localizedTag(tag),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _localizedTag(String tag) {
+    return switch (tag) {
+      'Romance' => '纯爱',
+      'Fantasy' => '奇幻',
+      'Isekai' => '异世界',
+      'Comedy' => '喜剧',
+      'Drama' => '剧情',
+      'Action' => '动作',
+      'Slice of Life' => '日常',
+      'Music' => '音乐',
+      'Supernatural' => '超自然',
+      'School' => '校园',
+      _ => tag,
+    };
   }
 }
 

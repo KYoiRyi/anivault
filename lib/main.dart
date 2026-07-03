@@ -6,6 +6,7 @@ import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/smb_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/services/torrent_service.dart';
+import 'package:anivault/services/home_insights_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -20,6 +21,7 @@ void main() async {
   await TorrentService().initialize();
   await SMBService().init();
   await ThemeService().load();
+  await HomeInsightsService().initialize();
 
   // Initialize liquid glass shaders
   await LiquidGlassWidgets.initialize();
