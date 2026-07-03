@@ -9,7 +9,7 @@ import UIKit
   ) -> Bool {
     // Reference all Go torrent FFI symbols to prevent Xcode's linker from stripping them under -dead_strip.
     // We use a dynamic check that is always false at runtime to avoid executing them.
-    if application.coordinateSpace.bounds.width < 0 {
+    if ProcessInfo.processInfo.arguments.contains("DUMMY_KEEPER_ARG") {
       _ = anivault_torrent_init(nil)
       _ = anivault_torrent_add_magnet(nil)
       _ = anivault_torrent_pause(nil)
