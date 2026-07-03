@@ -9,9 +9,10 @@ export GOOS=ios
 export GOARCH=arm64
 
 SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
-export CC="$(xcrun --sdk iphoneos --find clang)"
-export CGO_CFLAGS="-isysroot ${SDK_PATH} -miphoneos-version-min=13.0"
-export CGO_LDFLAGS="-isysroot ${SDK_PATH} -miphoneos-version-min=13.0"
+export CC="$(xcrun --sdk iphoneos --find clang) -target arm64-apple-ios13.0"
+export CXX="$(xcrun --sdk iphoneos --find clang++) -target arm64-apple-ios13.0"
+export CGO_CFLAGS="-isysroot ${SDK_PATH} -miphoneos-version-min=13.0 -target arm64-apple-ios13.0"
+export CGO_LDFLAGS="-isysroot ${SDK_PATH} -miphoneos-version-min=13.0 -target arm64-apple-ios13.0"
 
 OUT_DIR="../../ios/Runner"
 mkdir -p "${OUT_DIR}"

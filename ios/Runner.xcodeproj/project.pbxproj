@@ -383,7 +383,11 @@
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-force_load",
+					"$(PROJECT_DIR)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a",
+					"-force_load",
 					"$(PROJECT_DIR)/Runner/libanivault_torrent.a",
+					"-framework",
+					CoreML,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.anivault.anivault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -571,7 +575,11 @@
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-force_load",
+					"$(PROJECT_DIR)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a",
+					"-force_load",
 					"$(PROJECT_DIR)/Runner/libanivault_torrent.a",
+					"-framework",
+					CoreML,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.anivault.anivault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -602,7 +610,11 @@
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-force_load",
+					"$(PROJECT_DIR)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a",
+					"-force_load",
 					"$(PROJECT_DIR)/Runner/libanivault_torrent.a",
+					"-framework",
+					CoreML,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.anivault.anivault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
