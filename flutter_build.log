@@ -35,16 +35,17 @@ Got dependencies!
 Try `flutter pub outdated` for more information.
 Warning: Building for device with codesigning disabled. You will have to manually codesign before deploying to device.
 Building com.anivault.anivault for device (ios-release)...
-Adding Swift Package Manager integration...                        13.6s
+Adding Swift Package Manager integration...                        10.5s
 The following plugins do not support Swift Package Manager for ios:
   - media_kit_libs_ios_video
   - media_kit_video
 This will become an error in a future version of Flutter. Please contact the plugin maintainers to request Swift Package Manager adoption.
-Running pod install...                                           1,093ms
+Running pod install...                                           1,366ms
 Running Xcode build...                                          
-Xcode build done.                                           77.0s
+Xcode build done.                                           80.8s
 Failed to build iOS app
-Error (Xcode): No simulator runtime version from [<DVTBuildVersion 22F77>, <DVTBuildVersion 22G86>, <DVTBuildVersion 23A8464>, <DVTBuildVersion 23B86>, <DVTBuildVersion 23C54>] available to use with iphonesimulator SDK version <DVTBuildVersion 22A3362>
-/Users/runner/work/anivault/anivault/ios/Runner/Assets.xcassets
+Error (Xcode): Library 'anivault_torrent' not found
+
+Error (Xcode): Linker command failed with exit code 1 (use -v to see invocation)
 
 Encountered error while building for device.
