@@ -101,8 +101,7 @@ class TorrentTaskState {
           (file) =>
               _isVideoPath(file.path) &&
               file.length > 0 &&
-              file.downloadedBytes >= file.length &&
-              VFSService().existsSync(file.path),
+              file.downloadedBytes >= file.length,
         )
         .map((file) => file.path)
         .toList();
@@ -297,7 +296,8 @@ class TorrentService extends ChangeNotifier {
     final paths =
         prefs
             .getStringList('media_library')
-            ?.where((path) => VFSService().existsSync(path))
+            ?.map((path) => VFSService().resolvePath(path))
+            .where((path) => VFSService().existsSync(path))
             .toList() ??
         const [];
     if (paths.isEmpty) return;
@@ -321,9 +321,10 @@ class TorrentService extends ChangeNotifier {
         }
       } catch (_) {}
     }
+    final completed = prefs.getStringList(_completedKey) ?? const [];
     _completedLibraryPaths
       ..clear()
-      ..addAll(prefs.getStringList(_completedKey) ?? const []);
+      ..addAll(completed.map((p) => VFSService().resolvePath(p)));
   }
 
   Future<void> _savePersistedTasks() async {

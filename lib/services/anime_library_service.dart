@@ -277,7 +277,8 @@ class AnimeLibraryService extends ChangeNotifier {
     required String languageCode,
     AniListMatchResolver? resolveAmbiguousMatch,
   }) async {
-    _lastRefreshPaths = List.unmodifiable(paths);
+    final resolvedPaths = paths.map(VFSService().resolvePath).toList();
+    _lastRefreshPaths = List.unmodifiable(resolvedPaths);
     _lastLanguageCode = languageCode;
     _isScanning = true;
     _lastError = null;
@@ -285,7 +286,7 @@ class AnimeLibraryService extends ChangeNotifier {
 
     try {
       await initialize();
-      final parsedFiles = paths.map(_filenameParser.parse).toList();
+      final parsedFiles = resolvedPaths.map(_filenameParser.parse).toList();
       final titleBuckets = <String, List<ParsedAnimeFile>>{};
       for (final parsed in parsedFiles) {
         titleBuckets.putIfAbsent(parsed.normalizedTitle, () => []).add(parsed);

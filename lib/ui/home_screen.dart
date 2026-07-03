@@ -79,7 +79,10 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isSyncing = true);
     try {
       final prefs = await SharedPreferences.getInstance();
-      final knownPaths = prefs.getStringList('media_library') ?? [];
+      final knownPaths = prefs.getStringList('media_library')
+              ?.map((path) => VFSService().resolvePath(path))
+              .toList() ??
+          [];
       final docDir = await getApplicationDocumentsDirectory();
       final validExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm'];
       final discoveredPaths = <String>[];

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:anivault/services/anime_library_service.dart';
+import 'package:anivault/services/vfs_service.dart';
 
 class WatchRecord {
   final String videoPath;
@@ -36,7 +37,7 @@ class WatchRecord {
   };
 
   factory WatchRecord.fromJson(Map<String, dynamic> json) => WatchRecord(
-    videoPath: json['videoPath'] as String,
+    videoPath: VFSService().resolvePath(json['videoPath'] as String),
     seriesId: json['seriesId'] as String,
     episodeNumber: json['episodeNumber'] as int?,
     episodeTitle: json['episodeTitle'] as String? ?? '',
