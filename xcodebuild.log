@@ -1,5 +1,5 @@
 Command line invocation:
-    /Applications/Xcode_16.app/Contents/Developer/usr/bin/xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= "OTHER_LDFLAGS=-force_load /Users/runner/work/anivault/anivault/ios/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -force_load /Users/runner/work/anivault/anivault/ios/../native/anivault_anitomy/build_ios/libanivault_anitomy.a -framework CoreML"
+    /Applications/Xcode_16.app/Contents/Developer/usr/bin/xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= "OTHER_LDFLAGS=-force_load /Users/runner/work/anivault/anivault/ios/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -force_load /Users/runner/work/anivault/anivault/ios/../native/anivault_anitomy/build_ios/libanivault_anitomy.a -framework CoreML"
 
 User defaults from command line:
     IDEPackageSupportUseBuiltinSCM = YES
@@ -16,11 +16,15 @@ Resolve Package Graph
 
 Resolved source packages:
   package_info_plus: /Users/runner/work/anivault/anivault/ios/Flutter/ephemeral/Packages/.packages/package_info_plus-10.0.0 @ local
-  FlutterFramework: /Users/runner/work/anivault/anivault/ios/Flutter/ephemeral/Packages/.packages/FlutterFramework @ local
   file_selector_ios: /Users/runner/work/anivault/anivault/ios/Flutter/ephemeral/Packages/.packages/file_selector_ios-0.5.3+5 @ local
   FlutterGeneratedPluginSwiftPackage: /Users/runner/work/anivault/anivault/ios/Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage
   shared_preferences_foundation: /Users/runner/work/anivault/anivault/ios/Flutter/ephemeral/Packages/.packages/shared_preferences_foundation-2.5.6 @ local
   wakelock_plus: /Users/runner/work/anivault/anivault/ios/Flutter/ephemeral/Packages/.packages/wakelock_plus-1.6.0 @ local
+  FlutterFramework: /Users/runner/work/anivault/anivault/ios/Flutter/ephemeral/Packages/.packages/FlutterFramework @ local
 
-2026-07-03 06:50:53.660 xcodebuild[19640:64169] Writing error result bundle to /var/folders/mn/js5hmsy13552y330w_94s79h0000gn/T/ResultBundle_2026-03-07_06-50-0053.xcresult
-xcodebuild: error: Found no destinations for the scheme 'Runner' and action build.
+2026-07-03 06:56:39.118 xcodebuild[23904:72319] Writing error result bundle to /var/folders/mn/js5hmsy13552y330w_94s79h0000gn/T/ResultBundle_2026-03-07_06-56-0039.xcresult
+xcodebuild: error: Unable to find a destination matching the provided destination specifier:
+		{ generic:1, platform:iOS }
+
+	Ineligible destinations for the "Runner" scheme:
+		{ platform:iOS, id:dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder, name:Any iOS Device, error:iOS 18.0 is not installed. To use with Xcode, first download and install the platform }
