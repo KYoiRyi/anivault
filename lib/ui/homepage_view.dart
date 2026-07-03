@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:anivault/services/anime_library_service.dart';
@@ -595,20 +596,27 @@ class _HomepageViewState extends State<HomepageView> {
         if (updates.isEmpty)
           _buildInsightEmptyCard(context, '今天还没有抓到更新情报', textColor, secondary)
         else
-          SizedBox(
-            height: 174,
-            child: ListView.separated(
+          ScrollConfiguration(
+            behavior: const MaterialScrollBehavior().copyWith(
+              dragDevices: PointerDeviceKind.values.toSet(),
+            ),
+            child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              itemCount: updates.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final item = updates[index];
-                return _TodayUpdateTile(
-                  item: item,
-                  textColor: textColor,
-                  secondary: secondary,
-                );
-              },
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
+              child: Row(
+                children: [
+                  for (final item in updates) ...[
+                    _TodayUpdateTile(
+                      item: item,
+                      textColor: textColor,
+                      secondary: secondary,
+                      onTap: () => _showAnimeInsightDetails(item),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                ],
+              ),
             ),
           ),
       ],
@@ -684,19 +692,27 @@ class _HomepageViewState extends State<HomepageView> {
             secondary,
           )
         else
-          SizedBox(
-            height: 316,
-            child: ListView.separated(
+          ScrollConfiguration(
+            behavior: const MaterialScrollBehavior().copyWith(
+              dragDevices: PointerDeviceKind.values.toSet(),
+            ),
+            child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              itemCount: recommendations.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 14),
-              itemBuilder: (context, index) {
-                return _RecommendationTile(
-                  item: recommendations[index],
-                  textColor: textColor,
-                  secondary: secondary,
-                );
-              },
+              physics: const BouncingScrollPhysics(),
+              clipBehavior: Clip.none,
+              child: Row(
+                children: [
+                  for (final item in recommendations) ...[
+                    _RecommendationTile(
+                      item: item,
+                      textColor: textColor,
+                      secondary: secondary,
+                      onTap: () => _showAnimeInsightDetails(item),
+                    ),
+                    const SizedBox(width: 14),
+                  ],
+                ],
+              ),
             ),
           ),
       ],
@@ -781,6 +797,100 @@ class _HomepageViewState extends State<HomepageView> {
     if (month <= 6) return '春季';
     if (month <= 9) return '夏季';
     return '秋季';
+  }
+
+  void _showAnimeInsightDetails(SeasonalAnimeItem item) {
+    final textColor = AniGlassTheme.textColor(context);
+    final secondary = AniGlassTheme.secondaryTextColor(context);
+    GlassModalSheet.show(
+      context: context,
+      initialState: GlassSheetState.half,
+      halfSize: 0.62,
+      fullSize: 0.92,
+      quality: GlassQuality.premium,
+      settings: AniGlassTheme.heroFor(context),
+      barrierColor: Colors.black45,
+      fillTransition: GlassFillTransition.instant,
+      builder: (context) {
+        final scrollData = ScrollControllerProvider.of(context);
+        return ListView(
+          controller: scrollData?.controller,
+          physics: scrollData?.physics,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+          children: [
+            Row(
+              children: [
+                _Poster(url: item.coverUrl, width: 86, height: 122),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          height: 1.08,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _insightMetaLine(item),
+                        style: TextStyle(
+                          color: secondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GlassButton(
+                  quality: GlassQuality.premium,
+                  settings: AniGlassTheme.chromeFor(context),
+                  icon: Icon(Icons.close_rounded, color: textColor),
+                  onTap: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _DetailSection(
+              title: 'AI 推荐理由',
+              body: item.reason.isEmpty ? '这部作品适合加入本季候选片单。' : item.reason,
+              textColor: textColor,
+              secondary: secondary,
+            ),
+            const SizedBox(height: 16),
+            _DetailSection(
+              title: '简介',
+              body: item.description?.isNotEmpty == true
+                  ? item.description!
+                  : '暂无简介。',
+              textColor: textColor,
+              secondary: secondary,
+            ),
+            const SizedBox(height: 16),
+            _TagWrap(
+              tags: [...item.genres, ...item.tags].take(8).toList(),
+              textColor: textColor,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _insightMetaLine(SeasonalAnimeItem item) {
+    final parts = <String>[
+      if (item.averageScore != null) 'AniList ${item.averageScore}/100',
+      if (item.episodes != null) '${item.episodes} episodes',
+      if (item.nextEpisode != null) 'Ep ${item.nextEpisode}',
+    ];
+    return parts.isEmpty ? 'Seasonal anime' : parts.join('  ·  ');
   }
 
   Widget _buildFallbackCover(AnimeSeries series) {
@@ -908,67 +1018,72 @@ class _TodayUpdateTile extends StatelessWidget {
   final SeasonalAnimeItem item;
   final Color textColor;
   final Color secondary;
+  final VoidCallback onTap;
 
   const _TodayUpdateTile({
     required this.item,
     required this.textColor,
     required this.secondary,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 280,
-      child: GlassCard(
-        quality: GlassQuality.premium,
-        useOwnLayer: true,
-        settings: AniGlassTheme.heroFor(context),
-        padding: const EdgeInsets.all(14),
-        shape: const LiquidRoundedSuperellipse(borderRadius: 22),
-        child: Row(
-          children: [
-            _Poster(url: item.coverUrl, width: 78, height: 118),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      height: 1.12,
+      child: GestureDetector(
+        onTap: onTap,
+        child: GlassCard(
+          quality: GlassQuality.premium,
+          useOwnLayer: true,
+          settings: AniGlassTheme.heroFor(context),
+          padding: const EdgeInsets.all(14),
+          shape: const LiquidRoundedSuperellipse(borderRadius: 22),
+          child: Row(
+            children: [
+              _Poster(url: item.coverUrl, width: 78, height: 118),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        height: 1.12,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.nextEpisode == null
-                        ? '今日放送'
-                        : '第 ${item.nextEpisode} 集更新',
-                    style: TextStyle(
-                      color: secondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: 8),
+                    Text(
+                      item.nextEpisode == null
+                          ? '今日放送'
+                          : '第 ${item.nextEpisode} 集更新',
+                      style: TextStyle(
+                        color: secondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _timeLabel(item.airingAt),
-                    style: TextStyle(color: secondary, fontSize: 12),
-                  ),
-                  const Spacer(),
-                  _TagWrap(
-                    tags: [...item.genres, ...item.tags].take(3).toList(),
-                    textColor: textColor,
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      _timeLabel(item.airingAt),
+                      style: TextStyle(color: secondary, fontSize: 12),
+                    ),
+                    const Spacer(),
+                    _TagWrap(
+                      tags: [...item.genres, ...item.tags].take(3).toList(),
+                      textColor: textColor,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1045,99 +1160,155 @@ class _RecommendationTile extends StatelessWidget {
   final SeasonalAnimeItem item;
   final Color textColor;
   final Color secondary;
+  final VoidCallback onTap;
 
   const _RecommendationTile({
     required this.item,
     required this.textColor,
     required this.secondary,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 218,
-      child: GlassCard(
-        quality: GlassQuality.premium,
-        useOwnLayer: true,
-        settings: AniGlassTheme.heroFor(context),
-        padding: EdgeInsets.zero,
-        shape: const LiquidRoundedSuperellipse(borderRadius: 24),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                height: 142,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _Poster(url: item.coverUrl, width: 218, height: 142),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Color(0xAA000000)],
+      child: GestureDetector(
+        onTap: onTap,
+        child: GlassCard(
+          quality: GlassQuality.premium,
+          useOwnLayer: true,
+          settings: AniGlassTheme.heroFor(context),
+          padding: EdgeInsets.zero,
+          shape: const LiquidRoundedSuperellipse(borderRadius: 24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 142,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _Poster(url: item.coverUrl, width: 218, height: 142),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Color(0xAA000000)],
+                          ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      left: 12,
-                      right: 12,
-                      bottom: 10,
-                      child: _TagWrap(
-                        tags: [...item.genres, ...item.tags].take(3).toList(),
-                        textColor: Colors.white,
+                      Positioned(
+                        left: 12,
+                        right: 12,
+                        bottom: 10,
+                        child: _TagWrap(
+                          tags: [...item.genres, ...item.tags].take(3).toList(),
+                          textColor: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        height: 1.12,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          height: 1.12,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      item.averageScore == null
-                          ? '本季新番'
-                          : 'AniList ${item.averageScore}/100',
-                      style: TextStyle(
-                        color: secondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(height: 8),
+                      Text(
+                        item.averageScore == null
+                            ? '本季新番'
+                            : 'AniList ${item.averageScore}/100',
+                        style: TextStyle(
+                          color: secondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      item.reason,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: secondary,
-                        fontSize: 12,
-                        height: 1.36,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(height: 10),
+                      Text(
+                        item.reason,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: secondary,
+                          fontSize: 12,
+                          height: 1.36,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  final String title;
+  final String body;
+  final Color textColor;
+  final Color secondary;
+
+  const _DetailSection({
+    required this.title,
+    required this.body,
+    required this.textColor,
+    required this.secondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: textColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: textColor.withValues(alpha: 0.08)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              body,
+              style: TextStyle(
+                color: secondary,
+                fontSize: 13,
+                height: 1.48,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
