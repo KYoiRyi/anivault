@@ -875,43 +875,55 @@ class _ModelGlassMenu extends StatelessWidget {
           Expanded(
             child: _StripText(title: 'Model', subtitle: label),
           ),
-          GlassMenu(
-            settings: AniGlassTheme.chromeFor(context),
-            quality: GlassQuality.premium,
-            menuWidth: 320,
-            items: visibleModels
-                .map(
-                  (model) => GlassMenuItem(
-                    title: model,
-                    maxLines: 2,
-                    icon: Icon(
-                      model == selectedModel
-                          ? Icons.check_circle_rounded
-                          : Icons.smart_toy_rounded,
+          SizedBox(
+            width: 42,
+            height: 42,
+            child: GlassMenu(
+              settings: AniGlassTheme.chromeFor(context),
+              quality: GlassQuality.premium,
+              menuWidth: 320,
+              items: visibleModels
+                  .map(
+                    (model) => GlassMenuItem(
+                      title: model,
+                      height: 52,
+                      maxLines: 1,
+                      isSelected: model == selectedModel,
+                      trailing: SizedBox(
+                        width: 22,
+                        child: model == selectedModel
+                            ? Icon(
+                                Icons.check_rounded,
+                                color: textColor,
+                                size: 18,
+                              )
+                            : null,
+                      ),
+                      titleStyle: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      onTap: () => onSelected(model),
                     ),
-                    isSelected: model == selectedModel,
-                    titleStyle: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    onTap: () => onSelected(model),
+                  )
+                  .toList(),
+              triggerBuilder: (context, toggle) {
+                return Center(
+                  child: GlassButton(
+                    quality: GlassQuality.premium,
+                    settings: AniGlassTheme.chromeFor(context),
+                    shape: const LiquidOval(),
+                    width: 42,
+                    height: 42,
+                    icon: Icon(Icons.expand_more_rounded, color: secondary),
+                    onTap: () {
+                      if (visibleModels.isEmpty) return;
+                      toggle();
+                    },
                   ),
-                )
-                .toList(),
-            triggerBuilder: (context, toggle) {
-              return GlassButton(
-                quality: GlassQuality.premium,
-                settings: AniGlassTheme.chromeFor(context),
-                shape: const LiquidOval(),
-                width: 42,
-                height: 42,
-                icon: Icon(Icons.expand_more_rounded, color: secondary),
-                onTap: () {
-                  if (visibleModels.isEmpty) return;
-                  toggle();
-                },
-              );
-            },
+                );
+              },
+            ),
           ),
         ],
       ),
