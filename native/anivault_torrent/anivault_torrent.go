@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,7 +15,9 @@ import (
 	"sync"
 	"unsafe"
 
+	g "github.com/anacrolix/generics"
 	"github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/storage"
 )
 
 type task struct {
@@ -88,6 +91,10 @@ func anivault_torrent_init(downloadDir *C.char) *C.char {
 		cfg.ListenPort = 0
 		cfg.Seed = false
 		cfg.DisableWebtorrent = true
+		cfg.DefaultStorage = storage.NewFileOpts(storage.NewFileClientOpts{
+			ClientBaseDir: dir,
+			UsePartFiles:  g.Some(false),
+		})
 		client, err := torrent.NewClient(cfg)
 		if err != nil {
 			mgr.client = nil
@@ -113,7 +120,12 @@ func anivault_torrent_add_magnet(magnet *C.char) *C.char {
 		if mgr.client == nil {
 			return errResp("torrent client is not initialized")
 		}
-		t, err := mgr.client.AddMagnet(uri)
+		spec, err := torrent.TorrentSpecFromMagnetUri(uri)
+		if err != nil {
+			return errResp(err.Error())
+		}
+		spec.DisableInitialPieceCheck = true
+		t, _, err := mgr.client.AddTorrentSpec(spec)
 		if err != nil {
 			return errResp(err.Error())
 		}
@@ -222,22 +234,32 @@ func stateLocked(tsk *task) taskState {
 	total := t.Length()
 	done := t.BytesCompleted()
 	files := []fileState{}
+	diskDone := int64(0)
+	diskAllComplete := gotInfo
 	if gotInfo {
 		for _, f := range t.Files() {
 			path := filepath.Join(mgr.downloadDir, filepath.FromSlash(f.Path()))
-			if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
-				partPath := path + ".part"
-				if _, partErr := os.Stat(partPath); partErr == nil && f.BytesCompleted() >= f.Length() {
-					path = partPath
-				}
+			path, diskComplete := finalizeCompletedFile(path, f.Length())
+			fileDone := f.BytesCompleted()
+			if diskComplete {
+				fileDone = f.Length()
+			} else {
+				diskAllComplete = false
 			}
+			diskDone += fileDone
 			files = append(files, fileState{
 				Path:            path,
 				DisplayPath:     f.DisplayPath(),
 				Length:          f.Length(),
-				DownloadedBytes: f.BytesCompleted(),
+				DownloadedBytes: fileDone,
 			})
 		}
+	}
+	if diskDone > done {
+		done = diskDone
+	}
+	if diskAllComplete && total > 0 {
+		t.DisallowDataDownload()
 	}
 	progress := 0.0
 	if total > 0 {
@@ -251,7 +273,7 @@ func stateLocked(tsk *task) taskState {
 		DownloadedBytes: done,
 		TotalBytes:      total,
 		Progress:        progress,
-		Complete:        t.Complete().Bool(),
+		Complete:        t.Complete().Bool() || (diskAllComplete && total > 0),
 		Paused:          tsk.Paused,
 		GotInfo:         gotInfo,
 		Files:           files,
@@ -264,6 +286,55 @@ func removeTorrentFiles(tsk *task) {
 	for _, file := range st.Files {
 		_ = os.Remove(file.Path)
 	}
+}
+
+func finalizeCompletedFile(path string, length int64) (string, bool) {
+	if fileHasLength(path, length) {
+		return path, true
+	}
+	partPath := path + ".part"
+	if !fileHasLength(partPath, length) {
+		return path, false
+	}
+	if err := os.Rename(partPath, path); err == nil || fileHasLength(path, length) {
+		return path, true
+	}
+	if err := copyFile(partPath, path); err == nil && fileHasLength(path, length) {
+		_ = os.Remove(partPath)
+		return path, true
+	}
+	return path, false
+}
+
+func fileHasLength(path string, length int64) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir() && info.Size() >= length
+}
+
+func copyFile(from, to string) error {
+	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+		return err
+	}
+	in, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(to, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return err
+	}
+	_, copyErr := io.Copy(out, in)
+	closeErr := out.Close()
+	if copyErr != nil {
+		_ = os.Remove(to)
+		return copyErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(to)
+		return closeErr
+	}
+	return nil
 }
 
 func cJSON(fn func() response) *C.char {

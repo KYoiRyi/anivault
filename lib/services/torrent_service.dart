@@ -415,14 +415,6 @@ class TorrentService extends ChangeNotifier {
 }
 
 bool _isVideoPath(String path) {
-  final lower = path.toLowerCase();
-  if (lower.endsWith('.mp4.part') ||
-      lower.endsWith('.mkv.part') ||
-      lower.endsWith('.avi.part') ||
-      lower.endsWith('.mov.part') ||
-      lower.endsWith('.webm.part')) {
-    return true;
-  }
   return _isFinalVideoPath(path);
 }
 
