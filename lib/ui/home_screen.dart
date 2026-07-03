@@ -4,13 +4,14 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/theme_service.dart';
-import 'package:anivault/services/vfs_service.dart';
+import 'package:anivault/services/torrent_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/anime_series_screen.dart';
 import 'package:anivault/ui/bt_downloads_view.dart';
@@ -80,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final knownPaths = prefs.getStringList('media_library')
-              ?.map((path) => VFSService().resolvePath(path))
+              ?.map(PathResolver.resolve)
               .toList() ??
           [];
       final docDir = await getApplicationDocumentsDirectory();
@@ -98,13 +99,25 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      for (final path in VFSService().getVirtualFiles()) {
-        if (!knownPaths.contains(path) && !discoveredPaths.contains(path)) {
-          discoveredPaths.add(path);
+      // Also scan Windows downloads directory (relative to executable) if on Windows
+      if (Platform.isWindows) {
+        final exeDir = File(Platform.resolvedExecutable).parent.path;
+        final winDownloadsDir = Directory(p.join(exeDir, 'downloads'));
+        if (await winDownloadsDir.exists()) {
+          await for (final entity in _safeWalk(winDownloadsDir)) {
+            if (entity is! File) {
+              continue;
+            }
+            final path = entity.path;
+            final isVideo = validExtensions.any(path.toLowerCase().endsWith);
+            if (isVideo && !knownPaths.contains(path)) {
+              discoveredPaths.add(path);
+            }
+          }
         }
       }
 
-      knownPaths.removeWhere((path) => !VFSService().existsSync(path));
+      knownPaths.removeWhere((path) => !File(path).existsSync());
       final mergedPaths = [...discoveredPaths, ...knownPaths];
       if (!mounted) return;
       setState(() => _mediaPaths = mergedPaths);

@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/torrent_native.dart';
-import 'package:anivault/services/vfs_service.dart';
 
 class TorrentFileState {
   final String path;
@@ -101,7 +100,8 @@ class TorrentTaskState {
           (file) =>
               _isVideoPath(file.path) &&
               file.length > 0 &&
-              file.downloadedBytes >= file.length,
+              file.downloadedBytes >= file.length &&
+              File(PathResolver.resolve(file.path)).existsSync(),
         )
         .map((file) => file.path)
         .toList();
@@ -141,9 +141,6 @@ class TorrentService extends ChangeNotifier {
     if (_initialized) return;
     _initialized = true;
     await _loadPersistedTasks();
-    for (final path in _completedLibraryPaths) {
-      VFSService().registerVirtualFile(path);
-    }
     try {
       final dir = await _downloadDirectory();
       _check(TorrentNative().init(dir.path));
@@ -258,10 +255,15 @@ class TorrentService extends ChangeNotifier {
   }
 
   Future<Directory> _downloadDirectory() async {
-    final docDir = await getApplicationDocumentsDirectory();
-    final dir = Directory(p.join(docDir.path, 'BTLibrary'));
-    if (!await dir.exists()) await dir.create(recursive: true);
-    return dir;
+    if (Platform.isWindows) {
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final dir = Directory(p.join(exeDir, 'downloads'));
+      if (!await dir.exists()) await dir.create(recursive: true);
+      return dir;
+    } else {
+      final docDir = await getApplicationDocumentsDirectory();
+      return docDir;
+    }
   }
 
   Future<bool> _markCompletedForLibrary(TorrentTaskState task) async {
@@ -272,7 +274,8 @@ class TorrentService extends ChangeNotifier {
 
     var changed = false;
     for (final path in paths) {
-      VFSService().registerVirtualFile(path);
+      final resolvedPath = PathResolver.resolve(path);
+      if (!File(resolvedPath).existsSync()) continue;
       _completedLibraryPaths.add(path);
       await _addPathToMediaLibrary(path);
       LoggerService().log('[BT] Added to library: ${p.basename(path)}');
@@ -296,8 +299,8 @@ class TorrentService extends ChangeNotifier {
     final paths =
         prefs
             .getStringList('media_library')
-            ?.map((path) => VFSService().resolvePath(path))
-            .where((path) => VFSService().existsSync(path))
+            ?.map(PathResolver.resolve)
+            .where((path) => File(path).existsSync())
             .toList() ??
         const [];
     if (paths.isEmpty) return;
@@ -324,7 +327,7 @@ class TorrentService extends ChangeNotifier {
     final completed = prefs.getStringList(_completedKey) ?? const [];
     _completedLibraryPaths
       ..clear()
-      ..addAll(completed.map((p) => VFSService().resolvePath(p)));
+      ..addAll(completed.map(PathResolver.resolve));
   }
 
   Future<void> _savePersistedTasks() async {
@@ -350,4 +353,35 @@ bool _isVideoPath(String path) {
       lower.endsWith('.avi') ||
       lower.endsWith('.mov') ||
       lower.endsWith('.webm');
+}
+
+class PathResolver {
+  static String? _docDirPath;
+  static String? _exeDirPath;
+
+  static Future<void> initialize() async {
+    final docDir = await getApplicationDocumentsDirectory();
+    _docDirPath = docDir.path;
+    _exeDirPath = File(Platform.resolvedExecutable).parent.path;
+  }
+
+  static String resolve(String path) {
+    final normalized = path.replaceAll('\\', '/');
+    
+    // 1. Check if it's a Windows downloads path
+    final downloadsIndex = normalized.indexOf('/downloads/');
+    if (downloadsIndex != -1 && _exeDirPath != null) {
+      final relativePart = normalized.substring(downloadsIndex + 11);
+      return p.join(_exeDirPath!, 'downloads', relativePart.replaceAll('/', p.separator));
+    }
+    
+    // 2. Check if it's a mobile Documents path
+    final docIndex = normalized.indexOf('/Documents/');
+    if (docIndex != -1 && _docDirPath != null) {
+      final relativePart = normalized.substring(docIndex + 11);
+      return p.join(_docDirPath!, relativePart.replaceAll('/', p.separator));
+    }
+    
+    return path;
+  }
 }

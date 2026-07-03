@@ -6,7 +6,6 @@ import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/smb_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/services/torrent_service.dart';
-import 'package:anivault/services/vfs_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -17,7 +16,7 @@ void main() async {
   // Extract shaders from assets to local filesystem for native hook support
   await ShaderService().initializeShaders();
   await CacheManagerService().initialize();
-  await VFSService().initialize();
+  await PathResolver.initialize();
   await TorrentService().initialize();
   await SMBService().init();
   await ThemeService().load();

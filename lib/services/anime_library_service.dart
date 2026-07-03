@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:anivault/services/anitomy_native.dart';
 import 'package:anivault/services/ai_agent_service.dart';
 import 'package:anivault/services/logger_service.dart';
-import 'package:anivault/services/vfs_service.dart';
+import 'package:anivault/services/torrent_service.dart';
 
 class ParsedAnimeFile {
   final String path;
@@ -277,7 +277,7 @@ class AnimeLibraryService extends ChangeNotifier {
     required String languageCode,
     AniListMatchResolver? resolveAmbiguousMatch,
   }) async {
-    final resolvedPaths = paths.map(VFSService().resolvePath).toList();
+    final resolvedPaths = paths.map(PathResolver.resolve).toList();
     _lastRefreshPaths = List.unmodifiable(resolvedPaths);
     _lastLanguageCode = languageCode;
     _isScanning = true;
@@ -445,7 +445,7 @@ class AnimeLibraryService extends ChangeNotifier {
         final path = entry.value;
         _setResolving(normalizedTitle, true);
         if ((availablePaths.isNotEmpty && !availablePaths.contains(path)) ||
-            !VFSService().existsSync(path)) {
+            !File(PathResolver.resolve(path)).existsSync()) {
           _unresolvedCache.remove(normalizedTitle);
           _setResolving(normalizedTitle, false);
           changed = true;
