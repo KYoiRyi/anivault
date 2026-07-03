@@ -26,6 +26,13 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: native/anivault_torrent/go.mod
+          cache: true
+          cache-dependency-path: native/anivault_torrent/go.sum
+
       - name: Cache Pub Dependencies
         uses: actions/cache@v4
         with:
@@ -80,6 +87,18 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
           cmake --build native/anivault_anitomy/build_ios --config Release
 
+      - name: Cache anivault_torrent iOS build
+        uses: actions/cache@v4
+        with:
+          path: ios/Runner/libanivault_torrent.a
+          key: ${{ runner.os }}-torrent-ios-${{ hashFiles('native/anivault_torrent/**/*') }}
+          restore-keys: |
+            ${{ runner.os }}-torrent-ios-
+
+      - name: Build anivault_torrent for iOS
+        run: |
+          chmod +x native/anivault_torrent/build_ios.sh
+          native/anivault_torrent/build_ios.sh
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
@@ -106,12 +125,13 @@ jobs:
             ios/**/*
             native/anivault_core/**/*
             native/anivault_anitomy/**/*
+            native/anivault_torrent/**/*
           
       - name: Build iOS Application (No Sign)
         run: |
           flutter build ios --release --no-codesign > flutter_build.log 2>&1 || true
           cd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" OTHER_LDFLAGS="-force_load $(pwd)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -framework CoreML" > ../xcodebuild.log 2>&1 || true
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" OTHER_LDFLAGS="\$(inherited) -force_load $(pwd)/../native/anivault_core/target/aarch64-apple-ios/release/libanivault_core.a -force_load $(pwd)/Runner/libanivault_torrent.a -framework CoreML" > ../xcodebuild.log 2>&1 || true
           cd ..
           if [ ! -d "build/ios/iphoneos/Runner.app" ]; then
             echo "Build failed!"

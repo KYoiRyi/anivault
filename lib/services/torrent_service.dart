@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/torrent_native.dart';
 
@@ -85,16 +86,29 @@ class TorrentTaskState {
   }
 
   String? get bestLibraryPath {
-    final videoFiles = files.where((file) {
-      final lower = file.path.toLowerCase();
-      return lower.endsWith('.mp4') ||
-          lower.endsWith('.mkv') ||
-          lower.endsWith('.avi') ||
-          lower.endsWith('.mov') ||
-          lower.endsWith('.webm');
-    }).toList()..sort((a, b) => b.length.compareTo(a.length));
+    final videoFiles =
+        completedVideoPaths
+            .map((path) => files.firstWhere((file) => file.path == path))
+            .toList()
+          ..sort((a, b) => b.length.compareTo(a.length));
     return videoFiles.isNotEmpty ? videoFiles.first.path : null;
   }
+
+  List<String> get completedVideoPaths {
+    return files
+        .where(
+          (file) =>
+              _isVideoPath(file.path) &&
+              file.length > 0 &&
+              file.downloadedBytes >= file.length &&
+              File(file.path).existsSync(),
+        )
+        .map((file) => file.path)
+        .toList();
+  }
+
+  bool get hasCompletedLibraryMedia =>
+      complete || completedVideoPaths.isNotEmpty;
 }
 
 class TorrentService extends ChangeNotifier {
@@ -194,13 +208,16 @@ class TorrentService extends ChangeNotifier {
           }),
         );
       for (final task in _tasks.values) {
-        if (task.complete) {
+        if (task.hasCompletedLibraryMedia) {
           libraryChanged =
               await _markCompletedForLibrary(task) || libraryChanged;
         }
       }
       await _savePersistedTasks();
-      if (libraryChanged) await onLibraryChanged?.call();
+      if (libraryChanged) {
+        await _refreshLibraryFromPrefs();
+        await onLibraryChanged?.call();
+      }
       notifyListeners();
     } catch (e) {
       _lastError = e.toString();
@@ -245,14 +262,21 @@ class TorrentService extends ChangeNotifier {
   }
 
   Future<bool> _markCompletedForLibrary(TorrentTaskState task) async {
-    final path = task.bestLibraryPath;
-    if (path == null || _completedLibraryPaths.contains(path)) return false;
-    if (!File(path).existsSync()) return false;
-    _completedLibraryPaths.add(path);
-    await _saveCompletedLibraryPaths();
-    await _addPathToMediaLibrary(path);
-    LoggerService().log('[BT] Added to library: ${p.basename(path)}');
-    return true;
+    final paths = task.completedVideoPaths
+        .where((path) => !_completedLibraryPaths.contains(path))
+        .toList();
+    if (paths.isEmpty) return false;
+
+    var changed = false;
+    for (final path in paths) {
+      if (!File(path).existsSync()) continue;
+      _completedLibraryPaths.add(path);
+      await _addPathToMediaLibrary(path);
+      LoggerService().log('[BT] Added to library: ${p.basename(path)}');
+      changed = true;
+    }
+    if (changed) await _saveCompletedLibraryPaths();
+    return changed;
   }
 
   Future<void> _addPathToMediaLibrary(String path) async {
@@ -262,6 +286,22 @@ class TorrentService extends ChangeNotifier {
       paths.insert(0, path);
       await prefs.setStringList('media_library', paths);
     }
+  }
+
+  Future<void> _refreshLibraryFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final paths =
+        prefs
+            .getStringList('media_library')
+            ?.where((path) => File(path).existsSync())
+            .toList() ??
+        const [];
+    if (paths.isEmpty) return;
+    final languageCode = Platform.localeName.split('_').first;
+    await AnimeLibraryService().refreshLibrary(
+      paths,
+      languageCode: languageCode.isEmpty ? 'en' : languageCode,
+    );
   }
 
   Future<void> _loadPersistedTasks() async {
@@ -296,4 +336,13 @@ class TorrentService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_completedKey, _completedLibraryPaths.toList());
   }
+}
+
+bool _isVideoPath(String path) {
+  final lower = path.toLowerCase();
+  return lower.endsWith('.mp4') ||
+      lower.endsWith('.mkv') ||
+      lower.endsWith('.avi') ||
+      lower.endsWith('.mov') ||
+      lower.endsWith('.webm');
 }
