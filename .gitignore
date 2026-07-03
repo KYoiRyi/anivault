@@ -12,3 +12,5 @@ native/**/*.mp4
 /AniVault-android-release.apk
 /AniVault-windows-release/
 third_party/torrent/
+/flutter_build.log
+/xcodebuild.log

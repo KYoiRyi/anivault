@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		2A7F00012D25000100A17A11 /* anivault_anitomy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2A7F00002D25000100A17A11 /* anivault_anitomy.cpp */; settings = {COMPILER_FLAGS = "-std=c++2b"; }; };
-		2A7F00112D25000100A17A11 /* libanivault_torrent.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A7F00102D25000100A17A11 /* libanivault_torrent.a */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
@@ -44,7 +43,6 @@
 
 /* Begin PBXFileReference section */
 		2A7F00002D25000100A17A11 /* anivault_anitomy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = anivault_anitomy.cpp; path = ../native/anivault_anitomy/anivault_anitomy.cpp; sourceTree = SOURCE_ROOT; };
-		2A7F00102D25000100A17A11 /* libanivault_torrent.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libanivault_torrent.a; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
@@ -68,7 +66,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2A7F00112D25000100A17A11 /* libanivault_torrent.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,7 +114,6 @@
 			isa = PBXGroup;
 			children = (
 				2A7F00002D25000100A17A11 /* anivault_anitomy.cpp */,
-				2A7F00102D25000100A17A11 /* libanivault_torrent.a */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
@@ -156,7 +152,6 @@
 			buildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
 			buildPhases = (
 				9740EEB61CF901F6004384FC /* Run Script */,
-				2A7F00122D25000100A17A11 /* Build Torrent Native */,
 				97C146EA1CF9000F007C117D /* Sources */,
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
@@ -248,25 +243,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
-		};
-		2A7F00122D25000100A17A11 /* Build Torrent Native */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/../native/anivault_torrent/anivault_torrent.go",
-				"$(SRCROOT)/../native/anivault_torrent/go.mod",
-				"$(SRCROOT)/../native/anivault_torrent/go.sum",
-			);
-			name = "Build Torrent Native";
-			outputPaths = (
-				"$(SRCROOT)/Runner/libanivault_torrent.a",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if command -v go >/dev/null 2>&1; then\n  /bin/sh \"$SRCROOT/../native/anivault_torrent/build_ios.sh\"\nelse\n  echo \"Go is required to build native torrent engine\" >&2\n  exit 1\nfi";
 		};
 		9740EEB61CF901F6004384FC /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
