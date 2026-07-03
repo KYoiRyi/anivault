@@ -123,6 +123,7 @@ class TorrentService extends ChangeNotifier {
   final Map<String, String> _magnetsById = {};
   final Map<String, TorrentTaskState> _tasks = {};
   final Set<String> _completedLibraryPaths = {};
+  Directory? _downloadRoot;
   Timer? _pollTimer;
   bool _initialized = false;
   bool _nativeReady = false;
@@ -131,6 +132,7 @@ class TorrentService extends ChangeNotifier {
 
   bool get nativeReady => _nativeReady;
   String? get lastError => _lastError;
+  String? get downloadDirectory => _downloadRoot?.path;
   List<TorrentTaskState> get tasks => List.unmodifiable(_tasks.values);
 
   void setLibraryChangedHandler(Future<void> Function()? handler) {
@@ -143,7 +145,9 @@ class TorrentService extends ChangeNotifier {
     await _loadPersistedTasks();
     try {
       final dir = await _downloadDirectory();
+      _downloadRoot = dir;
       _check(TorrentNative().init(dir.path));
+      LoggerService().log('[BT] Download directory: ${dir.path}');
       _nativeReady = true;
       for (final magnet in _magnetsById.values) {
         _restoreMagnet(magnet);
@@ -213,6 +217,7 @@ class TorrentService extends ChangeNotifier {
               await _markCompletedForLibrary(task) || libraryChanged;
         }
       }
+      libraryChanged = await _scanDownloadRootIntoLibrary() || libraryChanged;
       await _savePersistedTasks();
       if (libraryChanged) {
         await _refreshLibraryFromPrefs();
@@ -257,7 +262,7 @@ class TorrentService extends ChangeNotifier {
   Future<Directory> _downloadDirectory() async {
     if (Platform.isWindows) {
       final exeDir = File(Platform.resolvedExecutable).parent.path;
-      final dir = Directory(p.join(exeDir, 'downloads'));
+      final dir = Directory(p.join(exeDir, 'download'));
       if (!await dir.exists()) await dir.create(recursive: true);
       return dir;
     } else {
@@ -268,7 +273,10 @@ class TorrentService extends ChangeNotifier {
 
   Future<bool> _markCompletedForLibrary(TorrentTaskState task) async {
     final paths = task.completedVideoPaths
-        .where((path) => !_completedLibraryPaths.contains(path))
+        .where(
+          (path) =>
+              !_completedLibraryPaths.contains(PathResolver.resolve(path)),
+        )
         .toList();
     if (paths.isEmpty) return false;
 
@@ -276,13 +284,73 @@ class TorrentService extends ChangeNotifier {
     for (final path in paths) {
       final resolvedPath = PathResolver.resolve(path);
       if (!File(resolvedPath).existsSync()) continue;
-      _completedLibraryPaths.add(path);
-      await _addPathToMediaLibrary(path);
-      LoggerService().log('[BT] Added to library: ${p.basename(path)}');
+      _completedLibraryPaths.add(resolvedPath);
+      await _addPathToMediaLibrary(resolvedPath);
+      LoggerService().log('[BT] Added to library: ${p.basename(resolvedPath)}');
       changed = true;
     }
     if (changed) await _saveCompletedLibraryPaths();
     return changed;
+  }
+
+  Future<bool> _scanDownloadRootIntoLibrary() async {
+    final root = _downloadRoot;
+    if (root == null || !await root.exists()) return false;
+    final discovered = <String>[];
+    await for (final file in _walkVideoFiles(root)) {
+      discovered.add(file.path);
+    }
+    if (Platform.isWindows) {
+      final legacy = Directory(
+        p.join(File(Platform.resolvedExecutable).parent.path, 'downloads'),
+      );
+      if (await legacy.exists()) {
+        await for (final file in _walkVideoFiles(legacy)) {
+          discovered.add(file.path);
+        }
+      }
+    }
+    var changed = false;
+    for (final path in discovered.toSet()) {
+      final resolvedPath = PathResolver.resolve(path);
+      if (_completedLibraryPaths.contains(resolvedPath)) continue;
+      _completedLibraryPaths.add(resolvedPath);
+      await _addPathToMediaLibrary(resolvedPath);
+      LoggerService().log(
+        '[BT] Scanned into library: ${p.basename(resolvedPath)}',
+      );
+      changed = true;
+    }
+    if (changed) await _saveCompletedLibraryPaths();
+    return changed;
+  }
+
+  Stream<File> _walkVideoFiles(Directory root) async* {
+    Stream<FileSystemEntity> children;
+    try {
+      children = root.list(followLinks: false);
+    } on FileSystemException catch (e) {
+      LoggerService().log(
+        '[BT] Skip inaccessible directory: ${root.path} ($e)',
+      );
+      return;
+    }
+
+    try {
+      await for (final entity in children) {
+        if (entity is Directory) {
+          yield* _walkVideoFiles(entity);
+        } else if (entity is File &&
+            _isFinalVideoPath(entity.path) &&
+            await entity.length() > 0) {
+          yield entity;
+        }
+      }
+    } on FileSystemException catch (e) {
+      LoggerService().log(
+        '[BT] Skip inaccessible directory: ${root.path} ($e)',
+      );
+    }
   }
 
   Future<void> _addPathToMediaLibrary(String path) async {
@@ -348,6 +416,18 @@ class TorrentService extends ChangeNotifier {
 
 bool _isVideoPath(String path) {
   final lower = path.toLowerCase();
+  if (lower.endsWith('.mp4.part') ||
+      lower.endsWith('.mkv.part') ||
+      lower.endsWith('.avi.part') ||
+      lower.endsWith('.mov.part') ||
+      lower.endsWith('.webm.part')) {
+    return true;
+  }
+  return _isFinalVideoPath(path);
+}
+
+bool _isFinalVideoPath(String path) {
+  final lower = path.toLowerCase();
   return lower.endsWith('.mp4') ||
       lower.endsWith('.mkv') ||
       lower.endsWith('.avi') ||
@@ -367,21 +447,29 @@ class PathResolver {
 
   static String resolve(String path) {
     final normalized = path.replaceAll('\\', '/');
-    
-    // 1. Check if it's a Windows downloads path
-    final downloadsIndex = normalized.indexOf('/downloads/');
-    if (downloadsIndex != -1 && _exeDirPath != null) {
-      final relativePart = normalized.substring(downloadsIndex + 11);
-      return p.join(_exeDirPath!, 'downloads', relativePart.replaceAll('/', p.separator));
+
+    // 1. Check if it's a Windows download path. Keep the old plural folder
+    // for users who already downloaded files before the folder was renamed.
+    for (final folder in const ['download', 'downloads']) {
+      final marker = '/$folder/';
+      final folderIndex = normalized.indexOf(marker);
+      if (folderIndex != -1 && _exeDirPath != null) {
+        final relativePart = normalized.substring(folderIndex + marker.length);
+        return p.join(
+          _exeDirPath!,
+          folder,
+          relativePart.replaceAll('/', p.separator),
+        );
+      }
     }
-    
-    // 2. Check if it's a mobile Documents path
+
+    // 2. Check if it's a mobile Documents path.
     final docIndex = normalized.indexOf('/Documents/');
     if (docIndex != -1 && _docDirPath != null) {
       final relativePart = normalized.substring(docIndex + 11);
       return p.join(_docDirPath!, relativePart.replaceAll('/', p.separator));
     }
-    
+
     return path;
   }
 }

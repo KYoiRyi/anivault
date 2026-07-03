@@ -197,23 +197,28 @@ if (Test-Path -LiteralPath $torrentNativeDir) {
 }
 
 Write-Step 'Copy Windows release artifact'
-$updateArtifactInPlace = $false
 if (Test-Path -LiteralPath $artifactDir) {
-    try {
-        Remove-Item -LiteralPath $artifactDir -Recurse -Force -ErrorAction Stop
-    } catch {
-        Write-Warning "Could not replace artifact directory; updating files in place: $($_.Exception.Message)"
-        $updateArtifactInPlace = $true
-    }
-}
-
-if ($updateArtifactInPlace) {
-    New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+    Get-ChildItem -LiteralPath $artifactDir -Force |
+        Where-Object { $_.Name -notin @('download', 'downloads') } |
+        ForEach-Object {
+            Remove-Item -LiteralPath $_.FullName -Recurse -Force
+        }
 } else {
     New-Item -ItemType Directory -Path $artifactDir | Out-Null
 }
+
+$artifactDownloadDir = Join-Path $artifactDir 'download'
+New-Item -ItemType Directory -Path $artifactDownloadDir -Force | Out-Null
+
 Get-ChildItem -LiteralPath $buildDir -Force | ForEach-Object {
-    Copy-Item -LiteralPath $_.FullName -Destination $artifactDir -Recurse -Force
+    $destination = Join-Path $artifactDir $_.Name
+    if ($_.PSIsContainer -and (Test-Path -LiteralPath $destination)) {
+        Get-ChildItem -LiteralPath $_.FullName -Force | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $destination -Recurse -Force
+        }
+    } else {
+        Copy-Item -LiteralPath $_.FullName -Destination $artifactDir -Recurse -Force
+    }
 }
 
 Write-Host ""

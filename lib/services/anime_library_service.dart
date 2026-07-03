@@ -973,7 +973,10 @@ query ($id: Int!) {
 
 class AnitomyFilenameParser {
   ParsedAnimeFile parse(String path) {
-    final fileName = p.basename(path);
+    final actualFileName = p.basename(path);
+    final fileName = actualFileName.toLowerCase().endsWith('.part')
+        ? actualFileName.substring(0, actualFileName.length - 5)
+        : actualFileName;
     Map<String, dynamic> decoded;
     try {
       decoded = AnitomyNative().parse(fileName);

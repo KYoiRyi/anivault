@@ -224,8 +224,15 @@ func stateLocked(tsk *task) taskState {
 	files := []fileState{}
 	if gotInfo {
 		for _, f := range t.Files() {
+			path := filepath.Join(mgr.downloadDir, filepath.FromSlash(f.Path()))
+			if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+				partPath := path + ".part"
+				if _, partErr := os.Stat(partPath); partErr == nil && f.BytesCompleted() >= f.Length() {
+					path = partPath
+				}
+			}
 			files = append(files, fileState{
-				Path:            filepath.Join(mgr.downloadDir, filepath.FromSlash(f.Path())),
+				Path:            path,
 				DisplayPath:     f.DisplayPath(),
 				Length:          f.Length(),
 				DownloadedBytes: f.BytesCompleted(),

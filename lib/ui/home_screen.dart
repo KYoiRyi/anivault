@@ -80,7 +80,9 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isSyncing = true);
     try {
       final prefs = await SharedPreferences.getInstance();
-      final knownPaths = prefs.getStringList('media_library')
+      final knownPaths =
+          prefs
+              .getStringList('media_library')
               ?.map(PathResolver.resolve)
               .toList() ??
           [];
@@ -99,12 +101,18 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      // Also scan Windows downloads directory (relative to executable) if on Windows
+      // Also scan Windows download directories (relative to executable) if on Windows
       if (Platform.isWindows) {
         final exeDir = File(Platform.resolvedExecutable).parent.path;
-        final winDownloadsDir = Directory(p.join(exeDir, 'downloads'));
-        if (await winDownloadsDir.exists()) {
-          await for (final entity in _safeWalk(winDownloadsDir)) {
+        final winDownloadDirs = [
+          Directory(p.join(exeDir, 'download')),
+          Directory(p.join(exeDir, 'downloads')),
+        ];
+        for (final winDownloadDir in winDownloadDirs) {
+          if (!await winDownloadDir.exists()) {
+            continue;
+          }
+          await for (final entity in _safeWalk(winDownloadDir)) {
             if (entity is! File) {
               continue;
             }
