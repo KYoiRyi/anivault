@@ -1,15 +1,18 @@
 Resolving dependencies...
 Downloading packages...
   code_assets 1.0.0 (1.2.1 available)
+  cross_file 0.3.5+2 (0.3.5+4 available)
   dbus 0.7.12 (0.7.14 available)
   file_selector_android 0.5.2+5 (0.5.2+8 available)
   file_selector_web 0.9.4+2 (0.9.5 available)
   hooks 1.0.2 (2.0.2 available)
   image 4.8.0 (4.9.1 available)
+! langchain_core 0.4.1 from path third_party/langchain_dart/packages/langchain_core (overridden)
   matcher 0.12.19 (0.12.20 available)
   meta 1.18.0 (1.18.3 available)
   native_toolchain_c 0.17.6 (0.19.2 available)
   objective_c 9.3.0 (9.4.1 available)
+  openai_dart 1.4.0 (7.0.0 available)
   package_config 2.2.0 (3.0.0 available)
   package_info_plus 10.0.0 (10.2.0 available)
   package_info_plus_platform_interface 4.0.0 (4.1.0 available)
@@ -28,37 +31,20 @@ Downloading packages...
   win32 6.0.1 (6.3.0 available)
   xml 6.6.1 (7.0.1 available)
 Got dependencies!
-27 packages have newer versions incompatible with dependency constraints.
+29 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 Warning: Building for device with codesigning disabled. You will have to manually codesign before deploying to device.
 Building com.anivault.anivault for device (ios-release)...
-Adding Swift Package Manager integration...                        11.8s
+Adding Swift Package Manager integration...                        14.8s
 The following plugins do not support Swift Package Manager for ios:
   - media_kit_libs_ios_video
   - media_kit_video
 This will become an error in a future version of Flutter. Please contact the plugin maintainers to request Swift Package Manager adoption.
-Running pod install...                                           1,518ms
+Running pod install...                                           1,305ms
 Running Xcode build...                                          
-Xcode build done.                                           49.9s
+Xcode build done.                                           74.3s
 Failed to build iOS app
-════════════════════════════════════════════════════════════════════════════════
-Building a deployable iOS app requires a selected Development Team with a 
-Provisioning Profile. Please ensure that a Development Team is selected by:
-  1- Open the Flutter project's Xcode target with
-       open ios/Runner.xcworkspace
-  2- Select the 'Runner' project in the navigator then the 'Runner' target
-     in the project settings
-  3- Make sure a 'Development Team' is selected under Signing & Capabilities > Team. 
-     You may need to:
-         - Log in with your Apple ID in Xcode first
-         - Ensure you have a valid unique Bundle ID
-         - Register your device with your Apple Developer Account
-         - Let Xcode automatically provision a profile for your app
-  4- Build or run your project again
+Error (Xcode): No simulator runtime version from [<DVTBuildVersion 22F77>, <DVTBuildVersion 22G86>, <DVTBuildVersion 23A8464>, <DVTBuildVersion 23B86>, <DVTBuildVersion 23C54>] available to use with iphonesimulator SDK version <DVTBuildVersion 22A3362>
+/Users/runner/work/anivault/anivault/ios/Runner/Assets.xcassets
 
-For more information, please visit:
-  https://flutter.dev/to/ios-development-team
-
-Or run on an iOS simulator without code signing
-════════════════════════════════════════════════════════════════════════════════
 Encountered error while building for device.
