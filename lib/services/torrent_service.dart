@@ -458,6 +458,12 @@ class PathResolver {
   static String? _docDirPath;
   static String? _exeDirPath;
 
+  @visibleForTesting
+  static void configureForTesting({String? docDirPath, String? exeDirPath}) {
+    _docDirPath = docDirPath;
+    _exeDirPath = exeDirPath;
+  }
+
   static Future<void> initialize() async {
     final docDir = await getApplicationDocumentsDirectory();
     _docDirPath = docDir.path;
@@ -482,13 +488,54 @@ class PathResolver {
       }
     }
 
-    // 2. Check if it's a mobile Documents path.
+    // 2. Check if it's a mobile Documents path. LiveContainer may preserve
+    // another app sandbox path under Documents; keep one nested sandbox prefix,
+    // but collapse duplicates created by resolving already-resolved paths.
     final docIndex = normalized.indexOf('/Documents/');
     if (docIndex != -1 && _docDirPath != null) {
-      final relativePart = normalized.substring(docIndex + 11);
-      return p.join(_docDirPath!, relativePart.replaceAll('/', p.separator));
+      final relativePart = _collapseMobileDocumentRelativePath(
+        normalized.substring(docIndex + 11),
+      );
+      final resolved = p.join(
+        _docDirPath!,
+        relativePart.replaceAll('/', p.separator),
+      );
+      if (File(resolved).existsSync() || Directory(resolved).existsSync()) {
+        return resolved;
+      }
+      final lastDocIndex = normalized.lastIndexOf('/Documents/');
+      if (lastDocIndex != docIndex) {
+        final lastRelativePart = normalized.substring(lastDocIndex + 11);
+        final lastResolved = p.join(
+          _docDirPath!,
+          lastRelativePart.replaceAll('/', p.separator),
+        );
+        if (File(lastResolved).existsSync() ||
+            Directory(lastResolved).existsSync()) {
+          return lastResolved;
+        }
+      }
+      return resolved;
     }
 
     return path;
+  }
+
+  static String _collapseMobileDocumentRelativePath(String relativePath) {
+    const marker = 'Data/Application/';
+    final markerIndex = relativePath.indexOf(marker);
+    if (markerIndex == -1) return relativePath;
+
+    final nestedDocIndex = relativePath.indexOf('/Documents/', markerIndex);
+    if (nestedDocIndex == -1) return relativePath;
+
+    final prefix = relativePath.substring(0, nestedDocIndex + 11);
+    var rest = relativePath.substring(nestedDocIndex + 11);
+    while (rest.startsWith(marker)) {
+      final nextDocIndex = rest.indexOf('/Documents/');
+      if (nextDocIndex == -1) break;
+      rest = rest.substring(nextDocIndex + 11);
+    }
+    return '$prefix$rest';
   }
 }
