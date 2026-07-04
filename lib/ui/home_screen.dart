@@ -508,9 +508,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       bottomEdgeFade: true,
       body: Stack(
         children: [
-          KeyedSubtree(
-            key: ValueKey('section-$_sectionIndex'),
-            child: sectionChild,
+          _TabContentScaleEntrance(
+            sectionIndex: _sectionIndex,
+            child: KeyedSubtree(
+              key: ValueKey('section-$_sectionIndex'),
+              child: sectionChild,
+            ),
           ),
           Positioned(
             top: topPadding,
@@ -621,34 +624,87 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               itemCount: visible.length,
               itemBuilder: (context, index) {
                 final series = visible[index];
-                return AnimatedGlassEntrance(
-                  index: index,
-                  child: _AnimeSeriesCard(
-                    series: series,
-                    selected: _selectedSeriesIds.contains(series.id),
-                    selectionMode: _selectionMode,
-                    onTap: () {
-                      if (_selectionMode) {
-                        _toggleSeriesSelection(series);
-                        return;
-                      }
-                      Navigator.of(context).push(
-                        AniScalePageRoute(
-                          page: AnimeSeriesScreen(
-                            series: series,
-                            onDeleteSeries: _removeSeriesFromLibrary,
-                          ),
+                return _AnimeSeriesCard(
+                  series: series,
+                  selected: _selectedSeriesIds.contains(series.id),
+                  selectionMode: _selectionMode,
+                  onTap: () {
+                    if (_selectionMode) {
+                      _toggleSeriesSelection(series);
+                      return;
+                    }
+                    Navigator.of(context).push(
+                      AniScalePageRoute(
+                        page: AnimeSeriesScreen(
+                          series: series,
+                          onDeleteSeries: _removeSeriesFromLibrary,
                         ),
-                      );
-                    },
-                    onSelect: () => _toggleSeriesSelection(series),
-                    onDelete: () => _removeSeriesFromLibrary([series]),
-                  ),
+                      ),
+                    );
+                  },
+                  onSelect: () => _toggleSeriesSelection(series),
+                  onDelete: () => _removeSeriesFromLibrary([series]),
                 );
               },
             ),
           ),
       ],
+    );
+  }
+}
+
+class _TabContentScaleEntrance extends StatefulWidget {
+  final int sectionIndex;
+  final Widget child;
+
+  const _TabContentScaleEntrance({
+    required this.sectionIndex,
+    required this.child,
+  });
+
+  @override
+  State<_TabContentScaleEntrance> createState() =>
+      _TabContentScaleEntranceState();
+}
+
+class _TabContentScaleEntranceState extends State<_TabContentScaleEntrance>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    )..value = 1;
+    _scale = Tween<double>(
+      begin: 0.97,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void didUpdateWidget(covariant _TabContentScaleEntrance oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sectionIndex != widget.sectionIndex) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      alignment: Alignment.topCenter,
+      child: widget.child,
     );
   }
 }
