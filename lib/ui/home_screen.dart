@@ -465,6 +465,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _chooseSessionBackgroundCover();
     final coverUrl = _sessionBackgroundCoverUrl;
+    final sectionChild = _sectionIndex == 0
+        ? HomepageView(
+            topPadding: topPadding,
+            scrollController: _homeScrollController,
+            onNavigateToLibrary: (index) =>
+                setState(() => _sectionIndex = index),
+          )
+        : _sectionIndex == 1
+        ? _buildLibraryView(
+            busy: busy,
+            visible: visible,
+            topPadding: topPadding,
+          )
+        : _sectionIndex == 2
+        ? BtDownloadsView(
+            topPadding: topPadding + 74,
+            scrollController: _downloadScrollController,
+            onLibraryRefresh: _syncMedia,
+          )
+        : SettingsContent(
+            topPadding: topPadding + 74,
+            scrollController: _settingsScrollController,
+            onLibraryRefresh: _refreshAnimeLibrary,
+          );
 
     return GlassScaffold(
       background: AniGlassTheme.background(
@@ -488,32 +512,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       headerFadeDistance: 46,
       body: Stack(
         children: [
-          KeyedSubtree(
-            key: ValueKey('section-$_sectionIndex'),
-            child: _sectionIndex == 0
-                ? HomepageView(
-                    topPadding: topPadding,
-                    scrollController: _homeScrollController,
-                    onNavigateToLibrary: (index) =>
-                        setState(() => _sectionIndex = index),
-                  )
-                : _sectionIndex == 1
-                ? _buildLibraryView(
-                    busy: busy,
-                    visible: visible,
-                    topPadding: topPadding,
-                  )
-                : _sectionIndex == 2
-                ? BtDownloadsView(
-                    topPadding: topPadding + 74,
-                    scrollController: _downloadScrollController,
-                    onLibraryRefresh: _syncMedia,
-                  )
-                : SettingsContent(
-                    topPadding: topPadding + 74,
-                    scrollController: _settingsScrollController,
-                    onLibraryRefresh: _refreshAnimeLibrary,
-                  ),
+          _TabContentScaleEntrance(
+            sectionIndex: _sectionIndex,
+            child: KeyedSubtree(
+              key: ValueKey('section-$_sectionIndex'),
+              child: sectionChild,
+            ),
           ),
           Positioned(
             top: topPadding,
@@ -652,6 +656,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _TabContentScaleEntrance extends StatefulWidget {
+  final int sectionIndex;
+  final Widget child;
+
+  const _TabContentScaleEntrance({
+    required this.sectionIndex,
+    required this.child,
+  });
+
+  @override
+  State<_TabContentScaleEntrance> createState() =>
+      _TabContentScaleEntranceState();
+}
+
+class _TabContentScaleEntranceState extends State<_TabContentScaleEntrance>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    )..value = 1;
+    _scale = Tween<double>(
+      begin: 0.97,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void didUpdateWidget(covariant _TabContentScaleEntrance oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sectionIndex != widget.sectionIndex) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      alignment: Alignment.topCenter,
+      child: widget.child,
     );
   }
 }
