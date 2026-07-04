@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
@@ -31,9 +33,6 @@ void main() async {
   await SMBService().init();
   await ThemeService().load();
   await AppI18n().load();
-
-  // Initialize liquid glass shaders
-  await LiquidGlassWidgets.initialize();
 
   runApp(
     LiquidGlassWidgets.wrap(
@@ -141,8 +140,6 @@ class StartupGate extends StatefulWidget {
 class _StartupGateState extends State<StartupGate>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _opacity;
-  late final Animation<double> _scale;
   bool _ready = false;
   bool _showStartupOverlay = true;
 
@@ -156,16 +153,12 @@ class _StartupGateState extends State<StartupGate>
         vsync: this,
         duration: const Duration(milliseconds: 1),
       );
-      _opacity = const AlwaysStoppedAnimation<double>(1);
-      _scale = const AlwaysStoppedAnimation<double>(1);
       return;
     }
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-    _opacity = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-    _scale = Tween<double>(begin: 0.985, end: 1.015).animate(_opacity);
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
     _warmStart();
   }
 
@@ -238,7 +231,9 @@ class _StartupGateState extends State<StartupGate>
           opacity: _ready ? 1 : 0,
           duration: const Duration(milliseconds: 520),
           curve: Curves.easeOutCubic,
-          child: IgnorePointer(ignoring: !_ready, child: widget.child),
+          child: _ready
+              ? IgnorePointer(ignoring: false, child: widget.child)
+              : const SizedBox.shrink(),
         ),
         if (_showStartupOverlay)
           AnimatedOpacity(
@@ -255,21 +250,7 @@ class _StartupGateState extends State<StartupGate>
                     colors: [Color(0xFF05070D), Color(0xFF121826)],
                   ),
                 ),
-                child: Center(
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _scale.value,
-                        child: Opacity(
-                          opacity: 0.72 + _opacity.value * 0.22,
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: const _StartupMark(),
-                  ),
-                ),
+                child: Center(child: _StartupMark(animation: _controller)),
               ),
             ),
           ),
@@ -279,30 +260,155 @@ class _StartupGateState extends State<StartupGate>
 }
 
 class _StartupMark extends StatelessWidget {
-  const _StartupMark();
+  final Animation<double> animation;
+
+  const _StartupMark({required this.animation});
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      quality: AniGlassTheme.quality,
-      settings: AniGlassTheme.chromeFor(context),
-      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
-      shape: const LiquidRoundedSuperellipse(borderRadius: 28),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 26),
-          SizedBox(width: 12),
-          Text(
-            'AniVault',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CustomPaint(
+              size: const Size(118, 118),
+              painter: _AniVaultLogoPainter(animation.value),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(height: 18),
+            Text(
+              'AniVault',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.92),
+                fontSize: 25,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
+}
+
+class _AniVaultLogoPainter extends CustomPainter {
+  final double t;
+
+  const _AniVaultLogoPainter(this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final center = rect.center;
+    final pulse = Curves.easeInOut.transform((t < 0.5 ? t : 1 - t) * 2);
+    final draw = Curves.easeOutCubic.transform((t * 1.45).clamp(0.0, 1.0));
+
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFF38BDF8).withValues(alpha: 0.24 + pulse * 0.10),
+          const Color(0xFFB56CFF).withValues(alpha: 0.14),
+          Colors.transparent,
+        ],
+      ).createShader(rect.inflate(26));
+    canvas.drawCircle(center, size.width * (0.54 + pulse * 0.03), glowPaint);
+
+    final vaultRect = Rect.fromCenter(
+      center: center,
+      width: size.width * 0.66,
+      height: size.height * 0.72,
+    );
+    final vaultPath = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(vaultRect, Radius.circular(size.width * 0.16)),
+      );
+    final fillPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF101827), Color(0xFF07111F)],
+      ).createShader(vaultRect);
+    canvas.drawPath(vaultPath, fillPaint);
+
+    final borderPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..shader = SweepGradient(
+        startAngle: -1.6,
+        endAngle: 4.7,
+        transform: GradientRotation(t * math.pi * 2),
+        colors: const [
+          Color(0xFF38BDF8),
+          Color(0xFFFFFFFF),
+          Color(0xFFB56CFF),
+          Color(0xFF38BDF8),
+        ],
+      ).createShader(vaultRect.inflate(3));
+    canvas.drawPath(vaultPath, borderPaint);
+
+    final clipPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..strokeCap = StrokeCap.round
+      ..color = Colors.white.withValues(alpha: 0.78);
+    final topLine = Path()
+      ..moveTo(vaultRect.left + 18, vaultRect.top + 21)
+      ..lineTo(vaultRect.right - 18, vaultRect.top + 21);
+    _drawProgressPath(canvas, topLine, clipPaint, draw);
+
+    final playPath = Path()
+      ..moveTo(center.dx - 13, center.dy - 19)
+      ..lineTo(center.dx - 13, center.dy + 19)
+      ..lineTo(center.dx + 22, center.dy)
+      ..close();
+    final playPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFFFFFFF), Color(0xFF38BDF8)],
+      ).createShader(playPath.getBounds());
+    canvas.drawPath(playPath, playPaint);
+
+    final orbitRadius = size.width * 0.43;
+    final orbitAngle = t * math.pi * 2;
+    final dot =
+        center +
+        Offset(math.cos(orbitAngle), math.sin(orbitAngle)) * orbitRadius;
+    canvas.drawCircle(dot, 3.1, Paint()..color = const Color(0xFFFFFFFF));
+
+    final sparklePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFFB56CFF).withValues(alpha: 0.55 + pulse * 0.25);
+    final sparkleCenter = Offset(vaultRect.right - 4, vaultRect.top + 8);
+    canvas.drawLine(
+      sparkleCenter + const Offset(-6, 0),
+      sparkleCenter + const Offset(6, 0),
+      sparklePaint,
+    );
+    canvas.drawLine(
+      sparkleCenter + const Offset(0, -6),
+      sparkleCenter + const Offset(0, 6),
+      sparklePaint,
+    );
+  }
+
+  void _drawProgressPath(
+    Canvas canvas,
+    Path path,
+    Paint paint,
+    double progress,
+  ) {
+    for (final metric in path.computeMetrics()) {
+      canvas.drawPath(metric.extractPath(0, metric.length * progress), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AniVaultLogoPainter oldDelegate) =>
+      oldDelegate.t != t;
 }
