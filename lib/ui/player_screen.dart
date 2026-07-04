@@ -55,7 +55,9 @@ class _PlayerScreenState extends State<PlayerScreen>
   Duration _scrubPreviewPosition = Duration.zero;
   String? _gestureFeedback;
   IconData? _gestureFeedbackIcon;
+  Alignment _gestureFeedbackAlignment = Alignment.center;
   Timer? _gestureFeedbackTimer;
+  Timer? _controlsHideTimer;
   bool _previewReady = false;
 
   static PlayerConfiguration get _playerConfiguration {
@@ -218,6 +220,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           await player.seek(Duration(milliseconds: savedPos));
         }
         player.play();
+        if (mounted) _scheduleControlsHide();
         _applySubtitleSettings();
 
         // Delay previewPlayer initialization to avoid video resource congestion
@@ -1573,6 +1576,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _progressSaveTimer?.cancel();
     _watchTickTimer?.cancel();
     _gestureFeedbackTimer?.cancel();
+    _controlsHideTimer?.cancel();
     _saveProgress();
 
     // Save position one last time immediately on dispose
@@ -1684,12 +1688,27 @@ class _PlayerScreenState extends State<PlayerScreen>
     setState(() {
       _showControls = !_showControls;
     });
+    if (_showControls) {
+      _scheduleControlsHide();
+    } else {
+      _controlsHideTimer?.cancel();
+    }
   }
 
   void _toggleLock() {
     setState(() {
       _isLocked = !_isLocked;
       _showControls = !_isLocked;
+    });
+    if (_showControls) _scheduleControlsHide();
+  }
+
+  void _scheduleControlsHide() {
+    _controlsHideTimer?.cancel();
+    if (_isLocked) return;
+    _controlsHideTimer = Timer(const Duration(seconds: 4), () {
+      if (!mounted || _isLocked || !_showControls) return;
+      setState(() => _showControls = false);
     });
   }
 
@@ -1702,15 +1721,24 @@ class _PlayerScreenState extends State<PlayerScreen>
       return;
     }
     if (position.dx < width * 0.38) {
-      _seekRelative(const Duration(seconds: -10));
+      _seekRelative(
+        const Duration(seconds: -10),
+        feedbackAlignment: Alignment.centerLeft,
+      );
     } else if (position.dx > width * 0.62) {
-      _seekRelative(const Duration(seconds: 10));
+      _seekRelative(
+        const Duration(seconds: 10),
+        feedbackAlignment: Alignment.centerRight,
+      );
     } else {
       player.playOrPause();
     }
   }
 
-  void _seekRelative(Duration delta) {
+  void _seekRelative(
+    Duration delta, {
+    Alignment feedbackAlignment = Alignment.center,
+  }) {
     final duration = player.state.duration;
     final current = player.state.position;
     var next = current + delta;
@@ -1721,6 +1749,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _showGestureFeedback(
       delta.isNegative ? Icons.replay_10_rounded : Icons.forward_10_rounded,
       delta.isNegative ? '-${delta.abs().inSeconds}s' : '+${delta.inSeconds}s',
+      alignment: feedbackAlignment,
     );
   }
 
@@ -1753,18 +1782,24 @@ class _PlayerScreenState extends State<PlayerScreen>
       _showGestureFeedback(
         seconds < 0 ? Icons.fast_rewind_rounded : Icons.fast_forward_rounded,
         seconds < 0 ? '${seconds}s' : '+${seconds}s',
+        alignment: seconds < 0 ? Alignment.centerLeft : Alignment.centerRight,
       );
     }
     _horizontalDragDx = 0;
     setState(() => _isScrubbing = false);
   }
 
-  void _showGestureFeedback(IconData icon, String label) {
+  void _showGestureFeedback(
+    IconData icon,
+    String label, {
+    Alignment alignment = Alignment.center,
+  }) {
     _gestureFeedbackTimer?.cancel();
     if (!mounted) return;
     setState(() {
       _gestureFeedbackIcon = icon;
       _gestureFeedback = label;
+      _gestureFeedbackAlignment = alignment;
     });
     _gestureFeedbackTimer = Timer(const Duration(milliseconds: 760), () {
       if (!mounted) return;
@@ -1810,11 +1845,17 @@ class _PlayerScreenState extends State<PlayerScreen>
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft && !_isLocked) {
-      _seekRelative(const Duration(seconds: -10));
+      _seekRelative(
+        const Duration(seconds: -10),
+        feedbackAlignment: Alignment.centerLeft,
+      );
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowRight && !_isLocked) {
-      _seekRelative(const Duration(seconds: 10));
+      _seekRelative(
+        const Duration(seconds: 10),
+        feedbackAlignment: Alignment.centerRight,
+      );
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -1822,6 +1863,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final controlsVisible = _showControls || _isScrubbing;
     return Theme(
       data: ThemeData.dark(),
       child: GlassPage(
@@ -1869,7 +1911,6 @@ class _PlayerScreenState extends State<PlayerScreen>
                 // Custom Subtitle Overlay Layer (always visible over video)
                 _buildSubtitleOverlay(),
                 _buildGestureFeedbackOverlay(),
-                _buildScrubPreviewOverlay(),
 
                 _buildGlassWarmupLayer(),
 
@@ -1877,9 +1918,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                 AnimatedOpacity(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOutCubic,
-                  opacity: _showControls ? 1.0 : 0.0,
+                  opacity: controlsVisible ? 1.0 : 0.0,
                   child: IgnorePointer(
-                    ignoring: !_showControls,
+                    ignoring: !controlsVisible,
                     child: Stack(
                       children: [
                         // Top left back button & Title (Round liquid glass button)
@@ -2016,6 +2057,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                               player: player,
                               previewPlayer: previewPlayer,
                               previewController: previewController,
+                              externalScrubbing: _isScrubbing,
+                              externalScrubPosition: _scrubPreviewPosition,
+                              previewReady: _previewReady,
                             ),
                           ),
                         ),
@@ -2072,146 +2116,35 @@ class _PlayerScreenState extends State<PlayerScreen>
         opacity: label == null || icon == null ? 0 : 1,
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
-        child: Center(
-          child: GlassCard(
-            quality: AniGlassTheme.quality,
-            settings: RecommendedGlassSettings.playerHighlight,
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-            shape: const LiquidRoundedSuperellipse(borderRadius: 24),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon ?? Icons.fast_forward_rounded, color: Colors.white),
-                const SizedBox(width: 10),
-                Text(
-                  label ?? '',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 72),
+          child: Align(
+            alignment: _gestureFeedbackAlignment,
+            child: GlassCard(
+              quality: AniGlassTheme.quality,
+              settings: RecommendedGlassSettings.playerHighlight,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+              shape: const LiquidRoundedSuperellipse(borderRadius: 24),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon ?? Icons.fast_forward_rounded, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Text(
+                    label ?? '',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildScrubPreviewOverlay() {
-    final duration = player.state.duration;
-    final progress = duration > Duration.zero
-        ? (_scrubPreviewPosition.inMilliseconds / duration.inMilliseconds)
-              .clamp(0.0, 1.0)
-        : 0.0;
-    return IgnorePointer(
-      child: AnimatedOpacity(
-        opacity: _isScrubbing ? 1 : 0,
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 118),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: SizedBox(
-                    width: 190,
-                    height: 108,
-                    child: _previewReady
-                        ? Video(
-                            controller: previewController,
-                            controls: NoVideoControls,
-                          )
-                        : const ColoredBox(
-                            color: Color(0xCC000000),
-                            child: Center(
-                              child: Icon(
-                                Icons.movie_filter_rounded,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GlassCard(
-                  quality: AniGlassTheme.quality,
-                  settings: RecommendedGlassSettings.playerHighlight,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  shape: const LiquidRoundedSuperellipse(borderRadius: 18),
-                  child: Row(
-                    children: [
-                      Text(
-                        _formatPlayerDuration(_scrubPreviewPosition),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return Stack(
-                              alignment: Alignment.centerLeft,
-                              children: [
-                                Container(
-                                  height: 5,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white24,
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                ),
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 80),
-                                  width: constraints.maxWidth * progress,
-                                  height: 9,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _formatPlayerDuration(duration),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatPlayerDuration(Duration duration) {
-    final totalSeconds = duration.inSeconds;
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
-    if (hours > 0) {
-      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    }
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 }
 

@@ -9,12 +9,18 @@ class CinematicEdgeBar extends StatefulWidget {
   final Player player;
   final Player? previewPlayer;
   final VideoController? previewController;
+  final bool externalScrubbing;
+  final Duration? externalScrubPosition;
+  final bool previewReady;
 
   const CinematicEdgeBar({
     super.key,
     required this.player,
     this.previewPlayer,
     this.previewController,
+    this.externalScrubbing = false,
+    this.externalScrubPosition,
+    this.previewReady = true,
   });
 
   @override
@@ -59,7 +65,8 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
 
   @override
   Widget build(BuildContext context) {
-    final height = _isHovering || _isDragging ? 28.0 : 12.0;
+    final activelyScrubbing = _isDragging || widget.externalScrubbing;
+    final height = _isHovering || activelyScrubbing ? 28.0 : 12.0;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -76,14 +83,26 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
             actualProgress = actualProgress.clamp(0.0, 1.0);
           }
 
-          final effectiveProgress = _isDragging
-              ? _dragProgress
-              : actualProgress;
+          var effectiveProgress = _isDragging ? _dragProgress : actualProgress;
+          if (!_isDragging &&
+              widget.externalScrubbing &&
+              widget.externalScrubPosition != null &&
+              total.inMilliseconds > 0) {
+            effectiveProgress =
+                widget.externalScrubPosition!.inMilliseconds /
+                total.inMilliseconds;
+            effectiveProgress = effectiveProgress.clamp(0.0, 1.0);
+          }
           final targetMillis = (effectiveProgress * total.inMilliseconds)
               .toInt();
 
           return LayoutBuilder(
             builder: (context, constraints) {
+              final scrubX = activelyScrubbing
+                  ? (_isDragging
+                        ? _dragX
+                        : constraints.maxWidth * effectiveProgress)
+                  : _dragX;
               return Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16.0,
@@ -93,9 +112,9 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                   clipBehavior: Clip.none,
                   children: [
                     // Volumetric Glass Scrub Tooltip
-                    if (_isDragging)
+                    if (activelyScrubbing)
                       Positioned(
-                        left: (_dragX - 168.0 / 2).clamp(
+                        left: (scrubX - 168.0 / 2).clamp(
                           8.0,
                           constraints.maxWidth - 168.0 - 8.0,
                         ),
@@ -113,7 +132,8 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (widget.previewController != null)
+                                if (widget.previewController != null &&
+                                    widget.previewReady)
                                   SizedBox(
                                     width: 160,
                                     height: 90,
@@ -122,6 +142,18 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                                       child: Video(
                                         controller: widget.previewController!,
                                         controls: NoVideoControls,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  const SizedBox(
+                                    width: 160,
+                                    height: 90,
+                                    child: ColoredBox(
+                                      color: Color(0xCC000000),
+                                      child: Icon(
+                                        Icons.movie_filter_rounded,
+                                        color: Colors.white70,
                                       ),
                                     ),
                                   ),
@@ -215,7 +247,7 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
 
                               // Volumetric Light Strip (Progress)
                               AnimatedContainer(
-                                duration: _isDragging
+                                duration: activelyScrubbing
                                     ? Duration.zero
                                     : const Duration(milliseconds: 150),
                                 curve: Curves.easeOutCubic,

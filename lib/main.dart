@@ -144,12 +144,14 @@ class _StartupGateState extends State<StartupGate>
   late final Animation<double> _opacity;
   late final Animation<double> _scale;
   bool _ready = false;
+  bool _showStartupOverlay = true;
 
   @override
   void initState() {
     super.initState();
     if (_isWidgetTest) {
       _ready = true;
+      _showStartupOverlay = false;
       _controller = AnimationController(
         vsync: this,
         duration: const Duration(milliseconds: 1),
@@ -182,6 +184,9 @@ class _StartupGateState extends State<StartupGate>
     if (!mounted) return;
     setState(() => _ready = true);
     _controller.stop();
+    Future<void>.delayed(const Duration(milliseconds: 560), () {
+      if (mounted) setState(() => _showStartupOverlay = false);
+    });
   }
 
   Future<void> _preloadLibrary() async {
@@ -235,38 +240,39 @@ class _StartupGateState extends State<StartupGate>
           curve: Curves.easeOutCubic,
           child: IgnorePointer(ignoring: !_ready, child: widget.child),
         ),
-        AnimatedOpacity(
-          opacity: _ready ? 0 : 1,
-          duration: const Duration(milliseconds: 520),
-          curve: Curves.easeOutCubic,
-          child: IgnorePointer(
-            ignoring: _ready,
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF05070D), Color(0xFF121826)],
+        if (_showStartupOverlay)
+          AnimatedOpacity(
+            opacity: _ready ? 0 : 1,
+            duration: const Duration(milliseconds: 520),
+            curve: Curves.easeOutCubic,
+            child: IgnorePointer(
+              ignoring: _ready,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF05070D), Color(0xFF121826)],
+                  ),
                 ),
-              ),
-              child: Center(
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _scale.value,
-                      child: Opacity(
-                        opacity: 0.72 + _opacity.value * 0.22,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: const _StartupMark(),
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _scale.value,
+                        child: Opacity(
+                          opacity: 0.72 + _opacity.value * 0.22,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: const _StartupMark(),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
       ],
     );
   }

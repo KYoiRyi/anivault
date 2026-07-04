@@ -499,11 +499,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   )
                 : _sectionIndex == 2
                 ? BtDownloadsView(
-                    topPadding: topPadding + 74,
+                    topPadding: topPadding + 96,
                     onLibraryRefresh: _syncMedia,
                   )
                 : SettingsContent(
-                    topPadding: topPadding + 74,
+                    topPadding: topPadding + 96,
                     onLibraryRefresh: _refreshAnimeLibrary,
                   ),
           ),
@@ -514,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: _DemoTopGlassTabBar(
               selectedIndex: _sectionIndex,
               onChanged: (index) => setState(() => _sectionIndex = index),
-              tabWidth: 104,
+              tabWidth: 86,
               tabs: const [
                 GlassTab(label: 'Home'),
                 GlassTab(label: 'Library'),
