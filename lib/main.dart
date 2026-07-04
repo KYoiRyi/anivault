@@ -7,7 +7,6 @@ import 'package:anivault/services/cache_manager_service.dart';
 import 'package:anivault/services/smb_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/services/torrent_service.dart';
-import 'package:anivault/services/home_insights_service.dart';
 import 'package:anivault/services/app_i18n.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -23,7 +22,7 @@ void main() async {
   await TorrentService().initialize();
   await SMBService().init();
   await ThemeService().load();
-  await HomeInsightsService().initialize();
+  await AppI18n().load();
 
   // Initialize liquid glass shaders
   await LiquidGlassWidgets.initialize();
@@ -43,7 +42,7 @@ class AniVaultApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: ThemeService(),
+      listenable: Listenable.merge([ThemeService(), AppI18n()]),
       builder: (context, _) {
         return MaterialApp(
           title: 'AniVault',
@@ -58,9 +57,10 @@ class AniVaultApp extends StatelessWidget {
             final resolved = locale?.languageCode == 'zh'
                 ? const Locale('zh')
                 : const Locale('en');
-            AppI18n().update(resolved);
+            AppI18n().updateSystemLocale(resolved);
             return resolved;
           },
+          locale: AppI18n().locale,
           themeMode: ThemeService().themeMode,
           theme: _buildTheme(Brightness.light),
           darkTheme: _buildTheme(Brightness.dark),

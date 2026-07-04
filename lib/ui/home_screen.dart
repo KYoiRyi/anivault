@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:anivault/services/app_i18n.dart';
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/theme_service.dart';
@@ -51,7 +53,10 @@ class _HomeScreenState extends State<HomeScreen> {
     WatchHistoryService().initialize();
     AnimeLibraryService().addListener(_onLibraryChanged);
     WatchHistoryService().addListener(_onHistoryChanged);
-    _syncMedia();
+    AppI18n().addListener(_onLanguageChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_syncMedia());
+    });
   }
 
   void _onLibraryChanged() {
@@ -73,9 +78,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     AnimeLibraryService().removeListener(_onLibraryChanged);
     WatchHistoryService().removeListener(_onHistoryChanged);
+    AppI18n().removeListener(_onLanguageChanged);
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onLanguageChanged() {
+    if (!mounted || _mediaPaths.isEmpty) return;
+    unawaited(_refreshAnimeLibrary(_mediaPaths));
   }
 
   Future<void> _syncMedia() async {
@@ -89,6 +100,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ?.map(PathResolver.resolve)
               .toList() ??
           [];
+      knownPaths.removeWhere((path) => !File(path).existsSync());
+      if (knownPaths.isNotEmpty) {
+        if (mounted) setState(() => _mediaPaths = knownPaths);
+        await _refreshAnimeLibrary(knownPaths);
+      }
+
       final docDir = await getApplicationDocumentsDirectory();
       final validExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm'];
       final discoveredPaths = <String>[];
@@ -133,12 +150,16 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      knownPaths.removeWhere((path) => !File(path).existsSync());
       final mergedPaths = [...discoveredPaths, ...knownPaths];
-      if (!mounted) return;
-      setState(() => _mediaPaths = mergedPaths);
-      await prefs.setStringList('media_library', mergedPaths);
-      await _refreshAnimeLibrary(mergedPaths);
+      if (discoveredPaths.isNotEmpty ||
+          mergedPaths.length != knownPaths.length) {
+        if (!mounted) return;
+        setState(() => _mediaPaths = mergedPaths);
+        await prefs.setStringList('media_library', mergedPaths);
+        await _refreshAnimeLibrary(mergedPaths);
+      } else {
+        await prefs.setStringList('media_library', knownPaths);
+      }
     } catch (e) {
       LoggerService().log('[Library Error] Sync failed: $e');
     } finally {
@@ -650,7 +671,7 @@ class _HomeHero extends StatelessWidget {
     final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
       quality: GlassQuality.premium,
-      useOwnLayer: true,
+      useOwnLayer: false,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(22),
       shape: const LiquidRoundedSuperellipse(borderRadius: 30),
@@ -1225,6 +1246,8 @@ class _SeriesCover extends StatelessWidget {
       return Image.network(
         coverUrl,
         fit: BoxFit.cover,
+        cacheWidth: 512,
+        cacheHeight: 768,
         errorBuilder: (context, error, stackTrace) =>
             _CoverFallback(series: series),
       );

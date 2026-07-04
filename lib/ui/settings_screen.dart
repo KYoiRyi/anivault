@@ -6,6 +6,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'package:anivault/services/ai_agent_service.dart';
 import 'package:anivault/services/anime_library_service.dart';
+import 'package:anivault/services/app_i18n.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/theme_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
@@ -145,12 +146,37 @@ class _AppearancePanel extends StatelessWidget {
       title: 'Appearance',
       subtitle: 'Theme and background style',
       child: ListenableBuilder(
-        listenable: ThemeService(),
+        listenable: Listenable.merge([ThemeService(), AppI18n()]),
         builder: (context, _) {
           final service = ThemeService();
+          final i18n = AppI18n();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const _SettingLabel('Language'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ThemeChip(
+                    label: 'System',
+                    selected: i18n.mode == AppLanguageMode.system,
+                    onTap: () => i18n.setMode(AppLanguageMode.system),
+                  ),
+                  _ThemeChip(
+                    label: '中文',
+                    selected: i18n.mode == AppLanguageMode.zh,
+                    onTap: () => i18n.setMode(AppLanguageMode.zh),
+                  ),
+                  _ThemeChip(
+                    label: 'English',
+                    selected: i18n.mode == AppLanguageMode.en,
+                    onTap: () => i18n.setMode(AppLanguageMode.en),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               const _SettingLabel('Theme'),
               const SizedBox(height: 8),
               Wrap(

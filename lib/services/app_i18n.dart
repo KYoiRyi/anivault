@@ -2,25 +2,68 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum AppLanguageMode { system, zh, en }
 
 class AppI18n extends ChangeNotifier {
   static final AppI18n _instance = AppI18n._internal();
   factory AppI18n() => _instance;
   AppI18n._internal();
 
+  static const _languageModeKey = 'app_language_mode';
+
   Locale _locale = PlatformDispatcher.instance.locale;
+  AppLanguageMode _mode = AppLanguageMode.system;
 
   Locale get locale => _locale;
+  AppLanguageMode get mode => _mode;
   String get languageCode => _locale.languageCode == 'zh' ? 'zh' : 'en';
   bool get isChinese => languageCode == 'zh';
 
-  void update(Locale locale) {
+  Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    _mode = switch (prefs.getString(_languageModeKey)) {
+      'zh' => AppLanguageMode.zh,
+      'en' => AppLanguageMode.en,
+      _ => AppLanguageMode.system,
+    };
+    _locale = _localeForMode(_mode, PlatformDispatcher.instance.locale);
+    notifyListeners();
+  }
+
+  Future<void> setMode(AppLanguageMode mode) async {
+    if (_mode == mode) return;
+    _mode = mode;
+    _locale = _localeForMode(mode, PlatformDispatcher.instance.locale);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_languageModeKey, mode.name);
+  }
+
+  void updateSystemLocale(Locale locale) {
+    if (_mode != AppLanguageMode.system) return;
+    _setLocale(locale);
+  }
+
+  void _setLocale(Locale locale) {
     final next = locale.languageCode == 'zh'
-        ? Locale('zh', locale.countryCode)
+        ? const Locale('zh')
         : const Locale('en');
     if (_locale == next) return;
     _locale = next;
     notifyListeners();
+  }
+
+  Locale _localeForMode(AppLanguageMode mode, Locale systemLocale) {
+    return switch (mode) {
+      AppLanguageMode.zh => const Locale('zh'),
+      AppLanguageMode.en => const Locale('en'),
+      AppLanguageMode.system =>
+        systemLocale.languageCode == 'zh'
+            ? const Locale('zh')
+            : const Locale('en'),
+    };
   }
 
   String t(String key) =>

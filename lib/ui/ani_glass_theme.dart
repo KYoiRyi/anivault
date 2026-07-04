@@ -166,6 +166,7 @@ class AniGlassTheme {
               child: Image.network(
                 coverUrl,
                 fit: BoxFit.cover,
+                cacheWidth: 900,
                 errorBuilder: (context, error, stackTrace) =>
                     const SizedBox.shrink(),
               ),
@@ -229,6 +230,7 @@ class AniGlassTheme {
             child: Image.network(
               coverUrl,
               fit: BoxFit.cover,
+              cacheWidth: 900,
               errorBuilder: (context, error, stackTrace) =>
                   const SizedBox.shrink(),
             ),

@@ -31,7 +31,11 @@ class _HomepageViewState extends State<HomepageView> {
   void initState() {
     super.initState();
     WatchHistoryService().initialize();
-    HomeInsightsService().initialize();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 900), () {
+        if (mounted) HomeInsightsService().initialize();
+      });
+    });
   }
 
   @override
@@ -172,7 +176,7 @@ class _HomepageViewState extends State<HomepageView> {
 
     return GlassCard(
       quality: GlassQuality.premium,
-      useOwnLayer: true,
+      useOwnLayer: false,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(18),
       shape: const LiquidRoundedSuperellipse(borderRadius: 26),
@@ -350,7 +354,7 @@ class _HomepageViewState extends State<HomepageView> {
   ) {
     return GlassCard(
       quality: GlassQuality.premium,
-      useOwnLayer: true,
+      useOwnLayer: false,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
       shape: const LiquidRoundedSuperellipse(borderRadius: 26),
@@ -434,7 +438,7 @@ class _HomepageViewState extends State<HomepageView> {
 
     return GlassCard(
       quality: GlassQuality.premium,
-      useOwnLayer: true,
+      useOwnLayer: false,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(22),
       shape: const LiquidRoundedSuperellipse(borderRadius: 26),
@@ -661,7 +665,7 @@ class _HomepageViewState extends State<HomepageView> {
         else
           GlassCard(
             quality: GlassQuality.premium,
-            useOwnLayer: true,
+            useOwnLayer: false,
             settings: AniGlassTheme.heroFor(context),
             padding: const EdgeInsets.all(16),
             shape: const LiquidRoundedSuperellipse(borderRadius: 24),
@@ -779,7 +783,7 @@ class _HomepageViewState extends State<HomepageView> {
   ) {
     return GlassCard(
       quality: GlassQuality.premium,
-      useOwnLayer: true,
+      useOwnLayer: false,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       shape: const LiquidRoundedSuperellipse(borderRadius: 22),
@@ -1064,7 +1068,7 @@ class _TodayUpdateTile extends StatelessWidget {
         onTap: onTap,
         child: GlassCard(
           quality: GlassQuality.premium,
-          useOwnLayer: true,
+          useOwnLayer: false,
           settings: AniGlassTheme.heroFor(context),
           padding: const EdgeInsets.all(14),
           shape: const LiquidRoundedSuperellipse(borderRadius: 22),
@@ -1208,7 +1212,7 @@ class _RecommendationTile extends StatelessWidget {
         onTap: onTap,
         child: GlassCard(
           quality: GlassQuality.premium,
-          useOwnLayer: true,
+          useOwnLayer: false,
           settings: AniGlassTheme.heroFor(context),
           padding: EdgeInsets.zero,
           shape: const LiquidRoundedSuperellipse(borderRadius: 24),
@@ -1368,6 +1372,12 @@ class _Poster extends StatelessWidget {
             : Image.network(
                 url!,
                 fit: BoxFit.cover,
+                cacheWidth: (width * MediaQuery.devicePixelRatioOf(context))
+                    .round()
+                    .clamp(96, 512),
+                cacheHeight: (height * MediaQuery.devicePixelRatioOf(context))
+                    .round()
+                    .clamp(128, 768),
                 errorBuilder: (_, _, _) => const ColoredBox(
                   color: Color(0xFF111827),
                   child: Icon(
