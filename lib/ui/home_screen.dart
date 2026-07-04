@@ -39,24 +39,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _downloadScrollController = ScrollController();
   final _settingsScrollController = ScrollController();
   final _searchController = TextEditingController();
+  late final Widget _topBar;
 
   List<String> _mediaPaths = [];
   List<AnimeSeries> _animeSeries = [];
   bool _isSyncing = false;
   bool _isScraping = false;
   int _sectionIndex = 0;
-  int _selectedSectionIndex = 0;
+  final ValueNotifier<int> _selectedSectionIndex = ValueNotifier<int>(0);
   bool _filterSearchActive = false;
   String _filter = 'All';
   String _query = '';
   final Set<String> _selectedSeriesIds = {};
   String? _sessionBackgroundCoverUrl;
   Timer? _syncTimer;
-  Timer? _sectionSwitchTimer;
 
   @override
   void initState() {
     super.initState();
+    _topBar = _HomeTopBar(
+      selectedIndex: _selectedSectionIndex,
+      onChanged: _selectSection,
+    );
     WidgetsBinding.instance.addObserver(this);
     WatchHistoryService().initialize();
     AnimeLibraryService().addListener(_onLibraryChanged);
@@ -96,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     AppI18n().removeListener(_onLanguageChanged);
     WidgetsBinding.instance.removeObserver(this);
     _syncTimer?.cancel();
-    _sectionSwitchTimer?.cancel();
+    _selectedSectionIndex.dispose();
     _homeScrollController.dispose();
     _libraryScrollController.dispose();
     _downloadScrollController.dispose();
@@ -459,13 +463,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _selectSection(int index) {
-    if (index == _selectedSectionIndex) return;
-    _sectionSwitchTimer?.cancel();
-    setState(() => _selectedSectionIndex = index);
-    _sectionSwitchTimer = Timer(const Duration(milliseconds: 170), () {
-      if (!mounted) return;
-      setState(() => _sectionIndex = index);
-    });
+    if (index == _sectionIndex) return;
+    _selectedSectionIndex.value = index;
+    setState(() => _sectionIndex = index);
   }
 
   @override
@@ -528,22 +528,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             key: ValueKey('section-$_sectionIndex'),
             child: sectionChild,
           ),
-          Positioned(
-            top: topPadding,
-            left: 0,
-            right: 0,
-            child: _DemoTopGlassTabBar(
-              selectedIndex: _selectedSectionIndex,
-              onChanged: _selectSection,
-              tabWidth: 86,
-              tabs: const [
-                GlassTab(label: 'Home'),
-                GlassTab(label: 'Library'),
-                GlassTab(label: 'Download'),
-                GlassTab(label: 'Settings'),
-              ],
-            ),
-          ),
+          Positioned(top: topPadding, left: 0, right: 0, child: _topBar),
           if (_sectionIndex == 1)
             Positioned(
               left: 0,
@@ -928,6 +913,33 @@ class _DemoTopGlassTabBar extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+class _HomeTopBar extends StatelessWidget {
+  final ValueListenable<int> selectedIndex;
+  final ValueChanged<int> onChanged;
+
+  const _HomeTopBar({required this.selectedIndex, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: selectedIndex,
+      builder: (context, index, _) {
+        return _DemoTopGlassTabBar(
+          selectedIndex: index,
+          onChanged: onChanged,
+          tabWidth: 86,
+          tabs: const [
+            GlassTab(label: 'Home'),
+            GlassTab(label: 'Library'),
+            GlassTab(label: 'Download'),
+            GlassTab(label: 'Settings'),
+          ],
+        );
+      },
     );
   }
 }
