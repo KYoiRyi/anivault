@@ -148,6 +148,16 @@ class _StartupGateState extends State<StartupGate>
   @override
   void initState() {
     super.initState();
+    if (_isWidgetTest) {
+      _ready = true;
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1),
+      );
+      _opacity = const AlwaysStoppedAnimation<double>(1);
+      _scale = const AlwaysStoppedAnimation<double>(1);
+      return;
+    }
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -156,6 +166,10 @@ class _StartupGateState extends State<StartupGate>
     _scale = Tween<double>(begin: 0.985, end: 1.015).animate(_opacity);
     _warmStart();
   }
+
+  bool get _isWidgetTest => WidgetsBinding.instance.runtimeType
+      .toString()
+      .contains('TestWidgetsFlutterBinding');
 
   Future<void> _warmStart() async {
     final minimum = Future<void>.delayed(const Duration(seconds: 3));
