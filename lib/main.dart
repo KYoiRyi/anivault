@@ -271,17 +271,23 @@ class _StartupMark extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             CustomPaint(
-              size: const Size(166, 126),
+              size: const Size(174, 118),
               painter: _AniVaultLogoPainter(animation.value),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'AniVault',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.92),
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
+            const SizedBox(height: 12),
+            DefaultTextStyle.merge(
+              style: const TextStyle(decoration: TextDecoration.none),
+              child: Text(
+                'AniVault',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.94),
+                  decoration: TextDecoration.none,
+                  decorationColor: Colors.transparent,
+                  fontSize: 25,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                  height: 1,
+                ),
               ),
             ),
           ],
@@ -306,16 +312,16 @@ class _AniVaultLogoPainter extends CustomPainter {
     canvas.drawOval(
       Rect.fromCenter(
         center: center,
-        width: size.width * (1.02 + pulse * 0.04),
-        height: size.height * (0.92 + pulse * 0.03),
+        width: size.width * (0.90 + pulse * 0.035),
+        height: size.height * (0.78 + pulse * 0.025),
       ),
       Paint()
         ..shader = RadialGradient(
           center: const Alignment(0.08, -0.06),
           radius: 0.76,
           colors: [
-            const Color(0xFF26DFFF).withValues(alpha: 0.25 + pulse * 0.08),
-            const Color(0xFF7C4DFF).withValues(alpha: 0.16 + pulse * 0.06),
+            const Color(0xFF26DFFF).withValues(alpha: 0.20 + pulse * 0.06),
+            const Color(0xFF7C4DFF).withValues(alpha: 0.11 + pulse * 0.04),
             Colors.transparent,
           ],
         ).createShader(rect.inflate(18)),
@@ -323,8 +329,8 @@ class _AniVaultLogoPainter extends CustomPainter {
 
     final logoRect = Rect.fromCenter(
       center: center,
-      width: size.width * 0.76,
-      height: size.height * 0.58,
+      width: size.width * 0.78,
+      height: size.height * 0.60,
     );
     final body = _squircleDiamond(logoRect);
     final bodyBounds = body.getBounds();
@@ -484,9 +490,9 @@ class _AniVaultLogoPainter extends CustomPainter {
 
     final play = _roundedPlay(
       Rect.fromCenter(
-        center: center.translate(size.width * 0.035, 0),
-        width: size.width * 0.34,
-        height: size.height * 0.48,
+        center: center.translate(size.width * 0.028, 0),
+        width: size.width * 0.32,
+        height: size.height * 0.45,
       ),
     );
     canvas.drawPath(
