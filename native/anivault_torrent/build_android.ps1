@@ -24,6 +24,33 @@ if (-not (Test-Path -LiteralPath $toolchainBin)) {
     throw "NDK LLVM toolchain not found: $toolchainBin"
 }
 
+function Find-CxxShared {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Abi
+    )
+
+    $candidates = @(
+        (Join-Path $NdkRoot "sources\cxx-stl\llvm-libc++\libs\$Abi\libc++_shared.so"),
+        (Join-Path $NdkRoot "toolchains\llvm\prebuilt\$hostTag\sysroot\usr\lib\$Abi\libc++_shared.so")
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    $match = Get-ChildItem -LiteralPath $NdkRoot -Recurse -Filter 'libc++_shared.so' -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -like "*$Abi*" } |
+        Select-Object -First 1
+    if ($match) {
+        return $match.FullName
+    }
+
+    return $null
+}
+
 Push-Location -LiteralPath $root
 try {
     foreach ($target in $targets) {
@@ -40,9 +67,9 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Android torrent native build failed for $($target.Abi)"
         }
-        $cxxShared = Join-Path $NdkRoot "sources\cxx-stl\llvm-libc++\libs\$($target.Abi)\libc++_shared.so"
+        $cxxShared = Find-CxxShared -Abi $target.Abi
         if (-not (Test-Path -LiteralPath $cxxShared)) {
-            throw "Missing libc++_shared.so for $($target.Abi): $cxxShared"
+            throw "Missing libc++_shared.so for $($target.Abi) under $NdkRoot"
         }
         Copy-Item -LiteralPath $cxxShared -Destination (Join-Path $outDir 'libc++_shared.so') -Force
     }

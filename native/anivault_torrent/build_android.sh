@@ -23,6 +23,21 @@ export GOWORK=off
 export CGO_ENABLED=1
 export GOOS=android
 
+find_cxx_shared() {
+  local abi="$1"
+  local candidates=(
+    "${NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${abi}/libc++_shared.so"
+    "${NDK_ROOT}/toolchains/llvm/prebuilt/${HOST_TAG}/sysroot/usr/lib/${abi}/libc++_shared.so"
+  )
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  find "${NDK_ROOT}" -path "*/${abi}/libc++_shared.so" -print -quit
+}
+
 build_target() {
   local abi="$1"
   local goarch="$2"
@@ -41,9 +56,10 @@ build_target() {
 
   mkdir -p "${OUT_ROOT}/${abi}"
   go build -buildmode=c-shared -o "${OUT_ROOT}/${abi}/libanivault_torrent.so" .
-  local cxx_shared="${NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${abi}/libc++_shared.so"
+  local cxx_shared
+  cxx_shared="$(find_cxx_shared "${abi}")"
   if [[ ! -f "${cxx_shared}" ]]; then
-    echo "Missing libc++_shared.so for ${abi}: ${cxx_shared}" >&2
+    echo "Missing libc++_shared.so for ${abi} under ${NDK_ROOT}" >&2
     exit 1
   fi
   cp "${cxx_shared}" "${OUT_ROOT}/${abi}/libc++_shared.so"
