@@ -13,8 +13,8 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  PaintingBinding.instance.imageCache.maximumSize = 80;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 24 << 20;
+  PaintingBinding.instance.imageCache.maximumSize = 160;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 48 << 20;
   MediaKit.ensureInitialized();
 
   // Extract shaders from assets to local filesystem for native hook support
@@ -32,7 +32,7 @@ void main() async {
   runApp(
     LiquidGlassWidgets.wrap(
       child: const AniVaultApp(),
-      adaptiveQuality: true,
+      adaptiveQuality: false,
       theme: AniGlassTheme.theme,
     ),
   );

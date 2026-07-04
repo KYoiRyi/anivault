@@ -47,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _query = '';
   final Set<String> _selectedSeriesIds = {};
   String? _sessionBackgroundCoverUrl;
+  Timer? _syncTimer;
 
   @override
   void initState() {
@@ -62,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               defaultTargetPlatform == TargetPlatform.android
           ? const Duration(milliseconds: 1800)
           : const Duration(milliseconds: 450);
-      Timer(delay, () {
+      _syncTimer = Timer(delay, () {
         if (mounted) unawaited(_syncMedia());
       });
     });
@@ -89,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WatchHistoryService().removeListener(_onHistoryChanged);
     AppI18n().removeListener(_onLanguageChanged);
     WidgetsBinding.instance.removeObserver(this);
+    _syncTimer?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -97,8 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didHaveMemoryPressure() {
     PaintingBinding.instance.imageCache.clear();
-    PaintingBinding.instance.imageCache.clearLiveImages();
-    LoggerService().log('[Perf] Memory pressure: cleared image cache');
+    LoggerService().log('[Perf] Memory pressure: cleared inactive image cache');
   }
 
   void _onLanguageChanged() {
@@ -462,7 +463,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return GlassScaffold(
       background: AniGlassTheme.background(
-        coverUrl: _sectionIndex == 0 ? null : coverUrl,
+        coverUrl: coverUrl,
         light: light,
         style: backgroundStyle,
       ),
