@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
@@ -273,15 +271,15 @@ class _StartupMark extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             CustomPaint(
-              size: const Size(118, 118),
+              size: const Size(166, 126),
               painter: _AniVaultLogoPainter(animation.value),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             Text(
               'AniVault',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.92),
-                fontSize: 25,
+                fontSize: 26,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0,
               ),
@@ -303,109 +301,257 @@ class _AniVaultLogoPainter extends CustomPainter {
     final rect = Offset.zero & size;
     final center = rect.center;
     final pulse = Curves.easeInOut.transform((t < 0.5 ? t : 1 - t) * 2);
-    final draw = Curves.easeOutCubic.transform((t * 1.45).clamp(0.0, 1.0));
+    final sweep = Curves.easeInOutCubic.transform(t);
 
     final glowPaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          const Color(0xFF38BDF8).withValues(alpha: 0.24 + pulse * 0.10),
-          const Color(0xFFB56CFF).withValues(alpha: 0.14),
+          const Color(0xFF28D9FF).withValues(alpha: 0.28 + pulse * 0.12),
+          const Color(0xFF9068FF).withValues(alpha: 0.18),
           Colors.transparent,
         ],
-      ).createShader(rect.inflate(26));
-    canvas.drawCircle(center, size.width * (0.54 + pulse * 0.03), glowPaint);
+      ).createShader(rect.inflate(30));
+    canvas.drawOval(rect.inflate(8), glowPaint);
 
-    final vaultRect = Rect.fromCenter(
-      center: center,
-      width: size.width * 0.66,
-      height: size.height * 0.72,
+    final logoRect = Rect.fromCenter(
+      center: center.translate(0, -3),
+      width: size.width * 0.86,
+      height: size.height * 0.70,
     );
-    final vaultPath = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(vaultRect, Radius.circular(size.width * 0.16)),
-      );
-    final fillPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF101827), Color(0xFF07111F)],
-      ).createShader(vaultRect);
-    canvas.drawPath(vaultPath, fillPaint);
+    final leftWing = _roundedDiamondPath(
+      Rect.fromLTWH(
+        logoRect.left,
+        logoRect.top + logoRect.height * 0.08,
+        logoRect.width * 0.56,
+        logoRect.height * 0.84,
+      ),
+      leftSide: true,
+    );
+    final rightWing = _roundedDiamondPath(
+      Rect.fromLTWH(
+        logoRect.left + logoRect.width * 0.44,
+        logoRect.top + logoRect.height * 0.03,
+        logoRect.width * 0.56,
+        logoRect.height * 0.94,
+      ),
+      leftSide: false,
+    );
+    final lensRect = Rect.fromCenter(
+      center: logoRect.center,
+      width: logoRect.width * 0.49,
+      height: logoRect.height * 0.98,
+    );
+    final lensPath = Path()
+      ..addOval(lensRect)
+      ..moveTo(lensRect.left + lensRect.width * 0.12, lensRect.center.dy)
+      ..lineTo(lensRect.right - lensRect.width * 0.08, lensRect.top + 2)
+      ..lineTo(lensRect.right + lensRect.width * 0.14, lensRect.center.dy)
+      ..lineTo(lensRect.right - lensRect.width * 0.08, lensRect.bottom - 2)
+      ..close();
 
-    final borderPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round
-      ..shader = SweepGradient(
-        startAngle: -1.6,
-        endAngle: 4.7,
-        transform: GradientRotation(t * math.pi * 2),
-        colors: const [
-          Color(0xFF38BDF8),
-          Color(0xFFFFFFFF),
-          Color(0xFFB56CFF),
-          Color(0xFF38BDF8),
-        ],
-      ).createShader(vaultRect.inflate(3));
-    canvas.drawPath(vaultPath, borderPaint);
+    canvas.saveLayer(rect, Paint());
+    canvas.drawPath(
+      leftWing,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF27E7F1), Color(0xFF1B8DFF)],
+        ).createShader(logoRect),
+    );
+    canvas.drawPath(
+      rightWing,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFB78CFF), Color(0xFF6F42F5)],
+        ).createShader(logoRect),
+    );
+    canvas.drawPath(
+      lensPath,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0x9927E7F1), Color(0xDD2446FF)],
+        ).createShader(lensRect),
+    );
 
-    final clipPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round
-      ..color = Colors.white.withValues(alpha: 0.78);
-    final topLine = Path()
-      ..moveTo(vaultRect.left + 18, vaultRect.top + 21)
-      ..lineTo(vaultRect.right - 18, vaultRect.top + 21);
-    _drawProgressPath(canvas, topLine, clipPaint, draw);
+    final facetLeft = Path()
+      ..moveTo(logoRect.left + logoRect.width * 0.23, logoRect.center.dy)
+      ..quadraticBezierTo(
+        logoRect.left + logoRect.width * 0.30,
+        logoRect.top + logoRect.height * 0.03,
+        logoRect.left + logoRect.width * 0.52,
+        logoRect.top + logoRect.height * 0.10,
+      )
+      ..lineTo(logoRect.left + logoRect.width * 0.45, logoRect.bottom)
+      ..quadraticBezierTo(
+        logoRect.left + logoRect.width * 0.31,
+        logoRect.bottom - logoRect.height * 0.10,
+        logoRect.left + logoRect.width * 0.23,
+        logoRect.center.dy,
+      )
+      ..close();
+    canvas.drawPath(
+      facetLeft,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x5028F3FF), Color(0xAA126FE9)],
+        ).createShader(logoRect),
+    );
+
+    final facetRight = Path()
+      ..moveTo(logoRect.left + logoRect.width * 0.58, logoRect.top + 4)
+      ..quadraticBezierTo(
+        logoRect.left + logoRect.width * 0.77,
+        logoRect.center.dy,
+        logoRect.left + logoRect.width * 0.55,
+        logoRect.bottom - 3,
+      )
+      ..lineTo(logoRect.left + logoRect.width * 0.74, logoRect.bottom)
+      ..quadraticBezierTo(
+        logoRect.right - 2,
+        logoRect.center.dy,
+        logoRect.left + logoRect.width * 0.74,
+        logoRect.top,
+      )
+      ..close();
+    canvas.drawPath(
+      facetRight,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x609E85FF), Color(0xBB273BDE)],
+        ).createShader(logoRect),
+    );
+
+    final shineX = logoRect.left + logoRect.width * (-0.18 + sweep * 1.36);
+    final shinePath = Path()
+      ..moveTo(shineX - 15, logoRect.bottom + 8)
+      ..lineTo(shineX + 24, logoRect.top - 8)
+      ..lineTo(shineX + 44, logoRect.top - 8)
+      ..lineTo(shineX + 5, logoRect.bottom + 8)
+      ..close();
+    canvas.drawPath(
+      shinePath,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(alpha: 0.0),
+            Colors.white.withValues(alpha: 0.22 + pulse * 0.08),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ).createShader(logoRect),
+    );
 
     final playPath = Path()
-      ..moveTo(center.dx - 13, center.dy - 19)
-      ..lineTo(center.dx - 13, center.dy + 19)
-      ..lineTo(center.dx + 22, center.dy)
+      ..moveTo(center.dx - 17, center.dy - 31)
+      ..quadraticBezierTo(
+        center.dx - 20,
+        center.dy - 36,
+        center.dx - 13,
+        center.dy - 40,
+      )
+      ..lineTo(center.dx + 40, center.dy - 8)
+      ..quadraticBezierTo(
+        center.dx + 48,
+        center.dy - 3,
+        center.dx + 40,
+        center.dy + 3,
+      )
+      ..lineTo(center.dx - 13, center.dy + 36)
+      ..quadraticBezierTo(
+        center.dx - 20,
+        center.dy + 40,
+        center.dx - 17,
+        center.dy + 31,
+      )
       ..close();
-    final playPaint = Paint()
+    canvas.drawPath(playPath, Paint()..blendMode = BlendMode.clear);
+    canvas.restore();
+
+    final edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFFFFFFF), Color(0xFF38BDF8)],
-      ).createShader(playPath.getBounds());
-    canvas.drawPath(playPath, playPaint);
-
-    final orbitRadius = size.width * 0.43;
-    final orbitAngle = t * math.pi * 2;
-    final dot =
-        center +
-        Offset(math.cos(orbitAngle), math.sin(orbitAngle)) * orbitRadius;
-    canvas.drawCircle(dot, 3.1, Paint()..color = const Color(0xFFFFFFFF));
-
-    final sparklePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFFB56CFF).withValues(alpha: 0.55 + pulse * 0.25);
-    final sparkleCenter = Offset(vaultRect.right - 4, vaultRect.top + 8);
-    canvas.drawLine(
-      sparkleCenter + const Offset(-6, 0),
-      sparkleCenter + const Offset(6, 0),
-      sparklePaint,
-    );
-    canvas.drawLine(
-      sparkleCenter + const Offset(0, -6),
-      sparkleCenter + const Offset(0, 6),
-      sparklePaint,
-    );
+        colors: [Color(0x99FFFFFF), Color(0x4428D9FF), Color(0x88B78CFF)],
+      ).createShader(logoRect);
+    canvas.drawPath(leftWing, edgePaint);
+    canvas.drawPath(rightWing, edgePaint);
   }
 
-  void _drawProgressPath(
-    Canvas canvas,
-    Path path,
-    Paint paint,
-    double progress,
-  ) {
-    for (final metric in path.computeMetrics()) {
-      canvas.drawPath(metric.extractPath(0, metric.length * progress), paint);
+  Path _roundedDiamondPath(Rect rect, {required bool leftSide}) {
+    final radius = rect.height * 0.18;
+    final path = Path();
+    if (leftSide) {
+      path
+        ..moveTo(rect.left + radius, rect.center.dy)
+        ..quadraticBezierTo(
+          rect.left + 2,
+          rect.center.dy,
+          rect.left + radius,
+          rect.center.dy - radius,
+        )
+        ..lineTo(rect.center.dx - 2, rect.top + radius)
+        ..quadraticBezierTo(
+          rect.center.dx + radius,
+          rect.top,
+          rect.center.dx + radius * 2,
+          rect.top + radius,
+        )
+        ..lineTo(rect.right, rect.center.dy)
+        ..lineTo(rect.center.dx + radius * 2, rect.bottom - radius)
+        ..quadraticBezierTo(
+          rect.center.dx + radius,
+          rect.bottom,
+          rect.center.dx - 2,
+          rect.bottom - radius,
+        )
+        ..lineTo(rect.left + radius, rect.center.dy + radius)
+        ..quadraticBezierTo(
+          rect.left + 2,
+          rect.center.dy,
+          rect.left + radius,
+          rect.center.dy,
+        );
+    } else {
+      path
+        ..moveTo(rect.left, rect.center.dy)
+        ..lineTo(rect.center.dx - radius, rect.top + radius)
+        ..quadraticBezierTo(
+          rect.center.dx,
+          rect.top,
+          rect.center.dx + radius,
+          rect.top + radius,
+        )
+        ..lineTo(rect.right - radius, rect.center.dy - radius)
+        ..quadraticBezierTo(
+          rect.right - 2,
+          rect.center.dy,
+          rect.right - radius,
+          rect.center.dy + radius,
+        )
+        ..lineTo(rect.center.dx + radius, rect.bottom - radius)
+        ..quadraticBezierTo(
+          rect.center.dx,
+          rect.bottom,
+          rect.center.dx - radius,
+          rect.bottom - radius,
+        )
+        ..close();
     }
+    return path;
   }
 
   @override
