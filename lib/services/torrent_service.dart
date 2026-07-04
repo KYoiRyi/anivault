@@ -290,7 +290,7 @@ class TorrentService extends ChangeNotifier {
     final paths = task.completedVideoPaths
         .where(
           (path) =>
-              !_completedLibraryPaths.contains(PathResolver.resolve(path)),
+              !_completedLibraryPaths.contains(PathResolver.canonicalKey(path)),
         )
         .toList();
     if (paths.isEmpty) return false;
@@ -299,7 +299,7 @@ class TorrentService extends ChangeNotifier {
     for (final path in paths) {
       final resolvedPath = PathResolver.resolve(path);
       if (!File(resolvedPath).existsSync()) continue;
-      _completedLibraryPaths.add(resolvedPath);
+      _completedLibraryPaths.add(PathResolver.canonicalKey(resolvedPath));
       await _addPathToMediaLibrary(resolvedPath);
       LoggerService().log('[BT] Added to library: ${p.basename(resolvedPath)}');
       changed = true;
@@ -313,7 +313,8 @@ class TorrentService extends ChangeNotifier {
       for (final task in _tasks.values)
         if (!task.complete)
           for (final file in task.files)
-            if (_isFinalVideoPath(file.path)) PathResolver.resolve(file.path),
+            if (_isFinalVideoPath(file.path))
+              PathResolver.canonicalKey(file.path),
     };
   }
 
@@ -339,9 +340,10 @@ class TorrentService extends ChangeNotifier {
     var changed = false;
     for (final path in discovered.toSet()) {
       final resolvedPath = PathResolver.resolve(path);
-      if (activeIncompletePaths.contains(resolvedPath)) continue;
-      if (_completedLibraryPaths.contains(resolvedPath)) continue;
-      _completedLibraryPaths.add(resolvedPath);
+      final key = PathResolver.canonicalKey(resolvedPath);
+      if (activeIncompletePaths.contains(key)) continue;
+      if (_completedLibraryPaths.contains(key)) continue;
+      _completedLibraryPaths.add(key);
       await _addPathToMediaLibrary(resolvedPath);
       LoggerService().log(
         '[BT] Scanned into library: ${p.basename(resolvedPath)}',
@@ -382,9 +384,11 @@ class TorrentService extends ChangeNotifier {
 
   Future<void> _addPathToMediaLibrary(String path) async {
     final prefs = await SharedPreferences.getInstance();
-    final paths = prefs.getStringList('media_library') ?? [];
-    if (!paths.contains(path)) {
-      paths.insert(0, path);
+    final resolvedPath = PathResolver.resolve(path);
+    final existing = prefs.getStringList('media_library') ?? const [];
+    final paths = _uniqueResolvedPaths([resolvedPath, ...existing]);
+    if (paths.length != existing.length ||
+        paths.isNotEmpty && paths.first == resolvedPath) {
       await prefs.setStringList('media_library', paths);
     }
   }
@@ -395,6 +399,7 @@ class TorrentService extends ChangeNotifier {
         prefs
             .getStringList('media_library')
             ?.map(PathResolver.resolve)
+            .toSet()
             .where((path) => File(path).existsSync())
             .toList() ??
         const [];
@@ -422,7 +427,7 @@ class TorrentService extends ChangeNotifier {
     final completed = prefs.getStringList(_completedKey) ?? const [];
     _completedLibraryPaths
       ..clear()
-      ..addAll(completed.map(PathResolver.resolve));
+      ..addAll(completed.map(PathResolver.canonicalKey));
   }
 
   Future<void> _savePersistedTasks() async {
@@ -438,6 +443,17 @@ class TorrentService extends ChangeNotifier {
   Future<void> _saveCompletedLibraryPaths() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_completedKey, _completedLibraryPaths.toList());
+  }
+
+  List<String> _uniqueResolvedPaths(Iterable<String> paths) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final path in paths) {
+      final resolved = PathResolver.resolve(path);
+      final key = PathResolver.canonicalKey(resolved);
+      if (seen.add(key)) result.add(resolved);
+    }
+    return result;
   }
 }
 
@@ -519,6 +535,12 @@ class PathResolver {
     }
 
     return path;
+  }
+
+  static String canonicalKey(String path) {
+    final resolved = resolve(path).replaceAll('\\', '/');
+    final normalized = p.posix.normalize(resolved);
+    return Platform.isWindows ? normalized.toLowerCase() : normalized;
   }
 
   static String _collapseMobileDocumentRelativePath(String relativePath) {

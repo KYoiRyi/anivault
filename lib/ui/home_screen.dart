@@ -30,7 +30,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const _mediaPickerChannel = MethodChannel('anivault/media_picker');
 
   final _scrollController = ScrollController();
@@ -50,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WatchHistoryService().initialize();
     AnimeLibraryService().addListener(_onLibraryChanged);
     WatchHistoryService().addListener(_onHistoryChanged);
@@ -79,9 +80,17 @@ class _HomeScreenState extends State<HomeScreen> {
     AnimeLibraryService().removeListener(_onLibraryChanged);
     WatchHistoryService().removeListener(_onHistoryChanged);
     AppI18n().removeListener(_onLanguageChanged);
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didHaveMemoryPressure() {
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    LoggerService().log('[Perf] Memory pressure: cleared image cache');
   }
 
   void _onLanguageChanged() {
@@ -91,21 +100,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _syncMedia() async {
     if (_isSyncing) return;
+    final totalWatch = Stopwatch()..start();
     setState(() => _isSyncing = true);
     try {
       final prefs = await SharedPreferences.getInstance();
-      final knownPaths =
-          prefs
-              .getStringList('media_library')
-              ?.map(PathResolver.resolve)
-              .toList() ??
-          [];
+      final knownPaths = _uniqueResolvedPaths(
+        prefs.getStringList('media_library') ?? const [],
+      );
       knownPaths.removeWhere((path) => !File(path).existsSync());
+      final knownKeys = knownPaths.map(PathResolver.canonicalKey).toSet();
       if (knownPaths.isNotEmpty) {
         if (mounted) setState(() => _mediaPaths = knownPaths);
+        final refreshWatch = Stopwatch()..start();
         await _refreshAnimeLibrary(knownPaths);
+        LoggerService().log(
+          '[Perf] Initial library refresh: ${knownPaths.length} files in ${refreshWatch.elapsedMilliseconds}ms',
+        );
       }
 
+      final scanWatch = Stopwatch()..start();
       final docDir = await getApplicationDocumentsDirectory();
       final validExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm'];
       final discoveredPaths = <String>[];
@@ -116,11 +129,14 @@ class _HomeScreenState extends State<HomeScreen> {
           continue;
         }
         final path = entity.path;
+        final resolvedPath = PathResolver.resolve(path);
+        final key = PathResolver.canonicalKey(resolvedPath);
         final isVideo = validExtensions.any(path.toLowerCase().endsWith);
         if (isVideo &&
-            !knownPaths.contains(path) &&
-            !activeBtPaths.contains(PathResolver.resolve(path))) {
-          discoveredPaths.add(path);
+            !knownKeys.contains(key) &&
+            !activeBtPaths.contains(key)) {
+          discoveredPaths.add(resolvedPath);
+          knownKeys.add(key);
         }
       }
 
@@ -140,29 +156,45 @@ class _HomeScreenState extends State<HomeScreen> {
               continue;
             }
             final path = entity.path;
+            final resolvedPath = PathResolver.resolve(path);
+            final key = PathResolver.canonicalKey(resolvedPath);
             final isVideo = validExtensions.any(path.toLowerCase().endsWith);
             if (isVideo &&
-                !knownPaths.contains(path) &&
-                !activeBtPaths.contains(PathResolver.resolve(path))) {
-              discoveredPaths.add(path);
+                !knownKeys.contains(key) &&
+                !activeBtPaths.contains(key)) {
+              discoveredPaths.add(resolvedPath);
+              knownKeys.add(key);
             }
           }
         }
       }
 
-      final mergedPaths = [...discoveredPaths, ...knownPaths];
+      final mergedPaths = _uniqueResolvedPaths([
+        ...discoveredPaths,
+        ...knownPaths,
+      ]);
+      LoggerService().log(
+        '[Perf] Media scan: known=${knownPaths.length}, discovered=${discoveredPaths.length}, merged=${mergedPaths.length}, scan=${scanWatch.elapsedMilliseconds}ms',
+      );
       if (discoveredPaths.isNotEmpty ||
           mergedPaths.length != knownPaths.length) {
         if (!mounted) return;
         setState(() => _mediaPaths = mergedPaths);
         await prefs.setStringList('media_library', mergedPaths);
+        final refreshWatch = Stopwatch()..start();
         await _refreshAnimeLibrary(mergedPaths);
+        LoggerService().log(
+          '[Perf] Full library refresh: ${mergedPaths.length} files in ${refreshWatch.elapsedMilliseconds}ms',
+        );
       } else {
         await prefs.setStringList('media_library', knownPaths);
       }
     } catch (e) {
       LoggerService().log('[Library Error] Sync failed: $e');
     } finally {
+      LoggerService().log(
+        '[Perf] Media sync total: ${totalWatch.elapsedMilliseconds}ms',
+      );
       if (mounted) setState(() => _isSyncing = false);
     }
   }
@@ -172,8 +204,20 @@ class _HomeScreenState extends State<HomeScreen> {
       for (final task in TorrentService().tasks)
         if (!task.complete)
           for (final file in task.files)
-            if (_isVideoFilePath(file.path)) PathResolver.resolve(file.path),
+            if (_isVideoFilePath(file.path))
+              PathResolver.canonicalKey(file.path),
     };
+  }
+
+  List<String> _uniqueResolvedPaths(Iterable<String> paths) {
+    final seen = <String>{};
+    final result = <String>[];
+    for (final path in paths) {
+      final resolved = PathResolver.resolve(path);
+      final key = PathResolver.canonicalKey(resolved);
+      if (seen.add(key)) result.add(resolved);
+    }
+    return result;
   }
 
   bool _isVideoFilePath(String path) {
@@ -1245,8 +1289,8 @@ class _SeriesCover extends StatelessWidget {
       return Image.network(
         coverUrl,
         fit: BoxFit.cover,
-        cacheWidth: 512,
-        cacheHeight: 768,
+        cacheWidth: 360,
+        cacheHeight: 540,
         errorBuilder: (context, error, stackTrace) =>
             _CoverFallback(series: series),
       );
