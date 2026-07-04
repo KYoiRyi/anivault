@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -56,7 +57,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WatchHistoryService().addListener(_onHistoryChanged);
     AppI18n().addListener(_onLanguageChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_syncMedia());
+      final delay =
+          defaultTargetPlatform == TargetPlatform.iOS ||
+              defaultTargetPlatform == TargetPlatform.android
+          ? const Duration(milliseconds: 1800)
+          : const Duration(milliseconds: 450);
+      Timer(delay, () {
+        if (mounted) unawaited(_syncMedia());
+      });
     });
   }
 
@@ -101,7 +109,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _syncMedia() async {
     if (_isSyncing) return;
     final totalWatch = Stopwatch()..start();
-    setState(() => _isSyncing = true);
+    final showBusy = _sectionIndex != 0;
+    _isSyncing = true;
+    if (showBusy) setState(() {});
     try {
       final prefs = await SharedPreferences.getInstance();
       final knownPaths = _uniqueResolvedPaths(
@@ -195,7 +205,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       LoggerService().log(
         '[Perf] Media sync total: ${totalWatch.elapsedMilliseconds}ms',
       );
-      if (mounted) setState(() => _isSyncing = false);
+      _isSyncing = false;
+      if (mounted && showBusy) setState(() {});
     }
   }
 
@@ -451,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return GlassScaffold(
       background: AniGlassTheme.background(
-        coverUrl: coverUrl,
+        coverUrl: _sectionIndex == 0 ? null : coverUrl,
         light: light,
         style: backgroundStyle,
       ),
@@ -1289,8 +1300,7 @@ class _SeriesCover extends StatelessWidget {
       return Image.network(
         coverUrl,
         fit: BoxFit.cover,
-        cacheWidth: 360,
-        cacheHeight: 540,
+        cacheWidth: 420,
         errorBuilder: (context, error, stackTrace) =>
             _CoverFallback(series: series),
       );

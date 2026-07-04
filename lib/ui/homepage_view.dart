@@ -29,13 +29,18 @@ class HomepageView extends StatefulWidget {
 
 class _HomepageViewState extends State<HomepageView> {
   Timer? _insightsInitTimer;
+  Timer? _deferredSectionsTimer;
+  bool _showDeferredSections = false;
 
   @override
   void initState() {
     super.initState();
     WatchHistoryService().initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _insightsInitTimer = Timer(const Duration(milliseconds: 900), () {
+      _deferredSectionsTimer = Timer(const Duration(milliseconds: 700), () {
+        if (mounted) setState(() => _showDeferredSections = true);
+      });
+      _insightsInitTimer = Timer(const Duration(milliseconds: 2200), () {
         if (mounted) HomeInsightsService().initialize();
       });
     });
@@ -44,6 +49,7 @@ class _HomepageViewState extends State<HomepageView> {
   @override
   void dispose() {
     _insightsInitTimer?.cancel();
+    _deferredSectionsTimer?.cancel();
     super.dispose();
   }
 
@@ -139,12 +145,22 @@ class _HomepageViewState extends State<HomepageView> {
                       textColor,
                       secondary,
                     ),
-                    const SizedBox(height: 28),
-                    _buildTodayUpdatesSection(context, textColor, secondary),
-                    const SizedBox(height: 28),
-                    _buildSeasonProgressSection(context, textColor, secondary),
-                    const SizedBox(height: 28),
-                    _buildRecommendationsSection(context, textColor, secondary),
+                    if (_showDeferredSections) ...[
+                      const SizedBox(height: 28),
+                      _buildTodayUpdatesSection(context, textColor, secondary),
+                      const SizedBox(height: 28),
+                      _buildSeasonProgressSection(
+                        context,
+                        textColor,
+                        secondary,
+                      ),
+                      const SizedBox(height: 28),
+                      _buildRecommendationsSection(
+                        context,
+                        textColor,
+                        secondary,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1376,10 +1392,7 @@ class _Poster extends StatelessWidget {
                 fit: BoxFit.cover,
                 cacheWidth: (width * MediaQuery.devicePixelRatioOf(context))
                     .round()
-                    .clamp(96, 512),
-                cacheHeight: (height * MediaQuery.devicePixelRatioOf(context))
-                    .round()
-                    .clamp(128, 768),
+                    .clamp(96, 384),
                 errorBuilder: (_, _, _) => const ColoredBox(
                   color: Color(0xFF111827),
                   child: Icon(
