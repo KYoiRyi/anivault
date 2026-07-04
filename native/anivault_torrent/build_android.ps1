@@ -40,6 +40,11 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Android torrent native build failed for $($target.Abi)"
         }
+        $cxxShared = Join-Path $NdkRoot "sources\cxx-stl\llvm-libc++\libs\$($target.Abi)\libc++_shared.so"
+        if (-not (Test-Path -LiteralPath $cxxShared)) {
+            throw "Missing libc++_shared.so for $($target.Abi): $cxxShared"
+        }
+        Copy-Item -LiteralPath $cxxShared -Destination (Join-Path $outDir 'libc++_shared.so') -Force
     }
 } finally {
     Pop-Location

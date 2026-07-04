@@ -41,6 +41,12 @@ build_target() {
 
   mkdir -p "${OUT_ROOT}/${abi}"
   go build -buildmode=c-shared -o "${OUT_ROOT}/${abi}/libanivault_torrent.so" .
+  local cxx_shared="${NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${abi}/libc++_shared.so"
+  if [[ ! -f "${cxx_shared}" ]]; then
+    echo "Missing libc++_shared.so for ${abi}: ${cxx_shared}" >&2
+    exit 1
+  fi
+  cp "${cxx_shared}" "${OUT_ROOT}/${abi}/libc++_shared.so"
 }
 
 build_target "arm64-v8a" "arm64" "aarch64-linux-android${API_LEVEL}-clang" "aarch64-linux-android${API_LEVEL}-clang++"
