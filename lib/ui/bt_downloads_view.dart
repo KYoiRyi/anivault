@@ -73,13 +73,10 @@ class _BtDownloadsViewState extends State<BtDownloadsView> {
           controller: widget.scrollController,
           padding: EdgeInsets.fromLTRB(20, widget.topPadding, 20, 110),
           children: [
-            AnimatedGlassEntrance(
-              index: entranceIndex++,
-              child: _MagnetInputCard(
-                controller: _magnetCtrl,
-                adding: _adding,
-                onAdd: _addMagnet,
-              ),
+            _MagnetInputCard(
+              controller: _magnetCtrl,
+              adding: _adding,
+              onAdd: _addMagnet,
             ),
             if (service.lastError != null) ...[
               const SizedBox(height: 12),
