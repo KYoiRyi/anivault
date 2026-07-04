@@ -8,9 +8,15 @@ class LoggerService extends ChangeNotifier {
   final List<String> _logs = [];
 
   List<String> get logs => List.unmodifiable(_logs);
+  List<String> get errorLogs =>
+      _logs.where((line) => _isErrorLine(line)).toList(growable: false);
 
   void log(String message) {
-    final timestamp = DateTime.now().toIso8601String().split('T').last.substring(0, 8);
+    final timestamp = DateTime.now()
+        .toIso8601String()
+        .split('T')
+        .last
+        .substring(0, 8);
     _logs.insert(0, '[$timestamp] $message'); // Add to top
     if (_logs.length > 500) {
       _logs.removeLast(); // Keep recent 500
@@ -21,5 +27,10 @@ class LoggerService extends ChangeNotifier {
   void clear() {
     _logs.clear();
     notifyListeners();
+  }
+
+  bool _isErrorLine(String line) {
+    final lower = line.toLowerCase();
+    return lower.contains('error') || lower.contains('failed');
   }
 }

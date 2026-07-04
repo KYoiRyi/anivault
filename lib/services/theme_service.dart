@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum AniBackgroundStyle { dynamic, solid }
+
+enum AniGlassQualityMode { minimal, standard, premium }
 
 class ThemeService extends ChangeNotifier {
   static final ThemeService _instance = ThemeService._internal();
@@ -12,12 +15,20 @@ class ThemeService extends ChangeNotifier {
 
   static const _themeModeKey = 'appearance_theme_mode';
   static const _backgroundStyleKey = 'appearance_background_style';
+  static const _glassQualityKey = 'appearance_glass_quality';
 
   ThemeMode _themeMode = ThemeMode.system;
   AniBackgroundStyle _backgroundStyle = AniBackgroundStyle.dynamic;
+  AniGlassQualityMode _glassQuality = AniGlassQualityMode.premium;
 
   ThemeMode get themeMode => _themeMode;
   AniBackgroundStyle get backgroundStyle => _backgroundStyle;
+  AniGlassQualityMode get glassQuality => _glassQuality;
+  GlassQuality get glassQualityValue => switch (_glassQuality) {
+    AniGlassQualityMode.minimal => GlassQuality.minimal,
+    AniGlassQualityMode.standard => GlassQuality.standard,
+    AniGlassQualityMode.premium => GlassQuality.premium,
+  };
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -25,6 +36,7 @@ class ThemeService extends ChangeNotifier {
     _backgroundStyle = _backgroundStyleFromName(
       prefs.getString(_backgroundStyleKey),
     );
+    _glassQuality = _glassQualityFromName(prefs.getString(_glassQualityKey));
     notifyListeners();
   }
 
@@ -44,6 +56,14 @@ class ThemeService extends ChangeNotifier {
     await prefs.setString(_backgroundStyleKey, style.name);
   }
 
+  Future<void> setGlassQuality(AniGlassQualityMode quality) async {
+    if (_glassQuality == quality) return;
+    _glassQuality = quality;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_glassQualityKey, quality.name);
+  }
+
   ThemeMode _themeModeFromName(String? name) {
     return switch (name) {
       'light' => ThemeMode.light,
@@ -56,6 +76,14 @@ class ThemeService extends ChangeNotifier {
     return switch (name) {
       'solid' => AniBackgroundStyle.solid,
       _ => AniBackgroundStyle.dynamic,
+    };
+  }
+
+  AniGlassQualityMode _glassQualityFromName(String? name) {
+    return switch (name) {
+      'minimal' => AniGlassQualityMode.minimal,
+      'standard' => AniGlassQualityMode.standard,
+      _ => AniGlassQualityMode.premium,
     };
   }
 }

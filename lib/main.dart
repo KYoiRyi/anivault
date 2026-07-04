@@ -46,23 +46,26 @@ class AniVaultApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([ThemeService(), AppI18n()]),
       builder: (context, _) {
-        return MaterialApp(
-          title: 'AniVault',
-          debugShowCheckedModeBanner: false,
-          supportedLocales: const [Locale('en'), Locale('zh')],
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          localeResolutionCallback: (locale, supportedLocales) {
-            return AppI18n().locale;
-          },
-          locale: AppI18n().locale,
-          themeMode: ThemeService().themeMode,
-          theme: _buildTheme(Brightness.light),
-          darkTheme: _buildTheme(Brightness.dark),
-          home: const HomeScreen(),
+        return GlassTheme(
+          data: AniGlassTheme.theme,
+          child: MaterialApp(
+            title: 'AniVault',
+            debugShowCheckedModeBanner: false,
+            supportedLocales: const [Locale('en'), Locale('zh')],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            localeResolutionCallback: (locale, supportedLocales) {
+              return AppI18n().locale;
+            },
+            locale: AppI18n().locale,
+            themeMode: ThemeService().themeMode,
+            theme: _buildTheme(Brightness.light),
+            darkTheme: _buildTheme(Brightness.dark),
+            home: const HomeScreen(),
+          ),
         );
       },
     );

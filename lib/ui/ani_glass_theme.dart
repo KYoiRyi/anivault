@@ -29,7 +29,7 @@ class AniGlassTheme {
   static GlassThemeData get theme => GlassThemeData.simple(
     blur: 10,
     thickness: 28,
-    quality: GlassQuality.premium,
+    quality: ThemeService().glassQualityValue,
     chromaticAberration: 0.012,
     lightIntensity: 0.48,
     ambientStrength: 0.04,

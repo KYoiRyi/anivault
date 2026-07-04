@@ -98,8 +98,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didHaveMemoryPressure() {
-    PaintingBinding.instance.imageCache.clear();
-    LoggerService().log('[Perf] Memory pressure: cleared inactive image cache');
+    LoggerService().log('[Perf] Memory pressure reported');
   }
 
   void _onLanguageChanged() {
@@ -477,11 +476,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       headerFadeDistance: 46,
       body: Stack(
         children: [
-          _PageSwitchTransition(
-            selectedIndex: _sectionIndex,
+          KeyedSubtree(
+            key: ValueKey('section-$_sectionIndex'),
             child: _sectionIndex == 0
                 ? HomepageView(
-                    key: const ValueKey('home-page'),
                     topPadding: topPadding,
                     scrollController: _scrollController,
                     onNavigateToLibrary: (index) =>
@@ -489,19 +487,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   )
                 : _sectionIndex == 1
                 ? _buildLibraryView(
-                    key: const ValueKey('library-page'),
                     busy: busy,
                     visible: visible,
                     topPadding: topPadding,
                   )
                 : _sectionIndex == 2
                 ? BtDownloadsView(
-                    key: const ValueKey('bt-page'),
                     topPadding: topPadding + 96,
                     onLibraryRefresh: _syncMedia,
                   )
                 : SettingsContent(
-                    key: const ValueKey('settings-page'),
                     topPadding: topPadding + 96,
                     onLibraryRefresh: _refreshAnimeLibrary,
                   ),
@@ -1023,30 +1018,6 @@ class _FilterBar extends StatelessWidget {
             ),
           ),
         );
-      },
-    );
-  }
-}
-
-class _PageSwitchTransition extends StatelessWidget {
-  final int selectedIndex;
-  final Widget child;
-
-  const _PageSwitchTransition({
-    required this.selectedIndex,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(selectedIndex),
-      tween: Tween(begin: 0.97, end: 1),
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-      child: child,
-      builder: (context, scale, child) {
-        return Transform.scale(scale: scale, child: child);
       },
     );
   }

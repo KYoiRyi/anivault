@@ -223,6 +223,36 @@ class _AppearancePanel extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              const _SettingLabel('Glass quality'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _ThemeChip(
+                    label: 'Minimal',
+                    selected:
+                        service.glassQuality == AniGlassQualityMode.minimal,
+                    onTap: () =>
+                        service.setGlassQuality(AniGlassQualityMode.minimal),
+                  ),
+                  _ThemeChip(
+                    label: 'Standard',
+                    selected:
+                        service.glassQuality == AniGlassQualityMode.standard,
+                    onTap: () =>
+                        service.setGlassQuality(AniGlassQualityMode.standard),
+                  ),
+                  _ThemeChip(
+                    label: 'Premium',
+                    selected:
+                        service.glassQuality == AniGlassQualityMode.premium,
+                    onTap: () =>
+                        service.setGlassQuality(AniGlassQualityMode.premium),
+                  ),
+                ],
+              ),
             ],
           );
         },
@@ -279,15 +309,21 @@ class _PremiumStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _StatusRow(label: 'Quality', value: 'GlassQuality.premium'),
-        SizedBox(height: 8),
-        _StatusRow(label: 'Adaptive', value: 'Disabled'),
-        SizedBox(height: 8),
-        _StatusRow(label: 'Fallback', value: 'Blocked by policy'),
-      ],
+    return ListenableBuilder(
+      listenable: ThemeService(),
+      builder: (context, _) {
+        final quality = ThemeService().glassQuality.name;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StatusRow(label: 'Quality', value: 'GlassQuality.$quality'),
+            const SizedBox(height: 8),
+            const _StatusRow(label: 'Adaptive', value: 'Disabled'),
+            const SizedBox(height: 8),
+            const _StatusRow(label: 'Mode', value: 'Forced by setting'),
+          ],
+        );
+      },
     );
   }
 }
@@ -423,6 +459,15 @@ class _CompactLogSheet extends StatelessWidget {
     ).showSnackBar(SnackBar(content: Text('Copied ${logs.length} log lines')));
   }
 
+  Future<void> _copyErrors(BuildContext context) async {
+    final errors = LoggerService().errorLogs;
+    await Clipboard.setData(ClipboardData(text: errors.join('\n')));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Copied ${errors.length} error log lines')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scrollData = ScrollControllerProvider.of(context);
@@ -484,7 +529,7 @@ class _CompactLogSheet extends StatelessWidget {
               ...logs.map(
                 (line) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: _LogLine(line: line),
+                  child: _LogLine(line: line, onCopyErrors: _copyErrors),
                 ),
               ),
           ],
@@ -1076,6 +1121,15 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
     ).showSnackBar(SnackBar(content: Text('Copied ${lines.length} log lines')));
   }
 
+  Future<void> _copyErrors(BuildContext context) async {
+    final errors = LoggerService().errorLogs;
+    await Clipboard.setData(ClipboardData(text: errors.join('\n')));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Copied ${errors.length} error log lines')),
+    );
+  }
+
   Future<void> _confirmClear() async {
     final clear = await showDialog<bool>(
       context: context,
@@ -1179,8 +1233,10 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                         itemCount: visible.length,
                         separatorBuilder: (context, index) =>
                             const Divider(color: Color(0x1A0F172A)),
-                        itemBuilder: (context, index) =>
-                            _LogLine(line: visible[index]),
+                        itemBuilder: (context, index) => _LogLine(
+                          line: visible[index],
+                          onCopyErrors: _copyErrors,
+                        ),
                       ),
               ),
             ],
@@ -1193,8 +1249,9 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
 
 class _LogLine extends StatefulWidget {
   final String line;
+  final Future<void> Function(BuildContext context)? onCopyErrors;
 
-  const _LogLine({required this.line});
+  const _LogLine({required this.line, this.onCopyErrors});
 
   @override
   State<_LogLine> createState() => _LogLineState();
@@ -1210,7 +1267,13 @@ class _LogLineState extends State<_LogLine> {
         widget.line.toLowerCase().contains('failed');
     final textColor = AniGlassTheme.textColor(context);
     return InkWell(
-      onTap: () => setState(() => _expanded = !_expanded),
+      onTap: () {
+        if (isError && widget.onCopyErrors != null) {
+          unawaited(widget.onCopyErrors!(context));
+          return;
+        }
+        setState(() => _expanded = !_expanded);
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
