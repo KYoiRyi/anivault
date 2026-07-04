@@ -25,17 +25,23 @@ export GOOS=android
 
 find_cxx_shared() {
   local abi="$1"
+  local cxx="${2:-}"
+  local triple="$3"
   local candidates=(
     "${NDK_ROOT}/sources/cxx-stl/llvm-libc++/libs/${abi}/libc++_shared.so"
     "${NDK_ROOT}/toolchains/llvm/prebuilt/${HOST_TAG}/sysroot/usr/lib/${abi}/libc++_shared.so"
+    "${NDK_ROOT}/toolchains/llvm/prebuilt/${HOST_TAG}/sysroot/usr/lib/${triple}/libc++_shared.so"
   )
+  if [[ -n "${cxx}" && -x "${cxx}" ]]; then
+    candidates+=("$("${cxx}" -print-file-name=libc++_shared.so)")
+  fi
   for candidate in "${candidates[@]}"; do
     if [[ -f "${candidate}" ]]; then
       printf '%s\n' "${candidate}"
       return 0
     fi
   done
-  find "${NDK_ROOT}" -path "*/${abi}/libc++_shared.so" -print -quit
+  find "${NDK_ROOT}" \( -path "*/${abi}/libc++_shared.so" -o -path "*/${triple}/libc++_shared.so" \) -print -quit
 }
 
 build_target() {
@@ -44,6 +50,7 @@ build_target() {
   local cc="$3"
   local cxx="$4"
   local goarm="${5:-}"
+  local triple="$6"
 
   export GOARCH="${goarch}"
   export CC="${TOOLCHAIN_BIN}/${cc}"
@@ -57,7 +64,7 @@ build_target() {
   mkdir -p "${OUT_ROOT}/${abi}"
   go build -buildmode=c-shared -o "${OUT_ROOT}/${abi}/libanivault_torrent.so" .
   local cxx_shared
-  cxx_shared="$(find_cxx_shared "${abi}")"
+  cxx_shared="$(find_cxx_shared "${abi}" "${CXX}" "${triple}")"
   if [[ ! -f "${cxx_shared}" ]]; then
     echo "Missing libc++_shared.so for ${abi} under ${NDK_ROOT}" >&2
     exit 1
@@ -65,6 +72,6 @@ build_target() {
   cp "${cxx_shared}" "${OUT_ROOT}/${abi}/libc++_shared.so"
 }
 
-build_target "arm64-v8a" "arm64" "aarch64-linux-android${API_LEVEL}-clang" "aarch64-linux-android${API_LEVEL}-clang++"
-build_target "armeabi-v7a" "arm" "armv7a-linux-androideabi${API_LEVEL}-clang" "armv7a-linux-androideabi${API_LEVEL}-clang++" "7"
-build_target "x86_64" "amd64" "x86_64-linux-android${API_LEVEL}-clang" "x86_64-linux-android${API_LEVEL}-clang++"
+build_target "arm64-v8a" "arm64" "aarch64-linux-android${API_LEVEL}-clang" "aarch64-linux-android${API_LEVEL}-clang++" "" "aarch64-linux-android"
+build_target "armeabi-v7a" "arm" "armv7a-linux-androideabi${API_LEVEL}-clang" "armv7a-linux-androideabi${API_LEVEL}-clang++" "7" "arm-linux-androideabi"
+build_target "x86_64" "amd64" "x86_64-linux-android${API_LEVEL}-clang" "x86_64-linux-android${API_LEVEL}-clang++" "" "x86_64-linux-android"
