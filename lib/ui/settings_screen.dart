@@ -49,11 +49,13 @@ class SettingsScreen extends StatelessWidget {
 class SettingsContent extends StatefulWidget {
   final double topPadding;
   final Future<void> Function()? onLibraryRefresh;
+  final ScrollController? scrollController;
 
   const SettingsContent({
     super.key,
     this.topPadding = 0,
     this.onLibraryRefresh,
+    this.scrollController,
   });
 
   @override
@@ -70,6 +72,7 @@ class _SettingsContentState extends State<SettingsContent> {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      controller: widget.scrollController,
       padding: EdgeInsets.fromLTRB(20, widget.topPadding, 20, 36),
       children: [
         const _SettingsPanel(

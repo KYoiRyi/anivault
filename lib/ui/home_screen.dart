@@ -36,6 +36,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   final _homeScrollController = ScrollController();
   final _libraryScrollController = ScrollController();
+  final _downloadScrollController = ScrollController();
+  final _settingsScrollController = ScrollController();
   final _searchController = TextEditingController();
 
   List<String> _mediaPaths = [];
@@ -94,6 +96,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _syncTimer?.cancel();
     _homeScrollController.dispose();
     _libraryScrollController.dispose();
+    _downloadScrollController.dispose();
+    _settingsScrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -478,7 +482,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ? _homeScrollController
           : _sectionIndex == 1
           ? _libraryScrollController
-          : null,
+          : _sectionIndex == 2
+          ? _downloadScrollController
+          : _settingsScrollController,
       headerFadeDistance: 46,
       body: Stack(
         children: [
@@ -499,11 +505,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   )
                 : _sectionIndex == 2
                 ? BtDownloadsView(
-                    topPadding: topPadding + 96,
+                    topPadding: topPadding + 74,
+                    scrollController: _downloadScrollController,
                     onLibraryRefresh: _syncMedia,
                   )
                 : SettingsContent(
-                    topPadding: topPadding + 96,
+                    topPadding: topPadding + 74,
+                    scrollController: _settingsScrollController,
                     onLibraryRefresh: _refreshAnimeLibrary,
                   ),
           ),
@@ -566,9 +574,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return CustomScrollView(
       key: key,
       controller: _libraryScrollController,
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
       slivers: [
         SliverToBoxAdapter(
           child: Padding(

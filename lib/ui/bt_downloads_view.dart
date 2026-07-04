@@ -9,11 +9,13 @@ import 'package:anivault/ui/player_screen.dart';
 class BtDownloadsView extends StatefulWidget {
   final double topPadding;
   final Future<void> Function()? onLibraryRefresh;
+  final ScrollController? scrollController;
 
   const BtDownloadsView({
     super.key,
     required this.topPadding,
     this.onLibraryRefresh,
+    this.scrollController,
   });
 
   @override
@@ -67,6 +69,7 @@ class _BtDownloadsViewState extends State<BtDownloadsView> {
         final service = TorrentService();
         final tasks = service.tasks;
         return ListView(
+          controller: widget.scrollController,
           padding: EdgeInsets.fromLTRB(20, widget.topPadding, 20, 110),
           children: [
             _MagnetInputCard(
