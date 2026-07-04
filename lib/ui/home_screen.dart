@@ -820,7 +820,7 @@ class _DemoTopGlassTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = AniGlassTheme.textColor(context);
     final tertiaryTextColor = AniGlassTheme.tertiaryTextColor(context);
-    const horizontalPadding = 12.0;
+    const horizontalPadding = 20.0;
     final barGlassSettings = LiquidGlassSettings(
       glassColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xAA1C1C1E)
@@ -844,7 +844,7 @@ class _DemoTopGlassTabBar extends StatelessWidget {
     );
 
     return SizedBox(
-      height: 66,
+      height: 104,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final widthScale =
@@ -873,18 +873,18 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                   unselectedIconColor: tertiaryTextColor,
                   selectedLabelColor: textColor,
                   unselectedLabelColor: tertiaryTextColor,
-                  indicatorColor: textColor.withValues(alpha: 0.14),
+                  indicatorColor: textColor.withValues(alpha: 0.20),
+                  labelFontSize: 10,
                   iconSize: 28,
                   iconLabelSpacing: 0,
                   quality: AniGlassTheme.quality,
                   interactionBehavior: GlassInteractionBehavior.full,
                   settings: barGlassSettings,
                   tabWidth: effectiveTabWidth,
-                  barHeight: 42,
+                  barHeight: 64,
                   horizontalPadding: horizontalPadding,
-                  verticalPadding: 8,
-                  spacing: 4,
-                  labelFontSize: 18,
+                  verticalPadding: 16,
+                  spacing: 8,
                   textStyle: const TextStyle(
                     fontFamily: 'SF Pro Display',
                     fontFamilyFallback: [
