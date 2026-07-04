@@ -672,7 +672,6 @@ class _HomeHero extends StatelessWidget {
     return GlassCard(
       quality: GlassQuality.premium,
       useOwnLayer: false,
-      settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(22),
       shape: const LiquidRoundedSuperellipse(borderRadius: 30),
       child: Row(

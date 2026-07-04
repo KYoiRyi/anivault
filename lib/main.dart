@@ -54,11 +54,7 @@ class AniVaultApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           localeResolutionCallback: (locale, supportedLocales) {
-            final resolved = locale?.languageCode == 'zh'
-                ? const Locale('zh')
-                : const Locale('en');
-            AppI18n().updateSystemLocale(resolved);
-            return resolved;
+            return AppI18n().locale;
           },
           locale: AppI18n().locale,
           themeMode: ThemeService().themeMode,

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
@@ -27,15 +28,23 @@ class HomepageView extends StatefulWidget {
 }
 
 class _HomepageViewState extends State<HomepageView> {
+  Timer? _insightsInitTimer;
+
   @override
   void initState() {
     super.initState();
     WatchHistoryService().initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future<void>.delayed(const Duration(milliseconds: 900), () {
+      _insightsInitTimer = Timer(const Duration(milliseconds: 900), () {
         if (mounted) HomeInsightsService().initialize();
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _insightsInitTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -177,7 +186,6 @@ class _HomepageViewState extends State<HomepageView> {
     return GlassCard(
       quality: GlassQuality.premium,
       useOwnLayer: false,
-      settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(18),
       shape: const LiquidRoundedSuperellipse(borderRadius: 26),
       child: Column(
@@ -355,7 +363,6 @@ class _HomepageViewState extends State<HomepageView> {
     return GlassCard(
       quality: GlassQuality.premium,
       useOwnLayer: false,
-      settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
       shape: const LiquidRoundedSuperellipse(borderRadius: 26),
       child: Column(
@@ -439,7 +446,6 @@ class _HomepageViewState extends State<HomepageView> {
     return GlassCard(
       quality: GlassQuality.premium,
       useOwnLayer: false,
-      settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(22),
       shape: const LiquidRoundedSuperellipse(borderRadius: 26),
       child: Column(
@@ -666,7 +672,6 @@ class _HomepageViewState extends State<HomepageView> {
           GlassCard(
             quality: GlassQuality.premium,
             useOwnLayer: false,
-            settings: AniGlassTheme.heroFor(context),
             padding: const EdgeInsets.all(16),
             shape: const LiquidRoundedSuperellipse(borderRadius: 24),
             child: Column(
@@ -784,7 +789,6 @@ class _HomepageViewState extends State<HomepageView> {
     return GlassCard(
       quality: GlassQuality.premium,
       useOwnLayer: false,
-      settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       shape: const LiquidRoundedSuperellipse(borderRadius: 22),
       child: Row(
@@ -1069,7 +1073,6 @@ class _TodayUpdateTile extends StatelessWidget {
         child: GlassCard(
           quality: GlassQuality.premium,
           useOwnLayer: false,
-          settings: AniGlassTheme.heroFor(context),
           padding: const EdgeInsets.all(14),
           shape: const LiquidRoundedSuperellipse(borderRadius: 22),
           child: Row(
@@ -1213,7 +1216,6 @@ class _RecommendationTile extends StatelessWidget {
         child: GlassCard(
           quality: GlassQuality.premium,
           useOwnLayer: false,
-          settings: AniGlassTheme.heroFor(context),
           padding: EdgeInsets.zero,
           shape: const LiquidRoundedSuperellipse(borderRadius: 24),
           child: ClipRRect(
