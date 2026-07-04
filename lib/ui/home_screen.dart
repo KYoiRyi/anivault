@@ -512,8 +512,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       headerFadeDistance: 46,
       body: Stack(
         children: [
-          _TabContentScaleEntrance(
-            sectionIndex: _sectionIndex,
+          AnimatedGlassEntrance(
+            key: ValueKey('section-entrance-$_sectionIndex'),
+            index: 0,
             child: KeyedSubtree(
               key: ValueKey('section-$_sectionIndex'),
               child: sectionChild,
@@ -656,62 +657,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _TabContentScaleEntrance extends StatefulWidget {
-  final int sectionIndex;
-  final Widget child;
-
-  const _TabContentScaleEntrance({
-    required this.sectionIndex,
-    required this.child,
-  });
-
-  @override
-  State<_TabContentScaleEntrance> createState() =>
-      _TabContentScaleEntranceState();
-}
-
-class _TabContentScaleEntranceState extends State<_TabContentScaleEntrance>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 240),
-    )..value = 1;
-    _scale = Tween<double>(
-      begin: 0.97,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-  }
-
-  @override
-  void didUpdateWidget(covariant _TabContentScaleEntrance oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.sectionIndex != widget.sectionIndex) {
-      _controller.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scale,
-      alignment: Alignment.topCenter,
-      child: widget.child,
     );
   }
 }
