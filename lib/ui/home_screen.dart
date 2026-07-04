@@ -512,13 +512,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       headerFadeDistance: 46,
       body: Stack(
         children: [
-          AnimatedGlassEntrance(
-            key: ValueKey('section-entrance-$_sectionIndex'),
-            index: 0,
-            child: KeyedSubtree(
-              key: ValueKey('section-$_sectionIndex'),
-              child: sectionChild,
-            ),
+          KeyedSubtree(
+            key: ValueKey('section-$_sectionIndex'),
+            child: sectionChild,
           ),
           Positioned(
             top: topPadding,

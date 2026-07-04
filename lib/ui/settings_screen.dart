@@ -75,30 +75,44 @@ class _SettingsContentState extends State<SettingsContent> {
       controller: widget.scrollController,
       padding: EdgeInsets.fromLTRB(20, widget.topPadding, 20, 36),
       children: [
-        const _SettingsPanel(
-          icon: Icons.cloud_sync_rounded,
-          title: 'AniList Metadata',
-          subtitle: 'GraphQL search for imported anime',
-          child: _AniListStatus(),
+        const AnimatedGlassEntrance(
+          index: 0,
+          child: _SettingsPanel(
+            icon: Icons.cloud_sync_rounded,
+            title: 'AniList Metadata',
+            subtitle: 'GraphQL search for imported anime',
+            child: _AniListStatus(),
+          ),
         ),
         const SizedBox(height: 16),
-        const _SettingsPanel(
-          icon: Icons.diamond_rounded,
-          title: 'Premium Glass',
-          subtitle: 'Adaptive fallback is disabled for this build',
-          child: _PremiumStatus(),
+        const AnimatedGlassEntrance(
+          index: 1,
+          child: _SettingsPanel(
+            icon: Icons.diamond_rounded,
+            title: 'Premium Glass',
+            subtitle: 'Adaptive fallback is disabled for this build',
+            child: _PremiumStatus(),
+          ),
         ),
         const SizedBox(height: 16),
-        _SettingsPanel(
-          icon: Icons.science_rounded,
-          title: 'Experimental',
-          subtitle: 'AI-assisted matching for difficult releases',
-          child: _ExperimentalPanel(onLibraryRefresh: widget.onLibraryRefresh),
+        AnimatedGlassEntrance(
+          index: 2,
+          child: _SettingsPanel(
+            icon: Icons.science_rounded,
+            title: 'Experimental',
+            subtitle: 'AI-assisted matching for difficult releases',
+            child: _ExperimentalPanel(
+              onLibraryRefresh: widget.onLibraryRefresh,
+            ),
+          ),
         ),
         const SizedBox(height: 16),
-        const _AppearancePanel(),
+        const AnimatedGlassEntrance(index: 3, child: _AppearancePanel()),
         const SizedBox(height: 16),
-        _SettingsLogButton(onTap: _showCompactLogs),
+        AnimatedGlassEntrance(
+          index: 4,
+          child: _SettingsLogButton(onTap: _showCompactLogs),
+        ),
       ],
     );
   }

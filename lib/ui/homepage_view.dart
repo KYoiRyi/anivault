@@ -32,6 +32,9 @@ class _HomepageViewState extends State<HomepageView> {
   Timer? _deferredSectionsTimer;
   bool _showDeferredSections = false;
 
+  Widget _entrance(int index, Widget child) =>
+      AnimatedGlassEntrance(index: index, child: child);
+
   @override
   void initState() {
     super.initState();
@@ -113,52 +116,81 @@ class _HomepageViewState extends State<HomepageView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildContinueWatchingHeader(textColor),
-                    const SizedBox(height: 12),
-                    if (lastRecord != null &&
-                        lastSeries != null &&
-                        lastEpisode != null &&
-                        lastFile != null)
-                      _buildContinueWatchingCard(
-                        context,
-                        lastRecord,
-                        lastSeries,
-                        lastEpisode,
-                        lastFile,
-                        remainingCount,
-                        isCompleted,
-                        textColor,
-                        secondary,
-                      )
-                    else
-                      _buildEmptyContinueWatchingCard(
-                        context,
-                        textColor,
-                        secondary,
+                    _entrance(
+                      0,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildContinueWatchingHeader(textColor),
+                          const SizedBox(height: 12),
+                          if (lastRecord != null &&
+                              lastSeries != null &&
+                              lastEpisode != null &&
+                              lastFile != null)
+                            _buildContinueWatchingCard(
+                              context,
+                              lastRecord,
+                              lastSeries,
+                              lastEpisode,
+                              lastFile,
+                              remainingCount,
+                              isCompleted,
+                              textColor,
+                              secondary,
+                            )
+                          else
+                            _buildEmptyContinueWatchingCard(
+                              context,
+                              textColor,
+                              secondary,
+                            ),
+                        ],
                       ),
+                    ),
                     const SizedBox(height: 28),
-                    _buildWeeklyProgressHeader(textColor),
-                    const SizedBox(height: 12),
-                    _buildWeeklyProgressCard(
-                      context,
-                      stats,
-                      textColor,
-                      secondary,
+                    _entrance(
+                      1,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildWeeklyProgressHeader(textColor),
+                          const SizedBox(height: 12),
+                          _buildWeeklyProgressCard(
+                            context,
+                            stats,
+                            textColor,
+                            secondary,
+                          ),
+                        ],
+                      ),
                     ),
                     if (_showDeferredSections) ...[
                       const SizedBox(height: 28),
-                      _buildTodayUpdatesSection(context, textColor, secondary),
-                      const SizedBox(height: 28),
-                      _buildSeasonProgressSection(
-                        context,
-                        textColor,
-                        secondary,
+                      _entrance(
+                        2,
+                        _buildTodayUpdatesSection(
+                          context,
+                          textColor,
+                          secondary,
+                        ),
                       ),
                       const SizedBox(height: 28),
-                      _buildRecommendationsSection(
-                        context,
-                        textColor,
-                        secondary,
+                      _entrance(
+                        3,
+                        _buildSeasonProgressSection(
+                          context,
+                          textColor,
+                          secondary,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _entrance(
+                        4,
+                        _buildRecommendationsSection(
+                          context,
+                          textColor,
+                          secondary,
+                        ),
                       ),
                     ],
                   ],

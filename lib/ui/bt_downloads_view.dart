@@ -68,54 +68,73 @@ class _BtDownloadsViewState extends State<BtDownloadsView> {
       builder: (context, _) {
         final service = TorrentService();
         final tasks = service.tasks;
+        var entranceIndex = 0;
         return ListView(
           controller: widget.scrollController,
           padding: EdgeInsets.fromLTRB(20, widget.topPadding, 20, 110),
           children: [
-            _MagnetInputCard(
-              controller: _magnetCtrl,
-              adding: _adding,
-              onAdd: _addMagnet,
+            AnimatedGlassEntrance(
+              index: entranceIndex++,
+              child: _MagnetInputCard(
+                controller: _magnetCtrl,
+                adding: _adding,
+                onAdd: _addMagnet,
+              ),
             ),
             if (service.lastError != null) ...[
               const SizedBox(height: 12),
-              Text(
-                service.lastError!,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              AnimatedGlassEntrance(
+                index: entranceIndex++,
+                child: Text(
+                  service.lastError!,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                ),
               ),
             ],
             const SizedBox(height: 18),
-            Text(
-              'Download Tasks',
-              style: TextStyle(
-                color: textColor,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
+            AnimatedGlassEntrance(
+              index: entranceIndex++,
+              child: Text(
+                'Download Tasks',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             const SizedBox(height: 8),
             if (!service.nativeReady)
-              Text(
-                'Native torrent engine unavailable',
-                style: TextStyle(color: secondary),
+              AnimatedGlassEntrance(
+                index: entranceIndex++,
+                child: Text(
+                  'Native torrent engine unavailable',
+                  style: TextStyle(color: secondary),
+                ),
               )
             else if (tasks.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 36),
-                child: Center(
-                  child: Text(
-                    'Paste a magnet link to start downloading.',
-                    style: TextStyle(color: secondary),
+              AnimatedGlassEntrance(
+                index: entranceIndex++,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 36),
+                  child: Center(
+                    child: Text(
+                      'Paste a magnet link to start downloading.',
+                      style: TextStyle(color: secondary),
+                    ),
                   ),
                 ),
               )
             else
-              for (final task in tasks)
-                _TorrentTaskCard(
-                  task: task,
-                  onLibraryRefresh: widget.onLibraryRefresh,
+              for (final entry in tasks.asMap().entries)
+                AnimatedGlassEntrance(
+                  index: entranceIndex + entry.key,
+                  child: _TorrentTaskCard(
+                    task: entry.value,
+                    onLibraryRefresh: widget.onLibraryRefresh,
+                  ),
                 ),
           ],
         );
