@@ -32,7 +32,7 @@ class SettingsScreen extends StatelessWidget {
       appBar: GlassAppBar(
         title: Text('Settings', style: TextStyle(color: textColor)),
         leading: GlassButton(
-          quality: GlassQuality.premium,
+          quality: AniGlassTheme.quality,
           settings: AniGlassTheme.chromeFor(context),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onTap: () => Navigator.pop(context),
@@ -106,7 +106,7 @@ class _SettingsContentState extends State<SettingsContent> {
       initialState: GlassSheetState.half,
       halfSize: 0.46,
       fullSize: 0.82,
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.heroFor(context),
       barrierColor: Colors.black45,
       fillTransition: GlassFillTransition.instant,
@@ -294,7 +294,7 @@ class _ThemeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = AniGlassTheme.textColor(context);
     return GlassChip(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.chromeFor(context),
       label: label,
       selected: selected,
@@ -343,7 +343,7 @@ class _ExperimentalPanel extends StatelessWidget {
         final textColor = AniGlassTheme.textColor(context);
         final secondary = AniGlassTheme.secondaryTextColor(context);
         return GlassButton.custom(
-          quality: GlassQuality.premium,
+          quality: AniGlassTheme.quality,
           settings: AniGlassTheme.chromeFor(context),
           shape: const LiquidRoundedSuperellipse(borderRadius: 18),
           height: 64,
@@ -404,7 +404,7 @@ class _SettingsLogButton extends StatelessWidget {
     final textColor = AniGlassTheme.textColor(context);
     final secondary = AniGlassTheme.secondaryTextColor(context);
     return GlassButton.custom(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.chromeFor(context),
       shape: const LiquidRoundedSuperellipse(borderRadius: 20),
       height: 62,
@@ -495,14 +495,14 @@ class _CompactLogSheet extends StatelessWidget {
                   ),
                 ),
                 GlassButton(
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   settings: AniGlassTheme.chromeFor(context),
                   icon: const Icon(Icons.copy_rounded),
                   onTap: () => _copyLogs(context, logs),
                 ),
                 const SizedBox(width: 8),
                 GlassButton(
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   settings: AniGlassTheme.chromeFor(context),
                   icon: const Icon(Icons.close_rounded),
                   onTap: () => Navigator.pop(context),
@@ -628,7 +628,7 @@ class _AiAgentSettingsScreenState extends State<AiAgentSettingsScreen> {
       appBar: GlassAppBar(
         title: Text('AI Agent', style: TextStyle(color: textColor)),
         leading: GlassButton(
-          quality: GlassQuality.premium,
+          quality: AniGlassTheme.quality,
           settings: AniGlassTheme.chromeFor(context),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onTap: () => Navigator.pop(context),
@@ -757,7 +757,7 @@ class _AgentSwitchStrip extends StatelessWidget {
           GlassSwitch(
             value: enabled,
             onChanged: onChanged,
-            quality: GlassQuality.premium,
+            quality: AniGlassTheme.quality,
             settings: AniGlassTheme.chromeFor(context),
             activeColor: textColor.withValues(alpha: 0.72),
           ),
@@ -782,7 +782,7 @@ class _AgentStripShell extends StatelessWidget {
       ),
     );
     return GlassCard(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       useOwnLayer: true,
       settings: AniGlassTheme.chromeFor(context),
       padding: EdgeInsets.zero,
@@ -951,7 +951,7 @@ class _ModelGlassMenu extends StatelessWidget {
             height: 42,
             child: GlassMenu(
               settings: AniGlassTheme.chromeFor(context),
-              quality: GlassQuality.premium,
+              quality: AniGlassTheme.quality,
               menuWidth: 320,
               items: visibleModels
                   .map(
@@ -981,7 +981,7 @@ class _ModelGlassMenu extends StatelessWidget {
               triggerBuilder: (context, toggle) {
                 return Center(
                   child: GlassButton(
-                    quality: GlassQuality.premium,
+                    quality: AniGlassTheme.quality,
                     settings: AniGlassTheme.chromeFor(context),
                     shape: const LiquidOval(),
                     width: 42,
@@ -1017,7 +1017,7 @@ class _AgentActionStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = AniGlassTheme.textColor(context);
     return GlassCard(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       useOwnLayer: true,
       settings: AniGlassTheme.chromeFor(context),
       padding: EdgeInsets.zero,
@@ -1168,7 +1168,7 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               GlassSearchBar(
-                quality: GlassQuality.premium,
+                quality: AniGlassTheme.quality,
                 useOwnLayer: true,
                 settings: AniGlassTheme.chromeFor(context),
                 controller: _searchCtrl,
@@ -1184,7 +1184,7 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                 runSpacing: 8,
                 children: ['All', 'MPV', 'FFI', 'Shader', 'Error'].map((tag) {
                   return GlassChip(
-                    quality: GlassQuality.premium,
+                    quality: AniGlassTheme.quality,
                     settings: AniGlassTheme.chromeFor(context),
                     label: tag,
                     selected: _tag == tag,
@@ -1205,14 +1205,14 @@ class _LogViewerPanelState extends State<LogViewerPanel> {
                   ),
                   const Spacer(),
                   GlassButton(
-                    quality: GlassQuality.premium,
+                    quality: AniGlassTheme.quality,
                     settings: AniGlassTheme.chromeFor(context),
                     icon: const Icon(Icons.copy_rounded, size: 18),
                     onTap: () => _copyVisible(visible),
                   ),
                   const SizedBox(width: 8),
                   GlassButton(
-                    quality: GlassQuality.premium,
+                    quality: AniGlassTheme.quality,
                     settings: AniGlassTheme.chromeFor(context),
                     icon: const Icon(Icons.delete_outline_rounded, size: 18),
                     onTap: _confirmClear,
@@ -1334,7 +1334,7 @@ class _SettingsPanel extends StatelessWidget {
     final textColor = AniGlassTheme.textColor(context);
     final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       useOwnLayer: true,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(18),

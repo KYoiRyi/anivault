@@ -137,7 +137,7 @@ class _MagnetInputCard extends StatelessWidget {
     final textColor = AniGlassTheme.textColor(context);
     final secondary = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       useOwnLayer: true,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(14),
@@ -162,7 +162,7 @@ class _MagnetInputCard extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           GlassButton(
-            quality: GlassQuality.premium,
+            quality: AniGlassTheme.quality,
             settings: AniGlassTheme.chromeFor(context),
             icon: Icon(
               adding ? Icons.hourglass_top_rounded : Icons.add_rounded,
@@ -196,7 +196,7 @@ class _TorrentTaskCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
-        quality: GlassQuality.premium,
+        quality: AniGlassTheme.quality,
         useOwnLayer: true,
         settings: AniGlassTheme.chromeFor(context),
         padding: const EdgeInsets.all(14),
@@ -257,7 +257,7 @@ class _TorrentTaskCard extends StatelessWidget {
             Row(
               children: [
                 GlassButton(
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   settings: AniGlassTheme.chromeFor(context),
                   icon: Icon(
                     task.paused
@@ -270,7 +270,7 @@ class _TorrentTaskCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 GlassButton(
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   settings: AniGlassTheme.chromeFor(context),
                   icon: const Icon(Icons.refresh_rounded),
                   onTap: () =>
@@ -279,7 +279,7 @@ class _TorrentTaskCard extends StatelessWidget {
                 const Spacer(),
                 if (task.bestLibraryPath != null)
                   GlassButton(
-                    quality: GlassQuality.premium,
+                    quality: AniGlassTheme.quality,
                     settings: AniGlassTheme.chromeFor(context),
                     icon: const Icon(Icons.play_arrow_rounded),
                     onTap: () {
@@ -295,7 +295,7 @@ class _TorrentTaskCard extends StatelessWidget {
                   ),
                 const SizedBox(width: 8),
                 GlassButton(
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   settings: AniGlassTheme.chromeFor(context),
                   icon: const Icon(Icons.delete_outline_rounded),
                   onTap: () => TorrentService().remove(task.id),

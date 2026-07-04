@@ -26,10 +26,12 @@ class AniGlassTheme {
   static Color subtleSurfaceColor(BuildContext context) =>
       isLight(context) ? const Color(0x12FFFFFF) : const Color(0x12FFFFFF);
 
+  static GlassQuality get quality => ThemeService().glassQualityValue;
+
   static GlassThemeData get theme => GlassThemeData.simple(
     blur: 10,
     thickness: 28,
-    quality: ThemeService().glassQualityValue,
+    quality: quality,
     chromaticAberration: 0.012,
     lightIntensity: 0.48,
     ambientStrength: 0.04,

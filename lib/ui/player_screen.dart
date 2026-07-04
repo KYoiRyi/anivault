@@ -374,7 +374,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       initialState: GlassSheetState.half,
       halfSize: 0.56,
       fullSize: 0.9,
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.playerPanelFor(context),
       barrierColor: Colors.black45,
       fillTransition: GlassFillTransition.instant,
@@ -411,7 +411,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                     ),
                     GlassButton(
-                      quality: GlassQuality.premium,
+                      quality: AniGlassTheme.quality,
                       settings: AniGlassTheme.playerControlFor(context),
                       icon: const Icon(Icons.close_rounded),
                       onTap: () => Navigator.pop(context),
@@ -442,7 +442,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                             ),
                           ),
                           GlassSwitch(
-                            quality: GlassQuality.premium,
+                            quality: AniGlassTheme.quality,
                             useOwnLayer: true,
                             value: _isEnhancementEnabled,
                             onChanged: (val) {
@@ -462,7 +462,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                           child: Column(
                             children: [
                               GlassSegmentedControl(
-                                quality: GlassQuality.premium,
+                                quality: AniGlassTheme.quality,
                                 useOwnLayer: true,
                                 height: 44,
                                 borderRadius: 100,
@@ -502,7 +502,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 child: _currentEngine == 'Anime4K'
                                     ? GlassSegmentedControl(
                                         key: const ValueKey('anime4k-models'),
-                                        quality: GlassQuality.premium,
+                                        quality: AniGlassTheme.quality,
                                         useOwnLayer: true,
                                         height: 44,
                                         borderRadius: 100,
@@ -617,7 +617,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       ),
                       const SizedBox(height: 14),
                       GlassSegmentedControl(
-                        quality: GlassQuality.premium,
+                        quality: AniGlassTheme.quality,
                         useOwnLayer: true,
                         height: 44,
                         borderRadius: 100,
@@ -654,7 +654,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                       Align(
                         alignment: Alignment.centerRight,
                         child: GlassButton.custom(
-                          quality: GlassQuality.premium,
+                          quality: AniGlassTheme.quality,
                           settings: AniGlassTheme.playerControlFor(context),
                           shape: const LiquidRoundedSuperellipse(
                             borderRadius: 100,
@@ -692,7 +692,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                         ),
                       ),
                       GlassSwitch(
-                        quality: GlassQuality.premium,
+                        quality: AniGlassTheme.quality,
                         useOwnLayer: true,
                         value: _showHUD,
                         onChanged: (val) {
@@ -1385,7 +1385,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     required VoidCallback onTap,
   }) {
     return GlassButton.custom(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.playerControlFor(context),
       shape: const LiquidRoundedSuperellipse(borderRadius: 100),
       onTap: onTap,
@@ -1468,7 +1468,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       peekSize: 0.36,
       halfSize: 0.5,
       fullSize: 0.72,
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.playerPanelFor(context),
       barrierColor: Colors.black38,
       fillTransition: GlassFillTransition.instant,
@@ -1492,7 +1492,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: GlassButton.custom(
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   settings: AniGlassTheme.playerControlFor(context),
                   shape: const LiquidRoundedSuperellipse(borderRadius: 22),
                   onTap: () async {
@@ -1641,7 +1641,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 GlassSlider(
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   settings: RecommendedGlassSettings.playerHighlight,
                   value: 0.5,
                   min: 0,

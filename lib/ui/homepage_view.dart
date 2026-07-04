@@ -199,11 +199,9 @@ class _HomepageViewState extends State<HomepageView> {
         ? '已看完本季！🎉'
         : '距离看完本季还有 $remainingCount 集';
 
-    return GlassCard(
-      quality: GlassQuality.premium,
-      useOwnLayer: false,
+    return _HomeContentSurface(
+      borderRadius: 26,
       padding: const EdgeInsets.all(18),
-      shape: const LiquidRoundedSuperellipse(borderRadius: 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -336,7 +334,7 @@ class _HomepageViewState extends State<HomepageView> {
           const SizedBox(height: 14),
           // Action button
           GlassButton.custom(
-            quality: GlassQuality.premium,
+            quality: AniGlassTheme.quality,
             settings: AniGlassTheme.chromeFor(context),
             height: 48,
             shape: const LiquidRoundedSuperellipse(borderRadius: 14),
@@ -376,11 +374,9 @@ class _HomepageViewState extends State<HomepageView> {
     Color textColor,
     Color secondary,
   ) {
-    return GlassCard(
-      quality: GlassQuality.premium,
-      useOwnLayer: false,
+    return _HomeContentSurface(
+      borderRadius: 26,
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
-      shape: const LiquidRoundedSuperellipse(borderRadius: 26),
       child: Column(
         children: [
           Icon(
@@ -405,7 +401,7 @@ class _HomepageViewState extends State<HomepageView> {
           ),
           const SizedBox(height: 20),
           GlassButton.custom(
-            quality: GlassQuality.premium,
+            quality: AniGlassTheme.quality,
             settings: AniGlassTheme.chromeFor(context),
             height: 44,
             width: 150,
@@ -459,11 +455,9 @@ class _HomepageViewState extends State<HomepageView> {
     // Goal calculation (Target: 10 episodes or 5 hours. Let's make it 10 episodes).
     final double progress = (stats.episodesWatched / 10.0).clamp(0.0, 1.0);
 
-    return GlassCard(
-      quality: GlassQuality.premium,
-      useOwnLayer: false,
+    return _HomeContentSurface(
+      borderRadius: 26,
       padding: const EdgeInsets.all(22),
-      shape: const LiquidRoundedSuperellipse(borderRadius: 26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -685,11 +679,9 @@ class _HomepageViewState extends State<HomepageView> {
             secondary,
           )
         else
-          GlassCard(
-            quality: GlassQuality.premium,
-            useOwnLayer: false,
+          _HomeContentSurface(
+            borderRadius: 24,
             padding: const EdgeInsets.all(16),
-            shape: const LiquidRoundedSuperellipse(borderRadius: 24),
             child: Column(
               children: [
                 for (final item in progress.take(4)) ...[
@@ -802,11 +794,9 @@ class _HomepageViewState extends State<HomepageView> {
     Color textColor,
     Color secondary,
   ) {
-    return GlassCard(
-      quality: GlassQuality.premium,
-      useOwnLayer: false,
+    return _HomeContentSurface(
+      borderRadius: 22,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      shape: const LiquidRoundedSuperellipse(borderRadius: 22),
       child: Row(
         children: [
           Icon(
@@ -858,7 +848,7 @@ class _HomepageViewState extends State<HomepageView> {
       initialState: GlassSheetState.half,
       halfSize: 0.62,
       fullSize: 0.92,
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.heroFor(context),
       barrierColor: Colors.black45,
       fillTransition: GlassFillTransition.instant,
@@ -901,7 +891,7 @@ class _HomepageViewState extends State<HomepageView> {
                   ),
                 ),
                 GlassButton(
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   settings: AniGlassTheme.chromeFor(context),
                   icon: Icon(Icons.close_rounded, color: textColor),
                   onTap: () => Navigator.pop(context),
@@ -1085,12 +1075,11 @@ class _TodayUpdateTile extends StatelessWidget {
     return SizedBox(
       width: 280,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: GlassCard(
-          quality: GlassQuality.premium,
-          useOwnLayer: false,
+        child: _HomeContentSurface(
+          borderRadius: 22,
           padding: const EdgeInsets.all(14),
-          shape: const LiquidRoundedSuperellipse(borderRadius: 22),
           child: Row(
             children: [
               _Poster(url: item.coverUrl, width: 78, height: 118),
@@ -1228,12 +1217,11 @@ class _RecommendationTile extends StatelessWidget {
     return SizedBox(
       width: 218,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: GlassCard(
-          quality: GlassQuality.premium,
-          useOwnLayer: false,
+        child: _HomeContentSurface(
+          borderRadius: 24,
           padding: EdgeInsets.zero,
-          shape: const LiquidRoundedSuperellipse(borderRadius: 24),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: Column(
@@ -1313,6 +1301,44 @@ class _RecommendationTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _HomeContentSurface extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double borderRadius;
+
+  const _HomeContentSurface({
+    required this.child,
+    required this.padding,
+    required this.borderRadius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final light = AniGlassTheme.isLight(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: light
+            ? Colors.white.withValues(alpha: 0.54)
+            : Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: light
+              ? Colors.black.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: light ? 0.08 : 0.24),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(padding: padding, child: child),
     );
   }
 }

@@ -104,7 +104,7 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                           width: 168.0,
                           child: GlassCard(
                             useOwnLayer: true,
-                            quality: GlassQuality.premium,
+                            quality: AniGlassTheme.quality,
                             settings: AniGlassTheme.playerPanelFor(context),
                             padding: const EdgeInsets.all(4),
                             shape: const LiquidRoundedSuperellipse(
@@ -196,7 +196,7 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                         width: double.infinity,
                         child: GlassCard(
                           useOwnLayer: true,
-                          quality: GlassQuality.premium,
+                          quality: AniGlassTheme.quality,
                           settings: AniGlassTheme.playerPanelFor(context),
                           padding: EdgeInsets.zero,
                           shape: const LiquidRoundedSuperellipse(

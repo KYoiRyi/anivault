@@ -61,7 +61,7 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
       appBar: GlassAppBar(
         title: Text(series.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         leading: GlassButton(
-          quality: GlassQuality.premium,
+          quality: AniGlassTheme.quality,
           settings: AniGlassTheme.chromeFor(context),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onTap: () => Navigator.pop(context),
@@ -71,7 +71,7 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
             : [
                 GlassMenu(
                   settings: AniGlassTheme.chromeFor(context),
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   menuWidth: 220,
                   items: [
                     GlassMenuItem(
@@ -82,7 +82,7 @@ class _AnimeSeriesScreenState extends State<AnimeSeriesScreen> {
                     ),
                   ],
                   triggerBuilder: (context, toggle) => GlassButton(
-                    quality: GlassQuality.premium,
+                    quality: AniGlassTheme.quality,
                     settings: AniGlassTheme.chromeFor(context),
                     icon: const Icon(Icons.more_horiz_rounded),
                     onTap: toggle,
@@ -147,7 +147,7 @@ class _SeriesMetadataPanel extends StatelessWidget {
     final textColor = AniGlassTheme.textColor(context);
     final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       useOwnLayer: true,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(16),
@@ -278,7 +278,7 @@ class _GenreChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassChip(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.chromeFor(context),
       label: label,
       labelStyle: TextStyle(
@@ -300,7 +300,7 @@ class _SeriesHero extends StatelessWidget {
     final textColor = AniGlassTheme.textColor(context);
     final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       useOwnLayer: true,
       settings: AniGlassTheme.heroFor(context),
       padding: const EdgeInsets.all(18),
@@ -467,7 +467,7 @@ class _EpisodeFileRow extends StatelessWidget {
         child: Row(
           children: [
             GlassButton(
-              quality: GlassQuality.premium,
+              quality: AniGlassTheme.quality,
               settings: AniGlassTheme.chromeFor(context),
               width: 36,
               height: 36,

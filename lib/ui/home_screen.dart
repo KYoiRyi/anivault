@@ -359,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       title: 'Choose anime',
       message: parsedTitle,
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       settings: AniGlassTheme.chromeFor(context),
       actions: [
         for (final candidate in candidates)
@@ -384,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final meta = [
       if (candidate.startYear != null) '${candidate.startYear}',
       if (candidate.episodes != null) '${candidate.episodes} eps',
-    ].join(' · ');
+    ].join(' 路 ');
     return meta.isEmpty
         ? candidate.displayTitle
         : '${candidate.displayTitle}  ($meta)';
@@ -660,7 +660,7 @@ class _SelectionDeleteBar extends StatelessWidget {
     return Align(
       alignment: Alignment.center,
       child: GlassButton.custom(
-        quality: GlassQuality.premium,
+        quality: AniGlassTheme.quality,
         settings: AniGlassTheme.chromeFor(context),
         shape: const LiquidRoundedSuperellipse(borderRadius: 18),
         height: 56,
@@ -679,7 +679,7 @@ class _SelectionDeleteBar extends StatelessWidget {
                 ),
               ),
               GlassButton(
-                quality: GlassQuality.premium,
+                quality: AniGlassTheme.quality,
                 settings: AniGlassTheme.chromeFor(context),
                 width: 38,
                 height: 38,
@@ -688,7 +688,7 @@ class _SelectionDeleteBar extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               GlassButton(
-                quality: GlassQuality.premium,
+                quality: AniGlassTheme.quality,
                 settings: AniGlassTheme.chromeFor(context),
                 width: 38,
                 height: 38,
@@ -721,7 +721,7 @@ class _HomeHero extends StatelessWidget {
     final textColor = AniGlassTheme.textColor(context);
     final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
     return GlassCard(
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       useOwnLayer: false,
       padding: const EdgeInsets.all(22),
       shape: const LiquidRoundedSuperellipse(borderRadius: 30),
@@ -758,7 +758,7 @@ class _HomeHero extends StatelessWidget {
             ),
           ),
           GlassButton.custom(
-            quality: GlassQuality.premium,
+            quality: AniGlassTheme.quality,
             settings: AniGlassTheme.chromeFor(context),
             shape: const LiquidOval(),
             width: 54,
@@ -854,7 +854,7 @@ class _DemoTopGlassTabBar extends StatelessWidget {
               width: barWidth,
               // ignore: experimental_member_use
               child: GlassAdaptiveScope(
-                minQuality: GlassQuality.premium,
+                minQuality: AniGlassTheme.quality,
                 child: GlassTabBar.bottom(
                   selectedIndex: selectedIndex,
                   onTabSelected: onChanged,
@@ -865,7 +865,7 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                   indicatorColor: textColor.withValues(alpha: 0.14),
                   iconSize: 28,
                   iconLabelSpacing: 0,
-                  quality: GlassQuality.premium,
+                  quality: AniGlassTheme.quality,
                   interactionBehavior: GlassInteractionBehavior.full,
                   settings: barGlassSettings,
                   tabWidth: effectiveTabWidth,
@@ -966,7 +966,7 @@ class _FilterBar extends StatelessWidget {
             height: 80,
             // ignore: experimental_member_use
             child: GlassAdaptiveScope(
-              minQuality: GlassQuality.premium,
+              minQuality: AniGlassTheme.quality,
               child: GlassTabBar.searchable(
                 selectedIndex: index,
                 isSearchActive: searchActive,
@@ -985,7 +985,7 @@ class _FilterBar extends StatelessWidget {
                 labelFontSize: 10,
                 iconSize: 22,
                 iconLabelSpacing: 1,
-                quality: GlassQuality.premium,
+                quality: AniGlassTheme.quality,
                 interactionBehavior: GlassInteractionBehavior.full,
                 settings: barGlassSettings,
                 searchConfig: GlassSearchBarConfig(
@@ -1058,7 +1058,7 @@ class _EmptyLibrary extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           GlassButton.custom(
-            quality: GlassQuality.premium,
+            quality: AniGlassTheme.quality,
             settings: AniGlassTheme.chromeFor(context),
             shape: const LiquidRoundedSuperellipse(borderRadius: 16),
             onTap: onImport,
@@ -1101,7 +1101,7 @@ class _AnimeSeriesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassMenu(
       settings: AniGlassTheme.chromeFor(context),
-      quality: GlassQuality.premium,
+      quality: AniGlassTheme.quality,
       menuWidth: 220,
       items: [
         GlassMenuItem(
