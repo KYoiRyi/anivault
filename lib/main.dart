@@ -271,8 +271,9 @@ class _StartupMark extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             CustomPaint(
-              size: const Size(166, 126),
-              painter: _AniVaultLogoPainter(animation.value),
+              size: const Size(190, 136),
+              painter: _StartupGlowPainter(animation.value),
+              child: _StartupLogoImage(t: animation.value),
             ),
             const SizedBox(height: 16),
             Text(
@@ -291,246 +292,81 @@ class _StartupMark extends StatelessWidget {
   }
 }
 
-class _AniVaultLogoPainter extends CustomPainter {
+class _StartupLogoImage extends StatelessWidget {
   final double t;
 
-  const _AniVaultLogoPainter(this.t);
+  const _StartupLogoImage({required this.t});
+
+  static const _asset = 'assets/branding/anivault_startup_mark.png';
+
+  @override
+  Widget build(BuildContext context) {
+    final pulse = Curves.easeInOut.transform((t < 0.5 ? t : 1 - t) * 2);
+    final sweep = Curves.easeInOutCubic.transform(t);
+    return Transform.scale(
+      scale: 0.985 + pulse * 0.018,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            _asset,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+          ),
+          ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (bounds) {
+              final start = -2.2 + sweep * 4.4;
+              return LinearGradient(
+                begin: Alignment(start, 0),
+                end: Alignment(start + 1.0, 0),
+                colors: [
+                  Colors.transparent,
+                  Colors.white.withValues(alpha: 0),
+                  Colors.white.withValues(alpha: 0.52 + pulse * 0.12),
+                  Colors.white.withValues(alpha: 0),
+                  Colors.transparent,
+                ],
+                stops: const [0, 0.38, 0.50, 0.62, 1],
+              ).createShader(bounds);
+            },
+            child: Image.asset(
+              _asset,
+              fit: BoxFit.contain,
+              color: Colors.white,
+              colorBlendMode: BlendMode.srcIn,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StartupGlowPainter extends CustomPainter {
+  final double t;
+
+  const _StartupGlowPainter(this.t);
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final center = rect.center.translate(0, -3);
     final pulse = Curves.easeInOut.transform((t < 0.5 ? t : 1 - t) * 2);
-    final sweep = Curves.easeInOutCubic.transform(t);
-
     final glowPaint = Paint()
       ..shader = RadialGradient(
+        center: const Alignment(0.08, -0.03),
+        radius: 0.78,
         colors: [
-          const Color(0xFF28D9FF).withValues(alpha: 0.28 + pulse * 0.12),
-          const Color(0xFF9068FF).withValues(alpha: 0.18),
+          const Color(0xFF22D3EE).withValues(alpha: 0.22 + pulse * 0.08),
+          const Color(0xFF7C3AED).withValues(alpha: 0.15 + pulse * 0.05),
           Colors.transparent,
         ],
-      ).createShader(rect.inflate(30));
+      ).createShader(rect.inflate(18));
     canvas.drawOval(rect.inflate(8), glowPaint);
-
-    final logoRect = Rect.fromCenter(
-      center: center,
-      width: size.width * 0.80,
-      height: size.height * 0.62,
-    );
-    final w = logoRect.width;
-    final h = logoRect.height;
-    final left = logoRect.left;
-    final top = logoRect.top;
-    final cy = logoRect.center.dy;
-
-    final silhouette = _logoSilhouette(logoRect);
-    final leftWing = Path()
-      ..moveTo(left + w * 0.03, cy)
-      ..quadraticBezierTo(left + w * 0.18, top + h * 0.18, left + w * 0.42, top)
-      ..quadraticBezierTo(left + w * 0.36, cy, left + w * 0.42, top + h)
-      ..quadraticBezierTo(left + w * 0.18, top + h * 0.82, left + w * 0.03, cy)
-      ..close();
-    final rightWing = Path()
-      ..moveTo(left + w * 0.58, top)
-      ..quadraticBezierTo(left + w * 0.83, top + h * 0.18, left + w * 0.97, cy)
-      ..quadraticBezierTo(
-        left + w * 0.83,
-        top + h * 0.82,
-        left + w * 0.58,
-        top + h,
-      )
-      ..quadraticBezierTo(left + w * 0.66, cy, left + w * 0.58, top)
-      ..close();
-    final lensPath = Path()
-      ..moveTo(left + w * 0.42, top)
-      ..cubicTo(
-        left + w * 0.60,
-        top + h * 0.06,
-        left + w * 0.73,
-        top + h * 0.25,
-        left + w * 0.73,
-        cy,
-      )
-      ..cubicTo(
-        left + w * 0.73,
-        top + h * 0.75,
-        left + w * 0.60,
-        top + h * 0.94,
-        left + w * 0.42,
-        top + h,
-      )
-      ..cubicTo(
-        left + w * 0.35,
-        top + h * 0.72,
-        left + w * 0.35,
-        top + h * 0.28,
-        left + w * 0.42,
-        top,
-      )
-      ..close();
-
-    canvas.saveLayer(rect, Paint());
-    canvas.drawPath(
-      leftWing,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF27E7F1), Color(0xFF1B8DFF)],
-        ).createShader(logoRect),
-    );
-    canvas.drawPath(
-      rightWing,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFB78CFF), Color(0xFF6F42F5)],
-        ).createShader(logoRect),
-    );
-    canvas.drawPath(
-      lensPath,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xAA1BCBFF), Color(0xDD2450F6)],
-        ).createShader(logoRect),
-    );
-
-    final facetLeft = Path()
-      ..moveTo(left + w * 0.42, top)
-      ..lineTo(left + w * 0.22, cy)
-      ..lineTo(left + w * 0.42, top + h)
-      ..quadraticBezierTo(left + w * 0.35, cy, left + w * 0.42, top)
-      ..close();
-    canvas.drawPath(
-      facetLeft,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0x5028F3FF), Color(0xAA126FE9)],
-        ).createShader(logoRect),
-    );
-
-    final facetRight = Path()
-      ..moveTo(left + w * 0.58, top)
-      ..quadraticBezierTo(left + w * 0.73, cy, left + w * 0.58, top + h)
-      ..lineTo(left + w * 0.76, top + h * 0.88)
-      ..quadraticBezierTo(left + w * 0.88, cy, left + w * 0.76, top + h * 0.12)
-      ..close();
-    canvas.drawPath(
-      facetRight,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomCenter,
-          colors: [Color(0x609E85FF), Color(0xBB273BDE)],
-        ).createShader(logoRect),
-    );
-
-    final shineX = logoRect.left + logoRect.width * (-0.18 + sweep * 1.36);
-    final shinePath = Path()
-      ..moveTo(shineX - 15, logoRect.bottom + 8)
-      ..lineTo(shineX + 24, logoRect.top - 8)
-      ..lineTo(shineX + 44, logoRect.top - 8)
-      ..lineTo(shineX + 5, logoRect.bottom + 8)
-      ..close();
-    canvas.clipPath(silhouette);
-    canvas.drawPath(
-      shinePath,
-      Paint()
-        ..blendMode = BlendMode.plus
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(alpha: 0.0),
-            Colors.white.withValues(alpha: 0.22 + pulse * 0.08),
-            Colors.white.withValues(alpha: 0.0),
-          ],
-        ).createShader(logoRect),
-    );
-    canvas.restore();
-
-    final playPath = Path()
-      ..moveTo(center.dx - 14, center.dy - 25)
-      ..quadraticBezierTo(
-        center.dx - 18,
-        center.dy - 31,
-        center.dx - 9,
-        center.dy - 36,
-      )
-      ..lineTo(center.dx + 34, center.dy - 6)
-      ..quadraticBezierTo(
-        center.dx + 42,
-        center.dy,
-        center.dx + 34,
-        center.dy + 6,
-      )
-      ..lineTo(center.dx - 9, center.dy + 36)
-      ..quadraticBezierTo(
-        center.dx - 18,
-        center.dy + 31,
-        center.dx - 14,
-        center.dy + 25,
-      )
-      ..close();
-    canvas.drawPath(
-      playPath,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withValues(alpha: 0.98),
-            const Color(0xFFEAF8FF).withValues(alpha: 0.92),
-          ],
-        ).createShader(playPath.getBounds()),
-    );
-
-    final edgePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0
-      ..strokeCap = StrokeCap.round
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0x99FFFFFF), Color(0x4428D9FF), Color(0x88B78CFF)],
-      ).createShader(logoRect);
-    canvas.drawPath(silhouette, edgePaint);
-  }
-
-  Path _logoSilhouette(Rect rect) {
-    final w = rect.width;
-    final h = rect.height;
-    final left = rect.left;
-    final top = rect.top;
-    final cy = rect.center.dy;
-    return Path()
-      ..moveTo(left + w * 0.03, cy)
-      ..quadraticBezierTo(left + w * 0.22, top + h * 0.06, left + w * 0.42, top)
-      ..quadraticBezierTo(left + w * 0.51, top + h * 0.02, left + w * 0.58, top)
-      ..quadraticBezierTo(left + w * 0.82, top + h * 0.13, left + w * 0.97, cy)
-      ..quadraticBezierTo(
-        left + w * 0.82,
-        top + h * 0.87,
-        left + w * 0.58,
-        top + h,
-      )
-      ..quadraticBezierTo(
-        left + w * 0.51,
-        top + h * 0.98,
-        left + w * 0.42,
-        top + h,
-      )
-      ..quadraticBezierTo(left + w * 0.22, top + h * 0.94, left + w * 0.03, cy)
-      ..close();
   }
 
   @override
-  bool shouldRepaint(covariant _AniVaultLogoPainter oldDelegate) =>
+  bool shouldRepaint(covariant _StartupGlowPainter oldDelegate) =>
       oldDelegate.t != t;
 }
