@@ -45,12 +45,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isSyncing = false;
   bool _isScraping = false;
   int _sectionIndex = 0;
+  int _selectedSectionIndex = 0;
   bool _filterSearchActive = false;
   String _filter = 'All';
   String _query = '';
   final Set<String> _selectedSeriesIds = {};
   String? _sessionBackgroundCoverUrl;
   Timer? _syncTimer;
+  Timer? _sectionSwitchTimer;
 
   @override
   void initState() {
@@ -94,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     AppI18n().removeListener(_onLanguageChanged);
     WidgetsBinding.instance.removeObserver(this);
     _syncTimer?.cancel();
+    _sectionSwitchTimer?.cancel();
     _homeScrollController.dispose();
     _libraryScrollController.dispose();
     _downloadScrollController.dispose();
@@ -455,6 +458,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  void _selectSection(int index) {
+    if (index == _selectedSectionIndex) return;
+    _sectionSwitchTimer?.cancel();
+    setState(() => _selectedSectionIndex = index);
+    _sectionSwitchTimer = Timer(const Duration(milliseconds: 170), () {
+      if (!mounted) return;
+      setState(() => _sectionIndex = index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final busy = _isSyncing || _isScraping;
@@ -469,8 +482,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ? HomepageView(
             topPadding: topPadding,
             scrollController: _homeScrollController,
-            onNavigateToLibrary: (index) =>
-                setState(() => _sectionIndex = index),
+            onNavigateToLibrary: _selectSection,
           )
         : _sectionIndex == 1
         ? _buildLibraryView(
@@ -521,8 +533,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             left: 0,
             right: 0,
             child: _DemoTopGlassTabBar(
-              selectedIndex: _sectionIndex,
-              onChanged: (index) => setState(() => _sectionIndex = index),
+              selectedIndex: _selectedSectionIndex,
+              onChanged: _selectSection,
               tabWidth: 86,
               tabs: const [
                 GlassTab(label: 'Home'),
