@@ -116,6 +116,13 @@ const _strings = {
     'spring': 'Spring',
     'summer': 'Summer',
     'fall': 'Fall',
+    'totalDuration': 'Total duration',
+    'episodesWatched': 'Episodes',
+    'seriesCount': 'Series',
+    'fileCount': 'Files',
+    'episodeUnit': 'eps',
+    'moreThanLastWeek': 'More than last week',
+    'lessThanLastWeek': 'Less than last week',
   },
   'zh': {
     'todayContinue': '今日继续观看',

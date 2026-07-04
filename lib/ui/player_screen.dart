@@ -51,6 +51,12 @@ class _PlayerScreenState extends State<PlayerScreen>
   double _gestureStartVolume = 100.0;
   double _gestureStartBrightness = 0.5;
   double _horizontalDragDx = 0;
+  bool _isScrubbing = false;
+  Duration _scrubPreviewPosition = Duration.zero;
+  String? _gestureFeedback;
+  IconData? _gestureFeedbackIcon;
+  Timer? _gestureFeedbackTimer;
+  bool _previewReady = false;
 
   static PlayerConfiguration get _playerConfiguration {
     if (Platform.isIOS || Platform.isAndroid) {
@@ -214,9 +220,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         player.play();
         _applySubtitleSettings();
 
-        // Delay previewPlayer initialization to avoid video resource congestion & socket errors on SMB streams
-        if (Platform.isIOS) return;
-        Future.delayed(const Duration(milliseconds: 600), () async {
+        // Delay previewPlayer initialization to avoid video resource congestion
+        // while keeping scrub previews available on every platform.
+        Future.delayed(const Duration(milliseconds: 900), () async {
           if (!mounted) return;
           try {
             // Configure previewPlayer options (muted, hardware decoder auto, no shaders for instant seeking)
@@ -243,8 +249,9 @@ class _PlayerScreenState extends State<PlayerScreen>
               await previewPlayer.seek(Duration(milliseconds: savedPos));
             }
             previewPlayer.pause();
+            if (mounted) setState(() => _previewReady = true);
           } catch (e) {
-            debugPrint('Preview player background init error: $e');
+            LoggerService().log('[Player Preview] Init failed: $e');
           }
         });
       } on TimeoutException {
@@ -1565,6 +1572,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   void dispose() {
     _progressSaveTimer?.cancel();
     _watchTickTimer?.cancel();
+    _gestureFeedbackTimer?.cancel();
     _saveProgress();
 
     // Save position one last time immediately on dispose
@@ -1710,25 +1718,61 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (duration > Duration.zero && next > duration) next = duration;
     player.seek(next);
     previewPlayer.seek(next);
+    _showGestureFeedback(
+      delta.isNegative ? Icons.replay_10_rounded : Icons.forward_10_rounded,
+      delta.isNegative ? '-${delta.abs().inSeconds}s' : '+${delta.inSeconds}s',
+    );
   }
 
   void _handleHorizontalDragStart(DragStartDetails details) {
     if (_isLocked) return;
     _horizontalDragDx = 0;
+    _scrubPreviewPosition = player.state.position;
+    setState(() => _isScrubbing = true);
   }
 
   void _handleHorizontalDragUpdate(DragUpdateDetails details) {
     if (_isLocked) return;
     _horizontalDragDx += details.delta.dx;
+    final duration = player.state.duration;
+    final seconds = (_horizontalDragDx / 8).round().clamp(-90, 90);
+    var next = player.state.position + Duration(seconds: seconds);
+    if (next < Duration.zero) next = Duration.zero;
+    if (duration > Duration.zero && next > duration) next = duration;
+    _scrubPreviewPosition = next;
+    previewPlayer.seek(next);
+    setState(() {});
   }
 
   void _handleHorizontalDragEnd(DragEndDetails details) {
     if (_isLocked) return;
     final seconds = (_horizontalDragDx / 8).round().clamp(-90, 90);
     if (seconds != 0) {
-      _seekRelative(Duration(seconds: seconds));
+      player.seek(_scrubPreviewPosition);
+      previewPlayer.seek(_scrubPreviewPosition);
+      _showGestureFeedback(
+        seconds < 0 ? Icons.fast_rewind_rounded : Icons.fast_forward_rounded,
+        seconds < 0 ? '${seconds}s' : '+${seconds}s',
+      );
     }
     _horizontalDragDx = 0;
+    setState(() => _isScrubbing = false);
+  }
+
+  void _showGestureFeedback(IconData icon, String label) {
+    _gestureFeedbackTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _gestureFeedbackIcon = icon;
+      _gestureFeedback = label;
+    });
+    _gestureFeedbackTimer = Timer(const Duration(milliseconds: 760), () {
+      if (!mounted) return;
+      setState(() {
+        _gestureFeedbackIcon = null;
+        _gestureFeedback = null;
+      });
+    });
   }
 
   Future<void> _handleVerticalDragStart(DragStartDetails details) async {
@@ -1824,6 +1868,8 @@ class _PlayerScreenState extends State<PlayerScreen>
 
                 // Custom Subtitle Overlay Layer (always visible over video)
                 _buildSubtitleOverlay(),
+                _buildGestureFeedbackOverlay(),
+                _buildScrubPreviewOverlay(),
 
                 _buildGlassWarmupLayer(),
 
@@ -2016,6 +2062,156 @@ class _PlayerScreenState extends State<PlayerScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildGestureFeedbackOverlay() {
+    final label = _gestureFeedback;
+    final icon = _gestureFeedbackIcon;
+    return IgnorePointer(
+      child: AnimatedOpacity(
+        opacity: label == null || icon == null ? 0 : 1,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        child: Center(
+          child: GlassCard(
+            quality: AniGlassTheme.quality,
+            settings: RecommendedGlassSettings.playerHighlight,
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+            shape: const LiquidRoundedSuperellipse(borderRadius: 24),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon ?? Icons.fast_forward_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Text(
+                  label ?? '',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScrubPreviewOverlay() {
+    final duration = player.state.duration;
+    final progress = duration > Duration.zero
+        ? (_scrubPreviewPosition.inMilliseconds / duration.inMilliseconds)
+              .clamp(0.0, 1.0)
+        : 0.0;
+    return IgnorePointer(
+      child: AnimatedOpacity(
+        opacity: _isScrubbing ? 1 : 0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 118),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: SizedBox(
+                    width: 190,
+                    height: 108,
+                    child: _previewReady
+                        ? Video(
+                            controller: previewController,
+                            controls: NoVideoControls,
+                          )
+                        : const ColoredBox(
+                            color: Color(0xCC000000),
+                            child: Center(
+                              child: Icon(
+                                Icons.movie_filter_rounded,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GlassCard(
+                  quality: AniGlassTheme.quality,
+                  settings: RecommendedGlassSettings.playerHighlight,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  shape: const LiquidRoundedSuperellipse(borderRadius: 18),
+                  child: Row(
+                    children: [
+                      Text(
+                        _formatPlayerDuration(_scrubPreviewPosition),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return Stack(
+                              alignment: Alignment.centerLeft,
+                              children: [
+                                Container(
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white24,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                ),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 80),
+                                  width: constraints.maxWidth * progress,
+                                  height: 9,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _formatPlayerDuration(duration),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatPlayerDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    }
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 }
 

@@ -34,7 +34,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   static const _mediaPickerChannel = MethodChannel('anivault/media_picker');
 
-  final _scrollController = ScrollController();
+  final _homeScrollController = ScrollController();
+  final _libraryScrollController = ScrollController();
   final _searchController = TextEditingController();
 
   List<String> _mediaPaths = [];
@@ -91,7 +92,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     AppI18n().removeListener(_onLanguageChanged);
     WidgetsBinding.instance.removeObserver(this);
     _syncTimer?.cancel();
-    _scrollController.dispose();
+    _homeScrollController.dispose();
+    _libraryScrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -472,7 +474,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       settings: AniGlassTheme.chromeFor(context),
       topEdgeFade: true,
       bottomEdgeFade: true,
-      headerScrollController: _scrollController,
+      headerScrollController: _sectionIndex == 0
+          ? _homeScrollController
+          : _sectionIndex == 1
+          ? _libraryScrollController
+          : null,
       headerFadeDistance: 46,
       body: Stack(
         children: [
@@ -481,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: _sectionIndex == 0
                 ? HomepageView(
                     topPadding: topPadding,
-                    scrollController: _scrollController,
+                    scrollController: _homeScrollController,
                     onNavigateToLibrary: (index) =>
                         setState(() => _sectionIndex = index),
                   )
@@ -493,11 +499,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   )
                 : _sectionIndex == 2
                 ? BtDownloadsView(
-                    topPadding: topPadding + 96,
+                    topPadding: topPadding + 74,
                     onLibraryRefresh: _syncMedia,
                   )
                 : SettingsContent(
-                    topPadding: topPadding + 96,
+                    topPadding: topPadding + 74,
                     onLibraryRefresh: _refreshAnimeLibrary,
                   ),
           ),
@@ -508,11 +514,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: _DemoTopGlassTabBar(
               selectedIndex: _sectionIndex,
               onChanged: (index) => setState(() => _sectionIndex = index),
-              tabWidth: 86,
+              tabWidth: 104,
               tabs: const [
                 GlassTab(label: 'Home'),
                 GlassTab(label: 'Library'),
-                GlassTab(label: 'BT'),
+                GlassTab(label: 'Download'),
                 GlassTab(label: 'Settings'),
               ],
             ),
@@ -559,7 +565,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }) {
     return CustomScrollView(
       key: key,
-      controller: _scrollController,
+      controller: _libraryScrollController,
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
       slivers: [
         SliverToBoxAdapter(
           child: Padding(

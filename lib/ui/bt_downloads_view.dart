@@ -85,7 +85,7 @@ class _BtDownloadsViewState extends State<BtDownloadsView> {
             ],
             const SizedBox(height: 18),
             Text(
-              'BT Tasks',
+              'Download Tasks',
               style: TextStyle(
                 color: textColor,
                 fontSize: 22,

@@ -1215,7 +1215,7 @@ class _RecommendationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 218,
+      width: 246,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -1228,22 +1228,33 @@ class _RecommendationTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
-                  height: 142,
+                  height: 138,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      _Poster(url: item.coverUrl, width: 218, height: 142),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _Poster(
+                          url: item.coverUrl,
+                          width: 98,
+                          height: 138,
+                        ),
+                      ),
                       const DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Color(0xAA000000)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              Colors.transparent,
+                              Color(0x66000000),
+                              Color(0xAA000000),
+                            ],
                           ),
                         ),
                       ),
                       Positioned(
-                        left: 12,
+                        left: 112,
                         right: 12,
                         bottom: 10,
                         child: _TagWrap(

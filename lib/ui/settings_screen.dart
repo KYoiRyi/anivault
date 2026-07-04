@@ -781,14 +781,7 @@ class _AgentStripShell extends StatelessWidget {
         child: child,
       ),
     );
-    return GlassCard(
-      quality: AniGlassTheme.quality,
-      useOwnLayer: true,
-      settings: AniGlassTheme.chromeFor(context),
-      padding: EdgeInsets.zero,
-      shape: const LiquidRoundedSuperellipse(borderRadius: 18),
-      child: content,
-    );
+    return _SettingsSurface(borderRadius: 18, child: content);
   }
 }
 
@@ -1016,12 +1009,8 @@ class _AgentActionStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = AniGlassTheme.textColor(context);
-    return GlassCard(
-      quality: AniGlassTheme.quality,
-      useOwnLayer: true,
-      settings: AniGlassTheme.chromeFor(context),
-      padding: EdgeInsets.zero,
-      shape: const LiquidRoundedSuperellipse(borderRadius: 18),
+    return _SettingsSurface(
+      borderRadius: 18,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
@@ -1316,6 +1305,39 @@ class _LogLineState extends State<_LogLine> {
   }
 }
 
+class _SettingsSurface extends StatelessWidget {
+  final Widget child;
+  final double borderRadius;
+
+  const _SettingsSurface({required this.child, required this.borderRadius});
+
+  @override
+  Widget build(BuildContext context) {
+    final light = AniGlassTheme.isLight(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: light
+            ? Colors.white.withValues(alpha: 0.54)
+            : Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: light
+              ? Colors.black.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: light ? 0.08 : 0.24),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
 class _SettingsPanel extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -1333,44 +1355,46 @@ class _SettingsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = AniGlassTheme.textColor(context);
     final secondaryTextColor = AniGlassTheme.secondaryTextColor(context);
-    return GlassCard(
-      quality: AniGlassTheme.quality,
-      useOwnLayer: true,
-      settings: AniGlassTheme.heroFor(context),
-      padding: const EdgeInsets.all(18),
-      shape: const LiquidRoundedSuperellipse(borderRadius: 26),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: textColor, size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: textColor,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 17,
+    return _SettingsSurface(
+      borderRadius: 26,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: textColor, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(color: secondaryTextColor, fontSize: 12),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: secondaryTextColor,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
       ),
     );
   }
