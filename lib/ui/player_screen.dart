@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
@@ -27,12 +28,8 @@ class PlayerScreen extends StatefulWidget {
 
 class _PlayerScreenState extends State<PlayerScreen>
     with SingleTickerProviderStateMixin {
-  late final Player player = Player(
-    configuration: const PlayerConfiguration(vo: 'gpu-next'),
-  );
-  late final Player previewPlayer = Player(
-    configuration: const PlayerConfiguration(vo: 'gpu-next'),
-  );
+  late final Player player = Player(configuration: _playerConfiguration);
+  late final Player previewPlayer = Player(configuration: _playerConfiguration);
   late VideoController controller;
   late VideoController previewController;
   // Swapped to Anime4K: ArtCNN uses Compute Shaders incompatible with media_kit's vo=libmpv D3D11 layer.
@@ -54,6 +51,21 @@ class _PlayerScreenState extends State<PlayerScreen>
   double _gestureStartVolume = 100.0;
   double _gestureStartBrightness = 0.5;
   double _horizontalDragDx = 0;
+
+  static PlayerConfiguration get _playerConfiguration {
+    if (Platform.isIOS || Platform.isAndroid) {
+      return const PlayerConfiguration();
+    }
+    return const PlayerConfiguration(vo: 'gpu-next');
+  }
+
+  String get _mediaResource {
+    final file = File(widget.videoPath);
+    if ((Platform.isIOS || Platform.isMacOS) && file.existsSync()) {
+      return file.uri.toString();
+    }
+    return widget.videoPath;
+  }
 
   // Subtitle custom settings
   double _subtitleSize =
@@ -186,7 +198,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
         // Open main player first to split the heavy startup loading workload
         await player
-            .open(Media(widget.videoPath), play: false)
+            .open(Media(_mediaResource), play: false)
             .timeout(const Duration(seconds: 12));
 
         // Wait for duration stream to emit a valid duration (> 0) indicating player has parsed the media
@@ -203,6 +215,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         _applySubtitleSettings();
 
         // Delay previewPlayer initialization to avoid video resource congestion & socket errors on SMB streams
+        if (Platform.isIOS) return;
         Future.delayed(const Duration(milliseconds: 600), () async {
           if (!mounted) return;
           try {
@@ -221,7 +234,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             await nativePreviewPlayer.setProperty('resample-filter', 'soxr');
 
             await previewPlayer
-                .open(Media(widget.videoPath), play: false)
+                .open(Media(_mediaResource), play: false)
                 .timeout(const Duration(seconds: 8));
             await previewPlayer.stream.duration
                 .firstWhere((d) => d > Duration.zero)
