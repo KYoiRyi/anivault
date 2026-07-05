@@ -134,6 +134,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     });
 
     _loadSubtitleSettings();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scheduleControlsHide();
+    });
 
     // Listen to subtitle stream and parse active lines (filtering duplicates, sorting, stripping ASS tags)
     player.stream.subtitle.listen((subtitle) {
@@ -1436,7 +1439,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         (track.codec as String).trim().toUpperCase(),
       if (track.channelscount != null) '${track.channelscount}ch',
     ];
-    return parts.isEmpty ? 'Track $id' : parts.join(' · ');
+    return parts.isEmpty ? 'Track $id' : parts.join(' 路 ');
   }
 
   void _showAudioTrackPicker(List<AudioTrack> tracks) {
@@ -1695,6 +1698,12 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
+  void _hideControls() {
+    if (_isLocked || !_showControls) return;
+    _controlsHideTimer?.cancel();
+    setState(() => _showControls = false);
+  }
+
   void _toggleLock() {
     setState(() {
       _isLocked = !_isLocked;
@@ -1923,124 +1932,136 @@ class _PlayerScreenState extends State<PlayerScreen>
                     ignoring: !controlsVisible,
                     child: Stack(
                       children: [
+                        Positioned.fill(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onTap: _hideControls,
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
                         // Top left back button & Title (Round liquid glass button)
                         Positioned(
-                          top: 40,
-                          left: 24,
-                          child: Row(
-                            children: [
-                              GlassButton.custom(
-                                useOwnLayer: false,
-                                width: 48,
-                                height: 48,
-                                settings:
-                                    RecommendedGlassSettings.playerHighlight,
-                                interactionScale: 1.08,
-                                stretch: 0.75,
-                                glowColor: const Color(0xFF8FEAFF),
-                                glowOpacity: 0.45,
-                                glowBlurRadius: 18,
-                                shape: const LiquidOval(),
-                                onTap: () => Navigator.of(context).pop(),
-                                child: const Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                widget.title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Center Right Floating Settings Button (Round liquid glass button)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: GlassButton.custom(
-                              useOwnLayer: false,
-                              width: 56,
-                              height: 56,
-                              settings:
-                                  RecommendedGlassSettings.playerHighlight,
-                              interactionScale: 1.08,
-                              stretch: 0.75,
-                              glowColor: const Color(0xFFFF9AF2),
-                              glowOpacity: 0.45,
-                              glowBlurRadius: 18,
-                              shape: const LiquidOval(),
-                              onTap: _showVideoSettings,
-                              child: const Icon(
-                                Icons.layers_rounded,
-                                color: Colors.white,
-                                size: 28,
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: SafeArea(
+                            bottom: false,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+                              child: Row(
+                                children: [
+                                  GlassButton.custom(
+                                    useOwnLayer: false,
+                                    width: 46,
+                                    height: 46,
+                                    settings: RecommendedGlassSettings
+                                        .playerHighlight,
+                                    interactionScale: 1.08,
+                                    stretch: 0.75,
+                                    glowColor: const Color(0xFF8FEAFF),
+                                    glowOpacity: 0.45,
+                                    glowBlurRadius: 18,
+                                    shape: const LiquidOval(),
+                                    onTap: () => Navigator.of(context).pop(),
+                                    child: const Icon(
+                                      Icons.arrow_back_ios_new_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      widget.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ),
 
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 16),
-                            child: GlassButton.custom(
-                              useOwnLayer: false,
-                              width: 56,
-                              height: 56,
-                              settings:
-                                  RecommendedGlassSettings.playerHighlight,
-                              interactionScale: 1.08,
-                              stretch: 0.75,
-                              glowColor: const Color(0xFF8FEAFF),
-                              glowOpacity: 0.45,
-                              glowBlurRadius: 18,
-                              shape: const LiquidOval(),
-                              onTap: _toggleLock,
-                              child: const Icon(
-                                Icons.lock_rounded,
-                                color: Colors.white,
-                                size: 26,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Center Play/Pause Floating Island (Round liquid glass button)
                         Align(
                           alignment: Alignment.center,
                           child: StreamBuilder<bool>(
                             stream: player.stream.playing,
                             builder: (context, playing) {
                               final isPlaying = playing.data ?? false;
-                              return GlassButton.custom(
-                                useOwnLayer: false,
-                                width: 96,
-                                height: 96,
-                                settings:
-                                    RecommendedGlassSettings.playerHighlight,
-                                interactionScale: 1.05,
-                                stretch: 0.6,
-                                glowColor: Colors.white,
-                                glowOpacity: 0.42,
-                                glowBlurRadius: 24,
-                                shape: const LiquidOval(),
-                                onTap: () => player.playOrPause(),
-                                child: Icon(
-                                  isPlaying
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
-                                  size: 48,
-                                  color: Colors.white,
-                                ),
+                              return Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  GlassButton.custom(
+                                    useOwnLayer: false,
+                                    width: 54,
+                                    height: 54,
+                                    settings: RecommendedGlassSettings
+                                        .playerHighlight,
+                                    interactionScale: 1.08,
+                                    stretch: 0.75,
+                                    glowColor: const Color(0xFF8FEAFF),
+                                    glowOpacity: 0.45,
+                                    glowBlurRadius: 18,
+                                    shape: const LiquidOval(),
+                                    onTap: _toggleLock,
+                                    child: const Icon(
+                                      Icons.lock_rounded,
+                                      color: Colors.white,
+                                      size: 25,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 28),
+                                  GlassButton.custom(
+                                    useOwnLayer: false,
+                                    width: 86,
+                                    height: 86,
+                                    settings: RecommendedGlassSettings
+                                        .playerHighlight,
+                                    interactionScale: 1.05,
+                                    stretch: 0.6,
+                                    glowColor: Colors.white,
+                                    glowOpacity: 0.42,
+                                    glowBlurRadius: 24,
+                                    shape: const LiquidOval(),
+                                    onTap: () {
+                                      player.playOrPause();
+                                      _scheduleControlsHide();
+                                    },
+                                    child: Icon(
+                                      isPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded,
+                                      size: 46,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 28),
+                                  GlassButton.custom(
+                                    useOwnLayer: false,
+                                    width: 54,
+                                    height: 54,
+                                    settings: RecommendedGlassSettings
+                                        .playerHighlight,
+                                    interactionScale: 1.08,
+                                    stretch: 0.75,
+                                    glowColor: const Color(0xFFFF9AF2),
+                                    glowOpacity: 0.45,
+                                    glowBlurRadius: 18,
+                                    shape: const LiquidOval(),
+                                    onTap: _showVideoSettings,
+                                    child: const Icon(
+                                      Icons.layers_rounded,
+                                      color: Colors.white,
+                                      size: 27,
+                                    ),
+                                  ),
+                                ],
                               );
                             },
                           ),
