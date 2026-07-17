@@ -1980,10 +1980,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                         shape: const LiquidOval(),
                                         onTap: () =>
                                             Navigator.of(context).pop(),
-                                        child: const Icon(
+                                        child: _gradientControlIcon(
                                           Icons.arrow_back_ios_new_rounded,
-                                          color: Colors.white,
                                           size: 18,
+                                          colors: const [
+                                            Color(0x6647D7FF),
+                                            Color(0x22FFFFFF),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 14),
@@ -2027,10 +2030,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                         glowBlurRadius: 18,
                                         shape: const LiquidOval(),
                                         onTap: _toggleLock,
-                                        child: const Icon(
+                                        child: _gradientControlIcon(
                                           Icons.lock_rounded,
-                                          color: Colors.white,
                                           size: 25,
+                                          colors: const [
+                                            Color(0x6647D7FF),
+                                            Color(0x225EEBFF),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 28),
@@ -2050,12 +2056,16 @@ class _PlayerScreenState extends State<PlayerScreen>
                                           player.playOrPause();
                                           _scheduleControlsHide();
                                         },
-                                        child: Icon(
+                                        child: _gradientControlIcon(
                                           isPlaying
                                               ? Icons.pause_rounded
                                               : Icons.play_arrow_rounded,
                                           size: 46,
-                                          color: Colors.white,
+                                          colors: const [
+                                            Color(0x5547D7FF),
+                                            Color(0x33FFFFFF),
+                                            Color(0x44FF7AD9),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 28),
@@ -2072,10 +2082,13 @@ class _PlayerScreenState extends State<PlayerScreen>
                                         glowBlurRadius: 18,
                                         shape: const LiquidOval(),
                                         onTap: _showVideoSettings,
-                                        child: const Icon(
+                                        child: _gradientControlIcon(
                                           Icons.layers_rounded,
-                                          color: Colors.white,
                                           size: 27,
+                                          colors: const [
+                                            Color(0x66FF7AD9),
+                                            Color(0x225B8CFF),
+                                          ],
                                         ),
                                       ),
                                     ],
@@ -2133,10 +2146,14 @@ class _PlayerScreenState extends State<PlayerScreen>
                       glowBlurRadius: 22,
                       shape: const LiquidOval(),
                       onTap: _toggleLock,
-                      child: const Icon(
+                      child: _gradientControlIcon(
                         Icons.lock_open_rounded,
-                        color: Colors.white,
                         size: 44,
+                        colors: const [
+                          Color(0x6647D7FF),
+                          Color(0x33FFFFFF),
+                          Color(0x44FF7AD9),
+                        ],
                       ),
                     ),
                   ),
@@ -2189,6 +2206,28 @@ class _PlayerScreenState extends State<PlayerScreen>
                   ),
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _gradientControlIcon(
+    IconData icon, {
+    required double size,
+    required List<Color> colors,
+  }) {
+    return SizedBox.expand(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: colors,
+          ),
+        ),
+        child: Center(
+          child: Icon(icon, color: Colors.white, size: size),
+        ),
       ),
     );
   }
