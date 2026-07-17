@@ -29,9 +29,9 @@ class PlayerScreen extends StatefulWidget {
 class _PlayerScreenState extends State<PlayerScreen>
     with SingleTickerProviderStateMixin {
   late final Player player = Player(configuration: _playerConfiguration);
-  late final Player previewPlayer = Player(configuration: _playerConfiguration);
+  Player? previewPlayer;
   late VideoController controller;
-  late VideoController previewController;
+  VideoController? previewController;
   // Swapped to Anime4K: ArtCNN uses Compute Shaders incompatible with media_kit's vo=libmpv D3D11 layer.
   // Anime4K uses standard fragment shaders, perfectly compatible with our SuperSampling frame buffer trick!
   bool _showControls = true;
@@ -58,7 +58,11 @@ class _PlayerScreenState extends State<PlayerScreen>
   Alignment _gestureFeedbackAlignment = Alignment.center;
   Timer? _gestureFeedbackTimer;
   Timer? _controlsHideTimer;
+  Timer? _previewReleaseTimer;
   bool _previewReady = false;
+  bool _previewInitializing = false;
+  StreamSubscription<PlayerLog>? _logSubscription;
+  StreamSubscription<List<String>>? _subtitleSubscription;
 
   static PlayerConfiguration get _playerConfiguration {
     if (Platform.isIOS || Platform.isAndroid) {
@@ -127,9 +131,8 @@ class _PlayerScreenState extends State<PlayerScreen>
     controller = VideoController(
       player,
     ); // Default creates HW accelerated controller
-    previewController = VideoController(previewPlayer);
     _isHwAccelerated = true;
-    player.stream.log.listen((event) {
+    _logSubscription = player.stream.log.listen((event) {
       LoggerService().log('[MPV] [${event.level}]: ${event.text}');
     });
 
@@ -139,7 +142,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     });
 
     // Listen to subtitle stream and parse active lines (filtering duplicates, sorting, stripping ASS tags)
-    player.stream.subtitle.listen((subtitle) {
+    _subtitleSubscription = player.stream.subtitle.listen((subtitle) {
       final uniqueLines = <String>{};
       for (final rawLine in subtitle) {
         final cleanLine = rawLine.replaceAll(RegExp(r'\{[^}]*\}'), '').trim();
@@ -150,16 +153,6 @@ class _PlayerScreenState extends State<PlayerScreen>
       if (mounted) {
         setState(() {
           _activeSubtitles = uniqueLines.toList();
-        });
-      }
-    });
-
-    // Listen to position stream to store current position in real-time directly to SharedPreferences
-    player.stream.position.listen((pos) {
-      final posMs = pos.inMilliseconds;
-      if (posMs > 0) {
-        SharedPreferences.getInstance().then((prefs) {
-          prefs.setInt('pos_${widget.videoPath}', posMs);
         });
       }
     });
@@ -178,13 +171,18 @@ class _PlayerScreenState extends State<PlayerScreen>
     Future.microtask(() async {
       try {
         final nativePlayer = player.platform as NativePlayer;
-        final nativePreviewPlayer = previewPlayer.platform as NativePlayer;
-
         // --- Windows Native Hang Prevention ---
         // Disable youtube-dl hook which causes "ytdl_hook: scraping" to block endlessly on some SMB streams.
         await nativePlayer.setProperty('ytdl', 'no');
         // Impose a strict native network timeout to gracefully fail rather than deadlocking the Windows C++ loop.
         await nativePlayer.setProperty('network-timeout', '10');
+        if (Platform.isIOS || Platform.isAndroid) {
+          await nativePlayer.setProperty('demuxer-max-bytes', '${32 << 20}');
+          await nativePlayer.setProperty(
+            'demuxer-max-back-bytes',
+            '${4 << 20}',
+          );
+        }
 
         // MUST use 'auto-copy' so the hardware decoder transfers the CVPixelBuffer/d3d11 back to system RAM to allow Fragment Shaders to hook it!
         await nativePlayer.setProperty(
@@ -225,41 +223,6 @@ class _PlayerScreenState extends State<PlayerScreen>
         player.play();
         if (mounted) _scheduleControlsHide();
         _applySubtitleSettings();
-
-        // Delay previewPlayer initialization to avoid video resource congestion
-        // while keeping scrub previews available on every platform.
-        Future.delayed(const Duration(milliseconds: 900), () async {
-          if (!mounted) return;
-          try {
-            // Configure previewPlayer options (muted, hardware decoder auto, no shaders for instant seeking)
-            await nativePreviewPlayer.setProperty('ytdl', 'no');
-            await nativePreviewPlayer.setProperty('network-timeout', '10');
-            await nativePreviewPlayer.setProperty('hwdec', 'auto');
-            await previewPlayer.setVolume(0);
-            await nativePreviewPlayer.setProperty('audio-format', 'float');
-            await nativePreviewPlayer.setProperty('audio-channels', 'auto');
-            await nativePreviewPlayer.setProperty('ad-lavc-ac3drc', '0');
-            await nativePreviewPlayer.setProperty(
-              'audio-normalize-downmix',
-              'no',
-            );
-            await nativePreviewPlayer.setProperty('resample-filter', 'soxr');
-
-            await previewPlayer
-                .open(Media(_mediaResource), play: false)
-                .timeout(const Duration(seconds: 8));
-            await previewPlayer.stream.duration
-                .firstWhere((d) => d > Duration.zero)
-                .timeout(const Duration(seconds: 5));
-            if (savedPos > 0) {
-              await previewPlayer.seek(Duration(milliseconds: savedPos));
-            }
-            previewPlayer.pause();
-            if (mounted) setState(() => _previewReady = true);
-          } catch (e) {
-            LoggerService().log('[Player Preview] Init failed: $e');
-          }
-        });
       } on TimeoutException {
         LoggerService().log('[Player Error] Timed out waiting for media info.');
         if (mounted) {
@@ -279,6 +242,61 @@ class _PlayerScreenState extends State<PlayerScreen>
           Navigator.of(context).pop();
         }
       }
+    });
+  }
+
+  Future<void> _ensurePreviewReady() async {
+    _previewReleaseTimer?.cancel();
+    if (_previewReady || _previewInitializing || !mounted) return;
+    _previewInitializing = true;
+    final preview = Player(configuration: _playerConfiguration);
+    final previewVideoController = VideoController(preview);
+    previewPlayer = preview;
+    previewController = previewVideoController;
+    try {
+      final nativePreview = preview.platform as NativePlayer;
+      await nativePreview.setProperty('ytdl', 'no');
+      await nativePreview.setProperty('network-timeout', '10');
+      await nativePreview.setProperty('hwdec', 'auto');
+      await nativePreview.setProperty('audio', 'no');
+      await nativePreview.setProperty('cache', 'no');
+      await preview.setVolume(0);
+      await preview
+          .open(Media(_mediaResource), play: false)
+          .timeout(const Duration(seconds: 8));
+      await preview.stream.duration
+          .firstWhere((duration) => duration > Duration.zero)
+          .timeout(const Duration(seconds: 5));
+      await preview.seek(_scrubPreviewPosition);
+      await preview.pause();
+      if (!mounted || previewPlayer != preview) {
+        await preview.dispose();
+        return;
+      }
+      setState(() => _previewReady = true);
+    } catch (e) {
+      LoggerService().log('[Player Preview] Init failed: $e');
+      if (previewPlayer == preview) {
+        previewPlayer = null;
+        previewController = null;
+      }
+      await preview.dispose();
+    } finally {
+      _previewInitializing = false;
+    }
+  }
+
+  void _schedulePreviewRelease() {
+    if (!Platform.isIOS) return;
+    _previewReleaseTimer?.cancel();
+    _previewReleaseTimer = Timer(const Duration(seconds: 8), () {
+      if (!mounted || _isScrubbing) return;
+      final preview = previewPlayer;
+      previewPlayer = null;
+      previewController = null;
+      _previewReady = false;
+      if (mounted) setState(() {});
+      preview?.dispose();
     });
   }
 
@@ -1572,6 +1590,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         secondsWatched: _accumulatedSecondsWatched,
       );
       _accumulatedSecondsWatched = 0;
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setInt('pos_${widget.videoPath}', posMs);
+      });
     }
   }
 
@@ -1581,6 +1602,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     _watchTickTimer?.cancel();
     _gestureFeedbackTimer?.cancel();
     _controlsHideTimer?.cancel();
+    _previewReleaseTimer?.cancel();
+    _logSubscription?.cancel();
+    _subtitleSubscription?.cancel();
     _saveProgress();
 
     // Save position one last time immediately on dispose
@@ -1595,7 +1619,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     ScreenBrightness.instance.resetApplicationScreenBrightness();
     _keyboardFocusNode.dispose();
     player.dispose();
-    previewPlayer.dispose();
+    previewPlayer?.dispose();
     super.dispose();
   }
 
@@ -1755,7 +1779,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (next < Duration.zero) next = Duration.zero;
     if (duration > Duration.zero && next > duration) next = duration;
     player.seek(next);
-    previewPlayer.seek(next);
+    previewPlayer?.seek(next);
     _showGestureFeedback(
       delta.isNegative ? Icons.replay_10_rounded : Icons.forward_10_rounded,
       delta.isNegative ? '-${delta.abs().inSeconds}s' : '+${delta.inSeconds}s',
@@ -1768,6 +1792,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _horizontalDragDx = 0;
     _scrubPreviewPosition = player.state.position;
     setState(() => _isScrubbing = true);
+    _ensurePreviewReady();
   }
 
   void _handleHorizontalDragUpdate(DragUpdateDetails details) {
@@ -1779,7 +1804,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (next < Duration.zero) next = Duration.zero;
     if (duration > Duration.zero && next > duration) next = duration;
     _scrubPreviewPosition = next;
-    previewPlayer.seek(next);
+    previewPlayer?.seek(next);
     setState(() {});
   }
 
@@ -1796,7 +1821,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final seconds = (_horizontalDragDx / 8).round().clamp(-90, 90);
     if (commit && !_isLocked && seconds != 0) {
       player.seek(_scrubPreviewPosition);
-      previewPlayer.seek(_scrubPreviewPosition);
+      previewPlayer?.seek(_scrubPreviewPosition);
       _showGestureFeedback(
         seconds < 0 ? Icons.fast_rewind_rounded : Icons.fast_forward_rounded,
         seconds < 0 ? '${seconds}s' : '+${seconds}s',
@@ -1806,6 +1831,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     _horizontalDragDx = 0;
     setState(() => _isScrubbing = false);
     _scheduleControlsHide();
+    _schedulePreviewRelease();
   }
 
   void _showGestureFeedback(
@@ -1853,7 +1879,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     } else {
       final next = (_gestureStartVolume + delta * 120).clamp(0.0, 100.0);
       player.setVolume(next);
-      previewPlayer.setVolume(0);
+      previewPlayer?.setVolume(0);
     }
   }
 
@@ -2111,6 +2137,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                                   externalScrubbing: _isScrubbing,
                                   externalScrubPosition: _scrubPreviewPosition,
                                   previewReady: _previewReady,
+                                  onScrubStart: _ensurePreviewReady,
+                                  onScrubEnd: _schedulePreviewRelease,
                                 ),
                               ),
                             ),

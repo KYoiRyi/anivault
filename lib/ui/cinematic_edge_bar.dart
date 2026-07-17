@@ -12,6 +12,8 @@ class CinematicEdgeBar extends StatefulWidget {
   final bool externalScrubbing;
   final Duration? externalScrubPosition;
   final bool previewReady;
+  final VoidCallback? onScrubStart;
+  final VoidCallback? onScrubEnd;
 
   const CinematicEdgeBar({
     super.key,
@@ -21,6 +23,8 @@ class CinematicEdgeBar extends StatefulWidget {
     this.externalScrubbing = false,
     this.externalScrubPosition,
     this.previewReady = true,
+    this.onScrubStart,
+    this.onScrubEnd,
   });
 
   @override
@@ -179,6 +183,7 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onHorizontalDragStart: (details) {
+                        widget.onScrubStart?.call();
                         setState(() => _isDragging = true);
                         _updateProgress(
                           details.localPosition,
@@ -211,6 +216,11 @@ class _CinematicEdgeBarState extends State<CinematicEdgeBar> {
                         if (mounted) {
                           setState(() => _isDragging = false);
                         }
+                        widget.onScrubEnd?.call();
+                      },
+                      onHorizontalDragCancel: () {
+                        if (mounted) setState(() => _isDragging = false);
+                        widget.onScrubEnd?.call();
                       },
                       onTapDown: (details) {
                         _updateProgress(
