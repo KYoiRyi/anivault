@@ -167,7 +167,7 @@ class HomeInsightsService extends ChangeNotifier {
     AnimeLibraryService().addListener(_rebuildSeasonProgress);
     WatchHistoryService().addListener(_rebuildSeasonProgress);
     notifyListeners();
-    unawaited(refresh(silent: true));
+    await refresh(silent: true);
   }
 
   Future<void> refresh({bool silent = false}) async {

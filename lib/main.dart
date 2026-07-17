@@ -13,6 +13,7 @@ import 'package:anivault/services/app_i18n.dart';
 import 'package:anivault/services/home_insights_service.dart';
 import 'package:anivault/services/logger_service.dart';
 import 'package:anivault/services/watch_history_service.dart';
+import 'package:anivault/services/startup_asset_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
@@ -172,6 +173,8 @@ class _StartupGateState extends State<StartupGate>
       _precacheGlass(),
     ]);
     await Future.wait([minimum, warmup]);
+    if (!mounted) return;
+    await StartupAssetService.precache(context);
     if (!mounted) return;
     setState(() => _ready = true);
     _controller.stop();

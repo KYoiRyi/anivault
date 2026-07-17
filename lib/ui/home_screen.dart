@@ -22,6 +22,7 @@ import 'package:anivault/ui/bt_downloads_view.dart';
 import 'package:anivault/ui/page_transition.dart';
 import 'package:anivault/ui/settings_screen.dart';
 import 'package:anivault/services/watch_history_service.dart';
+import 'package:anivault/services/startup_asset_service.dart';
 import 'package:anivault/ui/homepage_view.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -346,6 +347,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   void _chooseSessionBackgroundCover() {
     if (_sessionBackgroundCoverUrl != null) return;
+    final preloadedCover = StartupAssetService.preferredBackgroundCoverUrl;
+    if (preloadedCover != null) {
+      _sessionBackgroundCoverUrl = preloadedCover;
+      return;
+    }
     final covers = _animeSeries
         .map((series) => series.coverUrl)
         .whereType<String>()
