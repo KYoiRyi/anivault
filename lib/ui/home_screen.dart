@@ -19,6 +19,7 @@ import 'package:anivault/services/torrent_service.dart';
 import 'package:anivault/ui/ani_glass_theme.dart';
 import 'package:anivault/ui/anime_series_screen.dart';
 import 'package:anivault/ui/bt_downloads_view.dart';
+import 'package:anivault/ui/dmhy_search_view.dart';
 import 'package:anivault/ui/page_transition.dart';
 import 'package:anivault/ui/settings_screen.dart';
 import 'package:anivault/services/watch_history_service.dart';
@@ -38,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _homeScrollController = ScrollController();
   final _libraryScrollController = ScrollController();
   final _downloadScrollController = ScrollController();
+  final _dmhySearchScrollController = ScrollController();
   final _settingsScrollController = ScrollController();
   final _searchController = TextEditingController();
 
@@ -98,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _homeScrollController.dispose();
     _libraryScrollController.dispose();
     _downloadScrollController.dispose();
+    _dmhySearchScrollController.dispose();
     _settingsScrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -489,6 +492,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             topPadding: topPadding,
           )
         : _sectionIndex == 2
+        ? DmhySearchView(
+            topPadding: topPadding + 74,
+            scrollController: _dmhySearchScrollController,
+          )
+        : _sectionIndex == 3
         ? BtDownloadsView(
             topPadding: topPadding + 74,
             scrollController: _downloadScrollController,
@@ -528,11 +536,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: _DemoTopGlassTabBar(
               selectedIndex: _sectionIndex,
               onChanged: _selectSection,
-              tabWidth: 86,
+              tabWidth: 72,
               tabs: const [
                 GlassTab(label: 'Home'),
                 GlassTab(label: 'Library'),
-                GlassTab(label: 'Download'),
+                GlassTab(label: 'Search'),
+                GlassTab(label: 'Downloads'),
                 GlassTab(label: 'Settings'),
               ],
             ),
@@ -946,7 +955,7 @@ class _DemoTopGlassTabBar extends StatelessWidget {
                   horizontalPadding: horizontalPadding,
                   verticalPadding: 8,
                   spacing: 4,
-                  labelFontSize: 18,
+                  labelFontSize: tabs.length > 4 ? 14 : 18,
                   textStyle: const TextStyle(
                     fontFamily: 'SF Pro Display',
                     fontFamilyFallback: [
