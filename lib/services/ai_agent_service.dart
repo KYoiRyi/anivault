@@ -197,7 +197,15 @@ class AiAgentService extends ChangeNotifier {
     List<DmhyAnimeGroup> groups,
   ) async {
     await initialize();
-    if (!_config.isReady || groups.isEmpty) return const {};
+    if (!_config.isReady || groups.isEmpty) {
+      LoggerService().log(
+        '[AI Agent] DMHY skipped: ready=${_config.isReady}, groups=${groups.length}',
+      );
+      return const {};
+    }
+    LoggerService().log(
+      '[AI Agent] DMHY request model=${_config.model}, groups=${groups.length}',
+    );
     try {
       final model = ChatOpenAI(
         apiKey: _config.apiKey.trim(),
@@ -205,7 +213,7 @@ class AiAgentService extends ChangeNotifier {
         defaultOptions: ChatOpenAIOptions(
           model: _config.model.trim(),
           temperature: 0,
-          maxTokens: 1200,
+          maxTokens: 2000,
           tools: const [_dmhyGroupingTool],
           toolChoice: ChatToolChoice.forced(name: _dmhyGroupingToolName),
         ),
@@ -249,7 +257,7 @@ class AiAgentService extends ChangeNotifier {
               ChatMessage.humanText(jsonEncode(summary)),
             ]),
           )
-          .timeout(const Duration(seconds: 12));
+          .timeout(const Duration(seconds: 45));
       for (final toolCall in result.output.toolCalls) {
         if (toolCall.name != _dmhyGroupingToolName) continue;
         final rawGroups = toolCall.arguments['groups'];
@@ -269,6 +277,9 @@ class AiAgentService extends ChangeNotifier {
             mapping[sourceKey] = canonicalTitle;
           }
         }
+        LoggerService().log(
+          '[AI Agent] DMHY tool mappings=${mapping.length}/${groups.length}',
+        );
         return mapping;
       }
     } catch (e) {

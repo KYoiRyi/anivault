@@ -1,5 +1,6 @@
 import 'package:anivault/services/dmhy_result_grouper.dart';
 import 'package:anivault/services/dmhy_search_service.dart';
+import 'package:anivault/services/logger_service.dart';
 
 typedef DmhyCanonicalResolver =
     Future<Map<String, String>> Function(List<DmhyAnimeGroup> groups);
@@ -25,12 +26,22 @@ class DmhySearchOrganizer {
     final resolver = canonicalResolver;
     if (resolver == null || source.length < 2) return source;
     // Different scripts have no token overlap; send every machine cluster.
-    final candidates = source;
+    final candidates = [...source]
+      ..sort((a, b) => b.latestPublishedAt.compareTo(a.latestPublishedAt));
+    final batch = candidates.take(32).toList(growable: false);
+    LoggerService().log(
+      '[DMHY AI] dispatching ${batch.length}/${source.length} groups: '
+      '${batch.map((group) => group.title).take(12).join(' | ')}',
+    );
     try {
-      final canonicalTitles = await resolver(candidates);
+      final canonicalTitles = await resolver(batch);
+      LoggerService().log(
+        '[DMHY AI] received ${canonicalTitles.length} canonical mappings',
+      );
       if (canonicalTitles.isEmpty) return source;
       return grouper.mergeCanonical(source, canonicalTitles);
-    } catch (_) {
+    } catch (error) {
+      LoggerService().log('[DMHY AI] organizer failed: $error');
       return source;
     }
   }
