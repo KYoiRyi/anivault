@@ -55,6 +55,12 @@ class DmhyAnimeGroup {
           (sum, episode) => sum + episode.releases.length,
         ),
   );
+
+  String get latestPublishedAt => seasons
+      .expand((season) => season.episodes)
+      .expand((episode) => episode.releases)
+      .map((release) => release.publishedAt)
+      .fold<String>('', (latest, value) => value.compareTo(latest) > 0 ? value : latest);
 }
 
 typedef DmhyMetadataParser = DmhyReleaseMetadata Function(String title);
@@ -129,7 +135,7 @@ class DmhyResultGrouper {
             seasons: seasons,
           );
         }).toList()..sort(
-          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          (a, b) => b.latestPublishedAt.compareTo(a.latestPublishedAt),
         );
     return groups;
   }
@@ -200,7 +206,7 @@ class DmhyResultGrouper {
           seasons: seasons,
         );
       }).toList()
-      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+      ..sort((a, b) => b.latestPublishedAt.compareTo(a.latestPublishedAt));
   }
 
   static DmhyReleaseMetadata _parseWithAnitomy(String title) {

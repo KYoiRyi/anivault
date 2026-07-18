@@ -224,6 +224,12 @@ class AiAgentService extends ChangeNotifier {
                   .map((episode) => episode.episodeNumber)
                   .take(12)
                   .toList(),
+              'release_titles': group.seasons
+                  .expand((season) => season.episodes)
+                  .expand((episode) => episode.releases)
+                  .map((release) => release.title)
+                  .take(8)
+                  .toList(),
             },
           )
           .toList();
@@ -231,8 +237,12 @@ class AiAgentService extends ChangeNotifier {
           .invoke(
             PromptValue.chat([
               ChatMessage.system(
-                'You consolidate anime release search groups. Merge only '
-                'entries that are the same anime title and season franchise. '
+                'You are the canonical anime identity resolver for a DMHY '
+                'search. Use release_titles as the strongest evidence. Merge '
+                'English, Chinese, Japanese, romaji, kana, and fansub aliases '
+                'when they refer to the same series (for example Yume Mita '
+                'aliases). Merge only entries that are the same anime title '
+                'and season franchise. '
                 'Keep unrelated anime separate. Return every source_key '
                 'through the tool with a concise canonical anime title.',
               ),

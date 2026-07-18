@@ -52,13 +52,13 @@ class _DmhySearchViewState extends State<DmhySearchView> {
     });
     try {
       final response = await DmhySearchService().search(query);
-      final groups = await _organize(response.results);
       if (!mounted) return;
       setState(() {
         _rawResults = response.results;
-        _groups = groups;
+        _groups = DmhyResultGrouper().group(response.results);
         _hasNextPage = response.hasNextPage;
       });
+      _refineInBackground(response.results, query);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -76,14 +76,14 @@ class _DmhySearchViewState extends State<DmhySearchView> {
         page: nextPage,
       );
       final rawResults = [..._rawResults, ...response.results];
-      final groups = await _organize(rawResults);
       if (!mounted) return;
       setState(() {
         _page = nextPage;
         _rawResults = rawResults;
-        _groups = groups;
+        _groups = DmhyResultGrouper().group(rawResults);
         _hasNextPage = response.hasNextPage;
       });
+      _refineInBackground(rawResults, _activeQuery);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -91,10 +91,15 @@ class _DmhySearchViewState extends State<DmhySearchView> {
     }
   }
 
-  Future<List<DmhyAnimeGroup>> _organize(Iterable<DmhySearchResult> results) {
-    return DmhySearchOrganizer(
+  Future<void> _refineInBackground(
+    Iterable<DmhySearchResult> results,
+    String query,
+  ) async {
+    final groups = await DmhySearchOrganizer(
       canonicalResolver: AiAgentService().canonicalizeDmhyGroups,
     ).organize(results);
+    if (!mounted || query != _activeQuery) return;
+    setState(() => _groups = groups);
   }
 
   Future<void> _enqueue(DmhySearchResult result) async {

@@ -15,16 +15,23 @@ class DmhySearchOrganizer {
     Iterable<DmhySearchResult> results,
   ) async {
     final grouped = grouper.group(results);
+    return refine(grouped);
+  }
+
+  Future<List<DmhyAnimeGroup>> refine(
+    Iterable<DmhyAnimeGroup> grouped,
+  ) async {
+    final source = grouped.toList(growable: false);
     final resolver = canonicalResolver;
-    if (resolver == null || grouped.length < 2) return grouped;
-    final candidates = ambiguousGroups(grouped);
-    if (candidates.isEmpty) return grouped;
+    if (resolver == null || source.length < 2) return source;
+    // Different scripts have no token overlap; send every machine cluster.
+    final candidates = source;
     try {
       final canonicalTitles = await resolver(candidates);
-      if (canonicalTitles.isEmpty) return grouped;
-      return grouper.mergeCanonical(grouped, canonicalTitles);
+      if (canonicalTitles.isEmpty) return source;
+      return grouper.mergeCanonical(source, canonicalTitles);
     } catch (_) {
-      return grouped;
+      return source;
     }
   }
 
