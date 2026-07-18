@@ -18,6 +18,7 @@ class ParsedAnimeFile {
   final String title;
   final String normalizedTitle;
   final int? episodeNumber;
+  final int? seasonNumber;
   final String episodeKey;
   final String? releaseGroup;
   final String? resolution;
@@ -28,6 +29,7 @@ class ParsedAnimeFile {
     required this.title,
     required this.normalizedTitle,
     required this.episodeNumber,
+    this.seasonNumber,
     required this.episodeKey,
     this.releaseGroup,
     this.resolution,
@@ -986,6 +988,7 @@ class AnitomyFilenameParser {
     }
     final title = _stringValue(decoded['title']);
     final episode = _episodeNumber(_stringValue(decoded['episode']));
+    final season = _episodeNumber(_stringValue(decoded['anime_season']));
     final parsedTitle = title ?? fileName;
     return ParsedAnimeFile(
       path: path,
@@ -993,6 +996,7 @@ class AnitomyFilenameParser {
       title: parsedTitle,
       normalizedTitle: _normalizeTitle(parsedTitle),
       episodeNumber: episode,
+      seasonNumber: season,
       episodeKey: episode == null ? 'unknown:$fileName' : 'ep:$episode',
       releaseGroup: _stringValue(decoded['release_group']),
       resolution: _stringValue(decoded['video_resolution']),
