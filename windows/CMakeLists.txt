@@ -53,6 +53,26 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 add_subdirectory("runner")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../native/anivault_anitomy" "native/anivault_anitomy")
 
+set(ANIVAULT_TORRENT_SOURCE_DIR
+  "${CMAKE_CURRENT_SOURCE_DIR}/../native/anivault_torrent")
+set(ANIVAULT_TORRENT_DLL "${CMAKE_BINARY_DIR}/anivault_torrent.dll")
+find_program(GO_EXECUTABLE go REQUIRED)
+file(GLOB_RECURSE ANIVAULT_TORRENT_GO_SOURCES
+  "${ANIVAULT_TORRENT_SOURCE_DIR}/*.go")
+add_custom_command(
+  OUTPUT "${ANIVAULT_TORRENT_DLL}"
+  COMMAND "${GO_EXECUTABLE}" build -buildmode=c-shared
+    -o "${ANIVAULT_TORRENT_DLL}" .
+  WORKING_DIRECTORY "${ANIVAULT_TORRENT_SOURCE_DIR}"
+  DEPENDS
+    ${ANIVAULT_TORRENT_GO_SOURCES}
+    "${ANIVAULT_TORRENT_SOURCE_DIR}/go.mod"
+    "${ANIVAULT_TORRENT_SOURCE_DIR}/go.sum"
+  COMMENT "Building anivault_torrent.dll"
+  VERBATIM)
+add_custom_target(anivault_torrent ALL DEPENDS "${ANIVAULT_TORRENT_DLL}")
+add_dependencies(${BINARY_NAME} anivault_torrent)
+
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
@@ -87,6 +107,10 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/anivault_core.dll"
   COMPONENT Runtime)
 
 install(TARGETS anivault_anitomy RUNTIME DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
+install(FILES "${ANIVAULT_TORRENT_DLL}"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
 if(PLUGIN_BUNDLED_LIBRARIES)
