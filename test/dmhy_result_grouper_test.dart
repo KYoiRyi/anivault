@@ -58,4 +58,30 @@ void main() {
     ]);
     expect(groups.single.releaseCount, 1);
   });
+
+  test('merges Anitomy aliases using canonical AI titles', () {
+    final grouper = DmhyResultGrouper(
+      parser: (title) {
+        final alias = title.startsWith('A') ? 'YUME MITA' : 'YUME Mita!';
+        return DmhyReleaseMetadata(
+          animeTitle: alias,
+          normalizedTitle: alias.toLowerCase().replaceAll('!', ''),
+          seasonNumber: 1,
+          episodeNumber: 1,
+          releaseGroup: null,
+          confidence: 0.6,
+        );
+      },
+    );
+    final grouped = grouper.group([
+      release('A release', 'AAA', '2026/07/01 10:00'),
+      release('B release', 'BBB', '2026/07/02 10:00'),
+    ]);
+    final merged = grouper.mergeCanonical(grouped, {
+      for (final group in grouped)
+        group.normalizedTitle: 'BanG Dream! YUME MITA',
+    });
+    expect(merged, hasLength(1));
+    expect(merged.single.releaseCount, 2);
+  });
 }

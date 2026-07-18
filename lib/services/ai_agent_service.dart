@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:anivault/services/anime_library_service.dart';
 import 'package:anivault/services/logger_service.dart';
+import 'package:anivault/services/dmhy_result_grouper.dart';
 
 class AiAgentConfig {
   final bool enabled;
@@ -192,6 +193,80 @@ class AiAgentService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, String>> canonicalizeDmhyGroups(
+    List<DmhyAnimeGroup> groups,
+  ) async {
+    await initialize();
+    if (!_config.isReady || groups.isEmpty) return const {};
+    try {
+      final model = ChatOpenAI(
+        apiKey: _config.apiKey.trim(),
+        baseUrl: _normalizeBaseUrl(_config.baseUrl),
+        defaultOptions: ChatOpenAIOptions(
+          model: _config.model.trim(),
+          temperature: 0,
+          maxTokens: 1200,
+          tools: const [_dmhyGroupingTool],
+          toolChoice: ChatToolChoice.forced(name: _dmhyGroupingToolName),
+        ),
+      );
+      final summary = groups
+          .map(
+            (group) => {
+              'source_key': group.normalizedTitle,
+              'parsed_title': group.title,
+              'release_count': group.releaseCount,
+              'seasons': group.seasons
+                  .map((season) => season.seasonNumber)
+                  .toList(),
+              'episodes': group.seasons
+                  .expand((season) => season.episodes)
+                  .map((episode) => episode.episodeNumber)
+                  .take(12)
+                  .toList(),
+            },
+          )
+          .toList();
+      final result = await model
+          .invoke(
+            PromptValue.chat([
+              ChatMessage.system(
+                'You consolidate anime release search groups. Merge only '
+                'entries that are the same anime title and season franchise. '
+                'Keep unrelated anime separate. Return every source_key '
+                'through the tool with a concise canonical anime title.',
+              ),
+              ChatMessage.humanText(jsonEncode(summary)),
+            ]),
+          )
+          .timeout(const Duration(seconds: 12));
+      for (final toolCall in result.output.toolCalls) {
+        if (toolCall.name != _dmhyGroupingToolName) continue;
+        final rawGroups = toolCall.arguments['groups'];
+        if (rawGroups is! List) continue;
+        final allowedKeys = groups
+            .map((group) => group.normalizedTitle)
+            .toSet();
+        final mapping = <String, String>{};
+        for (final item in rawGroups.whereType<Map>()) {
+          final sourceKey = item['source_key'] as String?;
+          final canonicalTitle = _cleanTitle(
+            item['canonical_title'] as String? ?? '',
+          );
+          if (sourceKey != null &&
+              allowedKeys.contains(sourceKey) &&
+              canonicalTitle != null) {
+            mapping[sourceKey] = canonicalTitle;
+          }
+        }
+        return mapping;
+      }
+    } catch (e) {
+      LoggerService().log('[AI Agent] DMHY grouping failed: $e');
+    }
+    return const {};
+  }
+
   Future<String?> recommendAnimeReason({
     required String title,
     required List<String> genres,
@@ -313,6 +388,31 @@ class AiAgentService extends ChangeNotifier {
   }
 
   static const _libraryGroupToolName = 'set_library_group_title';
+  static const _dmhyGroupingToolName = 'consolidate_dmhy_groups';
+
+  static const _dmhyGroupingTool = ToolSpec(
+    name: _dmhyGroupingToolName,
+    description: 'Assign a canonical anime title to each parsed DMHY group.',
+    inputJsonSchema: {
+      'type': 'object',
+      'properties': {
+        'groups': {
+          'type': 'array',
+          'items': {
+            'type': 'object',
+            'properties': {
+              'source_key': {'type': 'string'},
+              'canonical_title': {'type': 'string'},
+            },
+            'required': ['source_key', 'canonical_title'],
+            'additionalProperties': false,
+          },
+        },
+      },
+      'required': ['groups'],
+      'additionalProperties': false,
+    },
+  );
 
   static const _libraryGroupTool = ToolSpec(
     name: _libraryGroupToolName,

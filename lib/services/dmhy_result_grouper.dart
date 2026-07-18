@@ -134,6 +134,75 @@ class DmhyResultGrouper {
     return groups;
   }
 
+  List<DmhyAnimeGroup> mergeCanonical(
+    Iterable<DmhyAnimeGroup> source,
+    Map<String, String> canonicalTitles,
+  ) {
+    final buckets = <String, _CanonicalBucket>{};
+    for (final group in source) {
+      final canonicalTitle = canonicalTitles[group.normalizedTitle]?.trim();
+      final title = canonicalTitle?.isNotEmpty == true
+          ? canonicalTitle!
+          : group.title;
+      final key = _fallbackNormalize(title);
+      final bucket = buckets.putIfAbsent(
+        key,
+        () => _CanonicalBucket(
+          title: title,
+          normalizedTitle: key,
+          confidence: group.confidence,
+        ),
+      );
+      bucket.confidence = bucket.confidence < group.confidence
+          ? bucket.confidence
+          : group.confidence;
+      for (final season in group.seasons) {
+        final seasonBucket = bucket.seasons.putIfAbsent(
+          season.seasonNumber,
+          () => {},
+        );
+        for (final episode in season.episodes) {
+          seasonBucket
+              .putIfAbsent(episode.episodeNumber, () => [])
+              .addAll(episode.releases);
+        }
+      }
+    }
+    return buckets.values.map((bucket) {
+        final seasons =
+            bucket.seasons.entries.map((seasonEntry) {
+              final episodes =
+                  seasonEntry.value.entries.map((episodeEntry) {
+                    final releases = [...episodeEntry.value]
+                      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+                    return DmhyEpisodeGroup(
+                      episodeNumber: episodeEntry.key,
+                      releases: releases,
+                    );
+                  }).toList()..sort(
+                    (a, b) => _compareNullableNumberDesc(
+                      a.episodeNumber,
+                      b.episodeNumber,
+                    ),
+                  );
+              return DmhySeasonGroup(
+                seasonNumber: seasonEntry.key,
+                episodes: episodes,
+              );
+            }).toList()..sort(
+              (a, b) =>
+                  _compareNullableNumberAsc(a.seasonNumber, b.seasonNumber),
+            );
+        return DmhyAnimeGroup(
+          title: bucket.title,
+          normalizedTitle: bucket.normalizedTitle,
+          confidence: bucket.confidence,
+          seasons: seasons,
+        );
+      }).toList()
+      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+  }
+
   static DmhyReleaseMetadata _parseWithAnitomy(String title) {
     final parsed = AnitomyFilenameParser().parse(title);
     final normalized = parsed.normalizedTitle;
@@ -191,5 +260,13 @@ class _AnimeBucket {
     required this.title,
     required this.normalizedTitle,
     required this.confidence,
+  });
+}
+
+class _CanonicalBucket extends _AnimeBucket {
+  _CanonicalBucket({
+    required super.title,
+    required super.normalizedTitle,
+    required super.confidence,
   });
 }
